@@ -2113,6 +2113,15 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
+        .setup(|app| {
+            use tauri::Manager;
+            if let Some(win) = app.get_webview_window("main") {
+                if let Some(icon) = app.default_window_icon().cloned() {
+                    let _ = win.set_icon(icon);
+                }
+            }
+            Ok(())
+        })
         .manage(AppState {
             db: Mutex::new(db),
             manifest: Mutex::new(manifest),
