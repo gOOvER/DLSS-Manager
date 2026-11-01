@@ -131,60 +131,6 @@
           </div>
 
           <div class="hub-panels">
-            <!-- Collapsible Steam Web API Integration Card -->
-            <details class="panel steam-api-panel" id="steam-api-details">
-              <summary class="steam-api-summary">
-                <div style="display:flex;align-items:center;gap:10px">
-                  <img src="assets/icons/Steam.png" alt="Steam" style="width:20px;height:20px" />
-                  <div>
-                    <strong data-i18n="steam_api_hub_title">Steam Web API Integration</strong>
-                    <span class="muted" style="margin-left:8px;font-size:0.78rem" data-i18n="steam_api_hub_sub">Lädt offizielle Cover-Bilder &amp; App-IDs für alle Launcher nach</span>
-                  </div>
-                </div>
-                <div style="display:flex;align-items:center;gap:10px">
-                  <span class="steam-status-pill" id="steam-api-status-pill">○ Nicht konfiguriert</span>
-                  <span class="muted" style="font-size:0.78rem">▾</span>
-                </div>
-              </summary>
-              <div class="steam-api-body">
-                <div class="preset-select-grid">
-                  <div class="preset-field">
-                    <label><span data-i18n="steam_api_key_label">Steam Web API Key</span> (<a href="#" onclick="event.preventDefault(); openExternalUrl('https://steamcommunity.com/dev/apikey')" style="color:var(--accent)" data-i18n="steam_get_key_link">Key bei Steam erstellen ↗</a>)</label>
-                    <div style="display:flex;gap:6px">
-                      <input
-                        type="password"
-                        id="input-steam-api-key"
-                        class="toolbar-select"
-                        style="flex:1"
-                        data-i18n-placeholder="steam_key_placeholder"
-                        placeholder="32-stelligen Steam Web API Key einfügen..."
-                      />
-                      <button class="btn btn-secondary" onclick="toggleRevealSteamApiKey()" title="API-Key anzeigen / verbergen" style="padding:6px 10px">👁️</button>
-                    </div>
-                  </div>
-                  <div class="preset-field">
-                    <label data-i18n="steam_id_label">Steam64 ID (Wird automatisch aus lokaler Steam-Installation erkannt)</label>
-                    <input
-                      type="text"
-                      id="input-steam-id"
-                      class="toolbar-select"
-                      data-i18n-placeholder="steam_id_placeholder"
-                      placeholder="z.B. 76561198000000000 (automatisch erkannt)"
-                    />
-                  </div>
-                </div>
-                <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-top:10px">
-                  <div class="muted" id="steam-api-feedback" style="font-size:0.78rem" data-i18n="steam_api_feedback_default">
-                    Gleicht eigene Steam-Spiele (`IPlayerService/GetOwnedGames`) + Steam-Store-Suche für alle Launcher ab.
-                  </div>
-                  <div style="display:flex;gap:8px">
-                    <button class="btn btn-secondary" onclick="reresolveGamesViaSteamNow()" data-i18n="btn_reresolve_covers">🔄 Cover &amp; App-IDs neu abgleichen</button>
-                    <button class="btn btn-primary" onclick="validateAndSaveSteamApiNow()" data-i18n="btn_validate_save_key">✓ Prüfen &amp; Speichern</button>
-                  </div>
-                </div>
-              </div>
-            </details>
-
             <!-- Compact Latest Upscaler Versions Strip -->
             <div class="panel">
               <div class="panel-header">
@@ -324,7 +270,10 @@
               <div class="preset-select-grid" style="margin-top:10px">
                 <div class="preset-field">
                   <label><span data-i18n="steam_api_key_label">Steam Web API Key</span> (<a href="#" onclick="event.preventDefault(); openExternalUrl('https://steamcommunity.com/dev/apikey')" style="color:var(--accent)" data-i18n="steam_get_key_link">Key bei Steam erstellen ↗</a>)</label>
-                  <input type="password" id="settings-steam-api-key" class="toolbar-select" data-i18n-placeholder="steam_key_placeholder" placeholder="32-stelliger Steam API Key" />
+                  <div style="display:flex;gap:6px">
+                    <input type="password" id="settings-steam-api-key" class="toolbar-select" style="flex:1" data-i18n-placeholder="steam_key_placeholder" placeholder="32-stelliger Steam API Key" />
+                    <button class="btn btn-secondary" onclick="toggleRevealSteamApiKey()" title="API-Key anzeigen / verbergen" style="padding:6px 10px">👁️</button>
+                  </div>
                 </div>
                 <div class="preset-field">
                   <label data-i18n="steam_id_label">Steam64 ID (Optional — automatisch aus Steam-VDF erkannt)</label>

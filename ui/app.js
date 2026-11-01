@@ -833,7 +833,7 @@ window.applyRecommendedProfileNow = async function (gameId) {
 };
 
 window.toggleRevealSteamApiKey = function () {
-  const el = document.getElementById("input-steam-api-key");
+  const el = document.getElementById("settings-steam-api-key") || document.getElementById("input-steam-api-key");
   if (!el) return;
   el.type = el.type === "password" ? "text" : "password";
 };
