@@ -104,7 +104,8 @@ pub fn load_legacy_db_game_roots() -> Vec<(String, String, String, Option<String
             continue;
         };
         for r in rows.flatten() {
-            if PathBuf::from(&r.1).exists() {
+            let p = PathBuf::from(&r.1);
+            if p.exists() && crate::scanner::has_valid_game_executable(&p) {
                 roots.push(r);
             }
         }
@@ -274,7 +275,11 @@ impl Database {
         let mut games = Vec::new();
         for r in rows.flatten() {
             if let Ok(g) = serde_json::from_str::<Game>(&r) {
-                games.push(g);
+                if std::path::Path::new(&g.path).exists()
+                    && crate::scanner::has_valid_game_executable(std::path::Path::new(&g.path))
+                {
+                    games.push(g);
+                }
             }
         }
         Ok(games)

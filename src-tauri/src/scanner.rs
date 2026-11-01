@@ -255,8 +255,9 @@ pub fn scan_all_games(
             .any(|other| other != &my_prefix && other.starts_with(&my_prefix))
     });
 
-    // Only keep games that actually contain at least one upscaler DLL (matching Python version behavior)
-    games.retain(|g| !g.dlls.is_empty());
+    // Only keep games that actually contain at least one upscaler DLL and a valid game executable (.exe)
+    // This filters out uninstalled leftover/ghost directories that only left behind an orphaned DLL or backup file.
+    games.retain(|g| !g.dlls.is_empty() && has_valid_game_executable(Path::new(&g.path)));
 
     games.sort_by(|a, b| a.name.to_ascii_lowercase().cmp(&b.name.to_ascii_lowercase()));
     games
@@ -622,6 +623,71 @@ pub fn find_primary_game_executable(root: &Path) -> Option<PathBuf> {
 
     candidates.sort_by(|a, b| b.0.cmp(&a.0));
     candidates.into_iter().next().map(|(_, p)| p)
+}
+
+/// Checks whether a directory (or its immediate parent for sub-flavor folders like `_retail_`)
+/// actually contains at least one valid game executable (`.exe`), ensuring uninstalled leftover folders
+/// that only contain orphaned `.dll` files are not listed as installed games.
+pub fn has_valid_game_executable(root: &Path) -> bool {
+    if !root.exists() || !root.is_dir() {
+        return false;
+    }
+    if root.join("Bin64").join("StarCitizen.exe").exists() {
+        return true;
+    }
+    if find_primary_game_executable(root).is_some() {
+        return true;
+    }
+
+    // Fallback: check for any non-uninstaller .exe inside root up to depth 6
+    let has_exe_in_dir = |dir: &Path, max_d: usize| -> bool {
+        for entry in WalkDir::new(dir)
+            .max_depth(max_d)
+            .follow_links(false)
+            .into_iter()
+            .filter_entry(should_descend)
+            .filter_map(|e| e.ok())
+        {
+            if !entry.file_type().is_file() {
+                continue;
+            }
+            let fname = entry.file_name().to_string_lossy().to_ascii_lowercase();
+            if fname.ends_with(".exe")
+                && !fname.starts_with("unins")
+                && !fname.contains("crash")
+                && !fname.contains("redist")
+                && !fname.contains("dxsetup")
+            {
+                if entry.metadata().map(|m| m.len()).unwrap_or(0) > 50_000 {
+                    return true;
+                }
+            }
+        }
+        false
+    };
+
+    if has_exe_in_dir(root, 6) {
+        return true;
+    }
+
+    // If root is a Battle.net or engine subfolder (e.g., `_retail_`, `_classic_`, `Binaries`, `Content`),
+    // check 2 levels in the parent directory as well.
+    if let Some(folder_name) = root.file_name().map(|n| n.to_string_lossy().to_ascii_lowercase()) {
+        if (folder_name.starts_with('_') && folder_name.ends_with('_'))
+            || matches!(
+                folder_name.as_str(),
+                "binaries" | "bin" | "bin64" | "x64" | "content" | "win64" | "gamelaunchhelper"
+            )
+        {
+            if let Some(parent) = root.parent() {
+                if has_exe_in_dir(parent, 2) {
+                    return true;
+                }
+            }
+        }
+    }
+
+    false
 }
 
 /// Auto-detects the user's 64-bit Steam ID (17-digit `7656119...`) from `<SteamPath>\config\loginusers.vdf`.

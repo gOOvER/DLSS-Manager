@@ -96,13 +96,21 @@ pub fn default_seed_game_db() -> Vec<GameProfileEntry> {
             id: "overwatch-2".to_string(),
             title: "Overwatch 2".to_string(),
             steam_app_ids: vec!["2357570".to_string()],
-            match_names: vec!["overwatch 2".to_string(), "overwatch".to_string()],
+            match_names: vec![
+                "overwatch 2".to_string(),
+                "overwatch".to_string(),
+                "overwatch®".to_string(),
+            ],
             match_executables: vec!["overwatch.exe".to_string()],
             anticheat_status: "signed_only".to_string(),
-            supported_techs: vec!["DLSS".to_string()],
+            supported_techs: vec![
+                "DLSS".to_string(),
+                "FSR 3/4".to_string(),
+                "XeSS".to_string(),
+            ],
             unsupported_techs: vec![UnsupportedTechNote {
                 tech: "DLSS-G (Frame Gen)".to_string(),
-                reason: "Overwatch 2 supports DLSS Super Resolution & NVIDIA Reflex, but does not ship with DLSS Frame Generation (nvngx_dlssg.dll).".to_string(),
+                reason: "Overwatch 2 supports DLSS Super Resolution, AMD FSR 3 & Intel XeSS, but does not ship with NVIDIA DLSS Frame Generation (nvngx_dlssg.dll).".to_string(),
             }],
             warning_banner: Some(
                 "Blizzard Defense Matrix: Official NVIDIA-signed nvngx_dlss.dll updates and NVIDIA Driver DRS Presets are supported. Battle.net patches may reset nvngx_dlss.dll after seasonal updates."
