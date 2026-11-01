@@ -522,6 +522,48 @@ pub fn default_seed_game_db() -> Vec<GameProfileEntry> {
                 "Render Scale: Native or Ultra Quality (built-in upscaler)".to_string(),
             ],
         },
+        GameProfileEntry {
+            id: "dcs-world".to_string(),
+            title: "DCS World".to_string(),
+            steam_app_ids: vec!["223750".to_string()],
+            match_names: vec![
+                "dcs world".to_string(),
+                "dcs world openbeta".to_string(),
+                "dcs world steam edition".to_string(),
+            ],
+            match_executables: vec!["dcs.exe".to_string()],
+            anticheat_status: "safe".to_string(),
+            supported_techs: vec!["DLSS".to_string()],
+            unsupported_techs: vec![],
+            warning_banner: None,
+            recommended_sr_preset: Some("Preset K".to_string()),
+            recommended_rr_preset: None,
+            recommended_fg_preset: None,
+            recommended_settings: vec![
+                "Upscaling: DLSS Quality or DLAA with Preset K (greatly reduces HUD/MFD text ghosting in cockpit)".to_string(),
+                "Sharpening: 0.25 – 0.40".to_string(),
+            ],
+        },
+        GameProfileEntry {
+            id: "minecraft-for-windows".to_string(),
+            title: "Minecraft for Windows (Bedrock RTX)".to_string(),
+            steam_app_ids: vec![],
+            match_names: vec![
+                "minecraft for windows".to_string(),
+                "minecraft".to_string(),
+            ],
+            match_executables: vec!["minecraft.windows.exe".to_string()],
+            anticheat_status: "safe".to_string(),
+            supported_techs: vec!["DLSS".to_string()],
+            unsupported_techs: vec![],
+            warning_banner: None,
+            recommended_sr_preset: Some("Preset K".to_string()),
+            recommended_rr_preset: None,
+            recommended_fg_preset: None,
+            recommended_settings: vec![
+                "Ray Tracing: Enabled (DirectX Raytracing + DLSS Upscaling)".to_string(),
+            ],
+        },
     ]
 }
 

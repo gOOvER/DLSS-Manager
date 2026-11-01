@@ -26,8 +26,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Updated **Overwatch 2** (`2357570`) to include `FSR 3/4` and `XeSS` alongside `DLSS`.
 
 ### Fixed
-- **Uninstalled Ghost Directory & Battle.net Sub-Flavor Filtering (`src-tauri/src/scanner.rs`, `src-tauri/src/database.rs`):**
+- **Uninstalled Ghost Directory, Multi-Drive Root & Launcher Folder Variants (`src-tauri/src/scanner.rs`, `src-tauri/src/database.rs`):**
   - Filtered out uninstalled leftover game directories (such as an uninstalled Battle.net `Overwatch\_retail_` folder that only left behind an orphaned `nvngx_dlss.dll` without `Overwatch.exe`) by verifying that both the game root and any Battle.net flavor directory (`_retail_`, `_classic_`, `_ptr_`, `_beta_`) contain a valid shipping `.exe` executable.
+  - Expanded multi-drive (`A:`–`Z:`) discovery to also scan top-level standalone game directories installed directly at a drive root (e.g. `F:\DCS World`, `F:\Cyberpunk2077`) as well as alternate launcher folder names (`<Drive>:\XBox`, `<Drive>:\Battlenet`, `<Drive>:\Epic`, `<Drive>:\GoG`, `<Drive>:\UPlay`, `<Drive>:\Rockstars`).
 - **Steam Store Search Modal Preview Images (`search_steam_store`):**
   - Fixed broken preview images for 2025/2026 Steam titles in the **✏️ Edit Display & Artwork** dialog by using hashed `tiny_image` / `IStoreBrowseService` asset URLs instead of legacy unhashed `/header.jpg` paths.
 - **NVIDIA DRS DLSS Preset Persistence & `.exe` Profile Binding (`src-tauri/src/gpu_nvapi.rs`, `src-tauri/src/lib.rs`):**

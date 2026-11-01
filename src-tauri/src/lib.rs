@@ -186,7 +186,7 @@ async fn get_initial_state(state: State<'_, AppState>) -> Result<InitialPayload,
         .unwrap_or_default();
     config.dlss_indicator_enabled = get_dlss_indicator_state();
 
-    let (games, backups) = {
+    let (mut games, backups) = {
         let db = state.db.lock().map_err(|e| e.to_string())?;
         let mut g = db.load_games().unwrap_or_default();
         db.apply_overrides_and_config(&mut g, &config);

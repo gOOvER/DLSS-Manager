@@ -568,6 +568,12 @@ pub fn prettify_game_name(raw_name: &str, full_path: &Path) -> (String, Option<S
                 Some("2582140".to_string()),
             );
         }
+        "cyberpunk2077" | "cyberpunk 2077" => {
+            return ("Cyberpunk 2077".to_string(), Some("1091500".to_string()));
+        }
+        "dcs world" | "dcs world openbeta" => {
+            return ("DCS World".to_string(), Some("223750".to_string()));
+        }
         _ => {}
     }
 
@@ -575,7 +581,8 @@ pub fn prettify_game_name(raw_name: &str, full_path: &Path) -> (String, Option<S
         "diablo iv" => Some("2344520".to_string()),
         "overwatch" | "overwatch 2" | "overwatch®" => Some("2357570".to_string()),
         "forzahorizon5" | "forza horizon 5" => Some("1551360".to_string()),
-        "cyberpunk 2077" => Some("1091500".to_string()),
+        "cyberpunk2077" | "cyberpunk 2077" => Some("1091500".to_string()),
+        "dcs world" | "dcs world openbeta" => Some("223750".to_string()),
         "star wars outlaws" => Some("2842040".to_string()),
         "msfs2024" | "microsoft flight simulator 2024" => Some("2537590".to_string()),
         "gr" | "global rescue" => Some("2873660".to_string()),
@@ -1075,7 +1082,13 @@ fn discover_epic_games(drives: &[char]) -> Vec<DiscoveredGameRoot> {
     }
 
     for &d in drives {
-        for suffix in &["Program Files\\Epic Games", "Epic Games", "Games\\Epic Games"] {
+        for suffix in &[
+            "Program Files\\Epic Games",
+            "Epic Games",
+            "Epic",
+            "Games\\Epic Games",
+            "Games\\Epic",
+        ] {
             let epic_root = PathBuf::from(format!("{}:\\{}", d, suffix));
             if let Ok(entries) = fs::read_dir(&epic_root) {
                 for entry in entries.flatten() {
@@ -1144,9 +1157,12 @@ fn discover_gog_games(drives: &[char]) -> Vec<DiscoveredGameRoot> {
     for &d in drives {
         for suffix in &[
             "GOG Games",
+            "GoG",
+            "GOG",
             "GOG Galaxy\\Games",
             "Program Files (x86)\\GOG Galaxy\\Games",
             "Games\\GOG Games",
+            "Games\\GoG",
         ] {
             let gog_root = PathBuf::from(format!("{}:\\{}", d, suffix));
             if let Ok(entries) = fs::read_dir(&gog_root) {
@@ -1220,7 +1236,12 @@ fn discover_ubisoft_games(drives: &[char]) -> Vec<DiscoveredGameRoot> {
         for suffix in &[
             "Program Files (x86)\\Ubisoft\\Ubisoft Game Launcher\\games",
             "Ubisoft Game Launcher\\games",
+            "Ubisoft\\Ubisoft Game Launcher\\games",
+            "Ubisoft",
+            "UPlay",
+            "Uplay",
             "Games\\Ubisoft",
+            "Games\\UPlay",
         ] {
             ubi_game_roots.push(PathBuf::from(format!("{}:\\{}", d, suffix)));
         }
@@ -1352,7 +1373,12 @@ fn discover_battlenet_games(drives: &[char]) -> Vec<DiscoveredGameRoot> {
     }
 
     for &d in drives {
-        for suffix in &["Battle.net", "Games\\Battle.net"] {
+        for suffix in &[
+            "Battle.net",
+            "Battlenet",
+            "Games\\Battle.net",
+            "Games\\Battlenet",
+        ] {
             let bnet_dir = PathBuf::from(format!("{}:\\{}", d, suffix));
             if let Ok(entries) = fs::read_dir(bnet_dir) {
                 for entry in entries.flatten() {
@@ -1384,7 +1410,15 @@ fn discover_battlenet_games(drives: &[char]) -> Vec<DiscoveredGameRoot> {
 fn discover_xbox_games(drives: &[char]) -> Vec<DiscoveredGameRoot> {
     let mut results = Vec::new();
     for &d in drives {
-        for suffix in &["XboxGames", "Games\\XboxGames", "ModifiableWindowsApps"] {
+        for suffix in &[
+            "XboxGames",
+            "XBox",
+            "Xbox",
+            "Games\\XboxGames",
+            "Games\\XBox",
+            "Games\\Xbox",
+            "ModifiableWindowsApps",
+        ] {
             let xbox_dir = PathBuf::from(format!("{}:\\{}", d, suffix));
             let Ok(entries) = fs::read_dir(&xbox_dir) else {
                 continue;
@@ -1541,21 +1575,91 @@ fn discover_generic_game_dirs(drives: &[char]) -> Vec<DiscoveredGameRoot> {
     let container_names = [
         "steam",
         "steamlibrary",
+        "epic",
         "epic games",
+        "gog",
         "gog games",
         "gog galaxy",
         "ubisoft",
         "ubisoft game launcher",
+        "uplay",
         "ea games",
         "origin games",
         "battle.net",
+        "battlenet",
+        "xbox",
         "xboxgames",
+        "modifiablewindowsapps",
         "starcitizen",
         "roberts space industries",
+        "games",
+        "spiele",
+        "pc games",
+        "rockstars",
+        "rockstar games",
+        "riot games",
+    ];
+
+    let non_game_root_dirs = [
+        "windows",
+        "program files",
+        "program files (x86)",
+        "programdata",
+        "users",
+        "perflogs",
+        "inetpub",
+        "amd",
+        "nvidia",
+        "nvidiasdk",
+        "intel",
+        "windowsapps",
+        "wpsystem",
+        "wudownloadcache",
+        "system volume information",
+        "$recycle.bin",
+        "recovery",
+        "msocache",
+        "filehistory",
+        "-=backups=-",
+        "pcbackup",
+        "takeout",
+        "bilder",
+        "music",
+        "videos",
+        "documents",
+        "downloads",
+        "storage",
+        "streaming",
+        "monero",
+        "andere computer",
+        "meine ablage",
+        "torsten ablage",
+        ".dtrash",
+        "github workspace",
+        "_backups",
+        "_gamebackup",
+        "_github",
+        "_projekte",
+        "_pterodactyl eggs",
+        "_tmp",
+        "_videotest",
+        "_vscode workspaces",
+        "_tools",
+        "tools",
+        "libs",
+        "projekte",
+        "webscripte",
     ];
 
     for &d in drives {
-        for folder_name in &["Games", "Spiele", "PC Games"] {
+        for folder_name in &[
+            "Games",
+            "Spiele",
+            "PC Games",
+            "Rockstars",
+            "Rockstar Games",
+            "Riot Games",
+        ] {
             let root = PathBuf::from(format!("{}:\\{}", d, folder_name));
             let Ok(entries) = fs::read_dir(&root) else {
                 continue;
@@ -1580,6 +1684,65 @@ fn discover_generic_game_dirs(drives: &[char]) -> Vec<DiscoveredGameRoot> {
                     app_id: None,
                     cover_url: None,
                 });
+            }
+        }
+
+        // Also inspect standalone game folders placed directly at the root of a drive
+        // (e.g. `F:\DCS World`, `F:\Cyberpunk2077`, `F:\Guild Wars 2`)
+        let drive_root = PathBuf::from(format!("{}:\\", d));
+        if let Ok(entries) = fs::read_dir(&drive_root) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if !path.is_dir() {
+                    continue;
+                }
+                let name = entry.file_name().to_string_lossy().to_string();
+                let lower = name.to_ascii_lowercase();
+                if lower.starts_with('$')
+                    || lower.starts_with('.')
+                    || lower.starts_with('_')
+                    || lower.starts_with('-')
+                    || container_names.contains(&lower.as_str())
+                    || non_game_root_dirs.contains(&lower.as_str())
+                    || SKIP_DIRS.contains(&lower.as_str())
+                    || is_redist_or_non_game(&name)
+                {
+                    continue;
+                }
+
+                // Check if this top-level folder looks like a game installation
+                let has_egstore = path.join(".egstore").is_dir();
+                let has_game_subdir = path.join("bin").is_dir()
+                    || path.join("bin-mt").is_dir()
+                    || path.join("Bin64").is_dir()
+                    || path.join("Binaries").is_dir()
+                    || path.join("Engine").is_dir()
+                    || path.join("Data").is_dir();
+                let has_root_exe = fs::read_dir(&path)
+                    .ok()
+                    .map(|iter| {
+                        iter.flatten().any(|f| {
+                            f.path()
+                                .extension()
+                                .map(|ext| ext.eq_ignore_ascii_case("exe"))
+                                .unwrap_or(false)
+                        })
+                    })
+                    .unwrap_or(false);
+
+                if has_egstore || has_game_subdir || has_root_exe {
+                    results.push(DiscoveredGameRoot {
+                        name,
+                        path,
+                        launcher: if has_egstore {
+                            LauncherType::Epic
+                        } else {
+                            LauncherType::Custom
+                        },
+                        app_id: None,
+                        cover_url: None,
+                    });
+                }
             }
         }
     }
