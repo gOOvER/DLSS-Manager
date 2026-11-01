@@ -343,13 +343,189 @@ window.syncGameDatabaseNow = async function () {
 };
 
 window.reportGamesToDbNow = async function (gameId = null) {
+  if (gameId) {
+    openReportGameModal(gameId);
+    return;
+  }
   try {
-    showToast(
-      gameId
-        ? "Reporting game to dlssdb.goover.dev..."
-        : "Sending all scanned games & detected technologies to dlssdb.goover.dev..."
-    );
-    const msg = await invoke("report_games_to_db", { gameId });
+    showToast("Sending all scanned games & detected technologies to dlssdb.goover.dev...");
+    const msg = await invoke("report_games_to_db", {
+      gameId: null,
+      worksStatus: null,
+      recommendedSettings: null,
+      recommendedSrPreset: null,
+      notes: null,
+    });
+    showToast(`✓ ${msg}`);
+  } catch (e) {
+    showToast(String(e), true);
+  }
+};
+
+window.openReportGameModal = function (gameId) {
+  const game = (appState.games || []).find((g) => g.id === gameId);
+  if (!game) return;
+
+  const backdrop = document.getElementById("secondary-modal-backdrop");
+  const content = document.getElementById("secondary-modal-content");
+  if (!backdrop || !content) return;
+
+  const techs = Array.from(new Set((game.dlls || []).map((d) => d.type_label)));
+  const existingSettings = (game.db_profile?.recommended_settings || []).join("\n");
+  const defaultPreset = game.dlss_sr_preset || game.db_profile?.recommended_sr_preset || "";
+
+  content.innerHTML = `
+    <div class="modal-header">
+      <div>
+        <h2>📤 Spiel an Online-DB melden</h2>
+        <p class="muted" style="font-size:0.82rem;margin-top:2px">
+          Melde <strong>${escapeHtml(game.name)}</strong> an <code>dlssdb.goover.dev</code>.
+          <strong>Pflichtangabe:</strong> Geht oder Geht nicht — alles andere ist optional.
+        </p>
+      </div>
+      <button class="btn-icon" onclick="closeSecondaryModal()">✕</button>
+    </div>
+
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:14px;padding-top:10px">
+      <div style="background:rgba(15,23,42,0.65);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:10px 14px;font-size:0.82rem">
+        <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px">
+          <span><strong>Spiel:</strong> ${escapeHtml(game.name)} (${escapeHtml(game.launcher_name)})</span>
+          <span><strong>Erkannte DLLs:</strong> ${escapeHtml(techs.join(", ") || "DLSS")}</span>
+        </div>
+        ${
+          game.anti_cheat
+            ? `<div style="margin-top:4px;color:#fcd34d">🛡️ Erkanntes Anti-Cheat: ${escapeHtml(game.anti_cheat)}</div>`
+            : ""
+        }
+      </div>
+
+      <div>
+        <label style="display:block;font-size:0.82rem;font-weight:700;margin-bottom:6px">
+          Status: Funktioniert das Spiel mit DLSS / Upscaler-Update? <span style="color:#a3e635">* (Muss)</span>
+        </label>
+        <input type="hidden" id="modal-rep-works-status" value="works" />
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <button
+            type="button"
+            id="modal-rep-btn-works"
+            class="btn"
+            onclick="setModalReportStatus('works')"
+            style="justify-content:center;padding:11px;border:1px solid rgba(118,185,0,0.75);background:rgba(118,185,0,0.2);color:#d9f99d;font-weight:700"
+          >
+            ✅ Geht (Funktioniert)
+          </button>
+          <button
+            type="button"
+            id="modal-rep-btn-broken"
+            class="btn btn-secondary"
+            onclick="setModalReportStatus('broken')"
+            style="justify-content:center;padding:11px;opacity:0.75"
+          >
+            ❌ Geht nicht (Probleme / Blockiert)
+          </button>
+        </div>
+      </div>
+
+      <div>
+        <label style="display:block;font-size:0.8rem;color:var(--text-muted);margin-bottom:5px">
+          Empfohlenes DLSS Preset <span style="opacity:0.75">(Optional)</span>
+        </label>
+        <select id="modal-rep-preset" class="filter-select" style="width:100%">
+          <option value="" ${!defaultPreset ? "selected" : ""}>— Keine Angabe (Optional) —</option>
+          <option value="Preset K" ${defaultPreset === "Preset K" ? "selected" : ""}>Preset K (DLSS 4.5 Transformer Gen 2)</option>
+          <option value="Preset J" ${defaultPreset === "Preset J" ? "selected" : ""}>Preset J (DLSS 4.5 Transformer)</option>
+          <option value="Latest" ${defaultPreset === "Latest" ? "selected" : ""}>Latest (Driver Default)</option>
+          <option value="Preset E" ${defaultPreset === "Preset E" ? "selected" : ""}>Preset E (CNN)</option>
+          <option value="Preset C" ${defaultPreset === "Preset C" ? "selected" : ""}>Preset C</option>
+        </select>
+      </div>
+
+      <div>
+        <label style="display:block;font-size:0.8rem;color:var(--text-muted);margin-bottom:5px">
+          Empfohlene In-Game Einstellungen <span style="opacity:0.75">(Optional, eine pro Zeile)</span>
+        </label>
+        <textarea
+          id="modal-rep-settings"
+          class="search-input"
+          rows="3"
+          style="width:100%;height:auto;padding:8px 10px;resize:vertical;font-family:inherit"
+          placeholder="Optional, z.B.&#10;Graphics Renderer: Vulkan&#10;Upscaling: DLSS Quality"
+        >${escapeHtml(existingSettings)}</textarea>
+      </div>
+
+      <div>
+        <label style="display:block;font-size:0.8rem;color:var(--text-muted);margin-bottom:5px">
+          Hinweise / Fehlerbeschreibung <span style="opacity:0.75">(Optional)</span>
+        </label>
+        <input
+          type="text"
+          id="modal-rep-notes"
+          class="search-input"
+          style="width:100%"
+          placeholder="Optional: z.B. Läuft super / Anti-Cheat blockiert / Flackern bei..."
+        />
+      </div>
+    </div>
+
+    <div class="modal-footer" style="margin-top:16px;display:flex;justify-content:flex-end;gap:10px">
+      <button class="btn btn-secondary" onclick="closeSecondaryModal()">Abbrechen</button>
+      <button class="btn btn-primary" onclick="submitModalGameReport('${escapeHtml(game.id)}')">
+        📤 Jetzt an Datenbank melden
+      </button>
+    </div>
+  `;
+
+  backdrop.style.display = "flex";
+};
+
+window.setModalReportStatus = function (status) {
+  const val = status === "broken" ? "broken" : "works";
+  const hidden = document.getElementById("modal-rep-works-status");
+  if (hidden) hidden.value = val;
+  const btnW = document.getElementById("modal-rep-btn-works");
+  const btnB = document.getElementById("modal-rep-btn-broken");
+  if (!btnW || !btnB) return;
+  if (val === "works") {
+    btnW.style.border = "1px solid rgba(118,185,0,0.75)";
+    btnW.style.background = "rgba(118,185,0,0.2)";
+    btnW.style.color = "#d9f99d";
+    btnW.style.fontWeight = "700";
+    btnW.style.opacity = "1";
+    btnB.style.border = "";
+    btnB.style.background = "";
+    btnB.style.color = "";
+    btnB.style.fontWeight = "500";
+    btnB.style.opacity = "0.75";
+  } else {
+    btnB.style.border = "1px solid rgba(239,68,68,0.75)";
+    btnB.style.background = "rgba(239,68,68,0.2)";
+    btnB.style.color = "#fca5a5";
+    btnB.style.fontWeight = "700";
+    btnB.style.opacity = "1";
+    btnW.style.border = "";
+    btnW.style.background = "";
+    btnW.style.color = "";
+    btnW.style.fontWeight = "500";
+    btnW.style.opacity = "0.75";
+  }
+};
+
+window.submitModalGameReport = async function (gameId) {
+  const worksStatus = document.getElementById("modal-rep-works-status")?.value || "works";
+  const recommendedSrPreset = document.getElementById("modal-rep-preset")?.value || null;
+  const recommendedSettings = document.getElementById("modal-rep-settings")?.value?.trim() || null;
+  const notes = document.getElementById("modal-rep-notes")?.value?.trim() || null;
+
+  try {
+    showToast("Sende Meldung an dlssdb.goover.dev...");
+    const msg = await invoke("report_games_to_db", {
+      gameId,
+      worksStatus,
+      recommendedSettings,
+      recommendedSrPreset,
+      notes,
+    });
+    closeSecondaryModal();
     showToast(`✓ ${msg}`);
   } catch (e) {
     showToast(String(e), true);

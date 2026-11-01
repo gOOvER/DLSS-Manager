@@ -19,7 +19,7 @@ use database::{
 };
 use game_db::{
     annotate_games_with_db_profiles, fetch_remote_game_db, load_cached_or_seed_game_db,
-    report_games_to_remote_db,
+    report_games_to_remote_db, UserGameReportInput,
 };
 use gpu_nvapi::{
     apply_nvapi_dlss_presets, detect_gpu_info, get_dlss_indicator_state, set_dlss_indicator_state,
@@ -255,6 +255,7 @@ async fn scan_games(state: State<'_, AppState>) -> Result<InitialPayload, String
             &config.game_db_api_key,
             &games,
             "auto_scan",
+            None,
         )
         .await
         {
@@ -1691,7 +1692,7 @@ async fn sync_game_database(
     };
 
     if config.auto_report_games_to_db && !config.game_db_api_key.trim().is_empty() && !games.is_empty() {
-        if let Ok(msg) = report_games_to_remote_db(&url, &key, &games, "auto_sync").await {
+        if let Ok(msg) = report_games_to_remote_db(&url, &key, &games, "auto_scan", None).await {
             push_log(&state, "INFO", format!("Auto-reported games to Online-DB: {}", msg));
         }
     }
@@ -1702,6 +1703,10 @@ async fn sync_game_database(
 #[tauri::command]
 async fn report_games_to_db(
     game_id: Option<String>,
+    works_status: Option<String>,
+    recommended_settings: Option<String>,
+    recommended_sr_preset: Option<String>,
+    notes: Option<String>,
     state: State<'_, AppState>,
 ) -> Result<String, String> {
     let config = state
@@ -1730,12 +1735,24 @@ async fn report_games_to_db(
         return Err("Kein Spiel zum Melden gefunden.".to_string());
     }
 
-    let source = if game_id.is_some() { "manual_card" } else { "manual_batch" };
+    let source = if game_id.is_some() { "user_report" } else { "auto_scan" };
+    let user_input = if game_id.is_some() {
+        Some(UserGameReportInput {
+            works_status,
+            recommended_settings,
+            recommended_sr_preset,
+            notes,
+        })
+    } else {
+        None
+    };
+
     let msg = report_games_to_remote_db(
         &config.game_db_url,
         &config.game_db_api_key,
         &target_games,
         source,
+        user_input,
     )
     .await?;
 

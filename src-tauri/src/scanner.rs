@@ -468,6 +468,27 @@ pub fn scan_game_directory(root: &Path) -> (Vec<DetectedDll>, Option<String>) {
 
             let full_path = entry.path();
             if let Some(dll_type) = DllType::from_filename(&lower) {
+                // If this DLL resides inside a Battle.net flavor folder (`_retail_`, `_classic_`, `_ptr_`, `_beta_`),
+                // verify that the flavor folder itself still contains a shipping game executable (.exe).
+                // This prevents uninstalled Battle.net flavors that only left behind a modified DLL from showing up.
+                let mut orphaned_bnet_flavor = false;
+                for anc in full_path.ancestors().skip(1) {
+                    if let Some(anc_name) = anc.file_name().map(|n| n.to_string_lossy().to_ascii_lowercase()) {
+                        if anc_name.starts_with('_') && anc_name.ends_with('_') {
+                            if find_primary_game_executable(anc).is_none() {
+                                orphaned_bnet_flavor = true;
+                            }
+                            break;
+                        }
+                    }
+                    if anc == root {
+                        break;
+                    }
+                }
+                if orphaned_bnet_flavor {
+                    continue;
+                }
+
                 let file_size = entry.metadata().map(|m| m.len()).unwrap_or(0);
                 let version =
                     extract_dll_version(full_path).unwrap_or_else(|| "Unknown".to_string());
@@ -670,15 +691,15 @@ pub fn has_valid_game_executable(root: &Path) -> bool {
         return true;
     }
 
-    // If root is a Battle.net or engine subfolder (e.g., `_retail_`, `_classic_`, `Binaries`, `Content`),
+    // If root is an engine binary subfolder (e.g., `Binaries`, `Bin64`, `x64`, `Content`),
     // check 2 levels in the parent directory as well.
+    // Note: Battle.net flavor folders (`_retail_`, `_classic_`, `_ptr_`, `_beta_`) always contain their own `.exe`;
+    // if `_retail_` has no `.exe` inside it, that flavor was uninstalled and only left behind a DLL backup.
     if let Some(folder_name) = root.file_name().map(|n| n.to_string_lossy().to_ascii_lowercase()) {
-        if (folder_name.starts_with('_') && folder_name.ends_with('_'))
-            || matches!(
-                folder_name.as_str(),
-                "binaries" | "bin" | "bin64" | "x64" | "content" | "win64" | "gamelaunchhelper"
-            )
-        {
+        if matches!(
+            folder_name.as_str(),
+            "binaries" | "bin" | "bin64" | "x64" | "content" | "win64" | "gamelaunchhelper"
+        ) {
             if let Some(parent) = root.parent() {
                 if has_exe_in_dir(parent, 2) {
                     return true;
