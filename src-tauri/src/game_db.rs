@@ -93,6 +93,23 @@ pub fn default_seed_game_db() -> Vec<GameProfileEntry> {
             ],
         },
         GameProfileEntry {
+            id: "global-rescue".to_string(),
+            title: "Global Rescue".to_string(),
+            steam_app_ids: vec!["2873660".to_string()],
+            match_names: vec!["global rescue".to_string(), "gr".to_string()],
+            match_executables: vec!["gr.exe".to_string()],
+            anticheat_status: "safe".to_string(),
+            supported_techs: vec!["DStorage".to_string()],
+            unsupported_techs: vec![],
+            warning_banner: None,
+            recommended_sr_preset: None,
+            recommended_rr_preset: None,
+            recommended_fg_preset: None,
+            recommended_settings: vec![
+                "DirectStorage: Active (dstorage.dll & dstoragecore.dll for fast map & tile streaming)".to_string(),
+            ],
+        },
+        GameProfileEntry {
             id: "overwatch-2".to_string(),
             title: "Overwatch 2".to_string(),
             steam_app_ids: vec!["2357570".to_string()],

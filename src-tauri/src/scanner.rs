@@ -144,12 +144,7 @@ pub fn scan_all_games(
         let p = PathBuf::from(&path_str);
         if p.exists() {
             let launcher = parse_launcher_label(&launcher_str);
-            let cover_url = app_id.as_ref().map(|id| {
-                format!(
-                    "https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/{}/library_600x900.jpg",
-                    id
-                )
-            });
+            let cover_url = app_id.as_ref().map(|id| resolve_steam_cover_url(id));
             add_root(DiscoveredGameRoot {
                 name,
                 path: p,
@@ -188,14 +183,9 @@ pub fn scan_all_games(
             let raw_name = root.name.clone();
             let (pretty_name, inferred_app_id) = prettify_game_name(&raw_name, &root.path);
             let app_id = root.app_id.or(inferred_app_id);
-            let cover_url = root.cover_url.or_else(|| {
-                app_id.as_ref().map(|aid| {
-                    format!(
-                        "https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/{}/library_600x900.jpg",
-                        aid
-                    )
-                })
-            });
+            let cover_url = root
+                .cover_url
+                .or_else(|| app_id.as_ref().map(|aid| resolve_steam_cover_url(aid)));
             let key_lower = pretty_name.to_ascii_lowercase();
             let raw_lower = raw_name.to_ascii_lowercase();
 
@@ -561,6 +551,26 @@ pub fn prettify_game_name(raw_name: &str, full_path: &Path) -> (String, Option<S
         }
     }
 
+    // Handle abbreviated Steam installdir names (e.g. `GR` -> `Global Rescue`, `MSFS2024` -> `Microsoft Flight Simulator 2024`)
+    match lower.as_str() {
+        "gr" | "global rescue" => {
+            return ("Global Rescue".to_string(), Some("2873660".to_string()));
+        }
+        "msfs2024" => {
+            return (
+                "Microsoft Flight Simulator 2024".to_string(),
+                Some("2537590".to_string()),
+            );
+        }
+        "seafarer" => {
+            return (
+                "Seafarer: The Ship Sim".to_string(),
+                Some("2582140".to_string()),
+            );
+        }
+        _ => {}
+    }
+
     let inferred_app_id = match lower.as_str() {
         "diablo iv" => Some("2344520".to_string()),
         "overwatch" | "overwatch 2" | "overwatch®" => Some("2357570".to_string()),
@@ -568,6 +578,8 @@ pub fn prettify_game_name(raw_name: &str, full_path: &Path) -> (String, Option<S
         "cyberpunk 2077" => Some("1091500".to_string()),
         "star wars outlaws" => Some("2842040".to_string()),
         "msfs2024" | "microsoft flight simulator 2024" => Some("2537590".to_string()),
+        "gr" | "global rescue" => Some("2873660".to_string()),
+        "how to fish" => Some("4001890".to_string()),
         _ => None,
     };
 
@@ -755,6 +767,91 @@ pub fn detect_steam_id_from_vdf() -> Option<String> {
     None
 }
 
+/// Resolves the best working Steam cover URL for `app_id`.
+/// Since 2024/2025, newer Steam games store assets under a 40-char SHA1 hash subdirectory
+/// (`.../steam/apps/<app_id>/<hash>/library_capsule.jpg` or `library_600x900.jpg`) instead of the flat root.
+/// This function inspects `<SteamPath>\appcache\librarycache\<app_id>` to discover the exact hash path if cached locally.
+pub fn resolve_steam_cover_url(app_id: &str) -> String {
+    let clean_id = app_id.trim();
+    let default_url = format!(
+        "https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/{}/library_600x900.jpg",
+        clean_id
+    );
+    if clean_id.is_empty() || !clean_id.chars().all(|c| c.is_ascii_digit()) {
+        return default_url;
+    }
+
+    let mut steam_roots = vec![
+        PathBuf::from("C:\\Program Files (x86)\\Steam"),
+        PathBuf::from("C:\\Program Files\\Steam"),
+        PathBuf::from("D:\\Steam"),
+    ];
+    #[cfg(windows)]
+    {
+        use winreg::enums::*;
+        use winreg::RegKey;
+        if let Ok(hkcu) = RegKey::predef(HKEY_CURRENT_USER).open_subkey("Software\\Valve\\Steam") {
+            if let Ok(p) = hkcu.get_value::<String, _>("SteamPath") {
+                steam_roots.insert(0, PathBuf::from(p));
+            }
+        }
+    }
+
+    for root in steam_roots {
+        let app_cache_dir = root.join("appcache").join("librarycache").join(clean_id);
+        if !app_cache_dir.is_dir() {
+            continue;
+        }
+        // If flat library_600x900.jpg exists directly in app_cache_dir, standard unhashed URL works
+        if app_cache_dir.join("library_600x900.jpg").is_file() {
+            return default_url;
+        }
+
+        let mut capsule_match: Option<String> = None;
+        let mut header_match: Option<String> = None;
+        let mut hero_match: Option<String> = None;
+
+        if let Ok(entries) = fs::read_dir(&app_cache_dir) {
+            for entry in entries.flatten() {
+                let sub_path = entry.path();
+                if !sub_path.is_dir() {
+                    continue;
+                }
+                let hash_dir = entry.file_name().to_string_lossy().to_string();
+                if hash_dir.len() < 20 {
+                    continue;
+                }
+                if let Ok(files) = fs::read_dir(&sub_path) {
+                    for f in files.flatten() {
+                        let fname = f.file_name().to_string_lossy().to_string();
+                        let fl = fname.to_ascii_lowercase();
+                        if !fl.ends_with(".jpg") && !fl.ends_with(".png") {
+                            continue;
+                        }
+                        let url = format!(
+                            "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{}/{}/{}",
+                            clean_id, hash_dir, fname
+                        );
+                        if fl.starts_with("library_600x900") || fl.starts_with("library_capsule") {
+                            capsule_match = Some(url);
+                        } else if fl.starts_with("library_header") || fl.starts_with("header") {
+                            header_match = Some(url);
+                        } else if fl.starts_with("library_hero") && !fl.contains("blur") {
+                            hero_match = Some(url);
+                        }
+                    }
+                }
+            }
+        }
+
+        if let Some(u) = capsule_match.or(header_match).or(hero_match) {
+            return u;
+        }
+    }
+
+    default_url
+}
+
 /// Normalizes a game title for Steam API / Owned Games matching (strips trademarks, punctuation, spaces, and leading "the").
 pub fn normalize_game_name_for_match(name: &str) -> String {
     let lower = name
@@ -886,12 +983,7 @@ fn discover_steam_games(drives: &[char]) -> Vec<DiscoveredGameRoot> {
 
                 let game_path = sa_dir.join("common").join(installdir);
                 if game_path.exists() {
-                    let cover_url = app_id.as_ref().map(|id| {
-                        format!(
-                            "https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/{}/library_600x900.jpg",
-                            id
-                        )
-                    });
+                    let cover_url = app_id.as_ref().map(|id| resolve_steam_cover_url(id));
                     results.push(DiscoveredGameRoot {
                         name,
                         path: game_path,

@@ -406,13 +406,20 @@ impl Database {
                 if g.cover_url.is_none() || is_steam_cover {
                     g.cover_url = Some("assets/icons/starcitizen_cover.png".to_string());
                 }
-            } else if g.cover_url.is_none() {
+            } else {
                 if let Some(ref aid) = g.app_id {
                     if !aid.is_empty() && aid.chars().all(|c| c.is_ascii_digit()) {
-                        g.cover_url = Some(format!(
-                            "https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/{}/library_600x900.jpg",
-                            aid
-                        ));
+                        let is_unhashed_default = g
+                            .cover_url
+                            .as_deref()
+                            .map(|u| {
+                                u.ends_with(&format!("/apps/{}/library_600x900.jpg", aid))
+                                    || u.ends_with(&format!("/apps/{}/header.jpg", aid))
+                            })
+                            .unwrap_or(true);
+                        if g.cover_url.is_none() || is_unhashed_default {
+                            g.cover_url = Some(crate::scanner::resolve_steam_cover_url(aid));
+                        }
                     }
                 }
             }
@@ -437,7 +444,19 @@ impl Database {
                     let skip_wrong_steam_cover = g.launcher == crate::models::LauncherType::Rsi
                         && trimmed_cover.contains("steamstatic.com");
                     if !trimmed_cover.is_empty() && !skip_wrong_steam_cover {
-                        g.cover_url = Some(trimmed_cover.to_string());
+                        // If override has a legacy unhashed URL for a newer Steam game, upgrade it via librarycache hash resolver
+                        let resolved = if let Some(ref aid) = g.app_id {
+                            if trimmed_cover.ends_with(&format!("/apps/{}/library_600x900.jpg", aid))
+                                || trimmed_cover.ends_with(&format!("/apps/{}/header.jpg", aid))
+                            {
+                                crate::scanner::resolve_steam_cover_url(aid)
+                            } else {
+                                trimmed_cover.to_string()
+                            }
+                        } else {
+                            trimmed_cover.to_string()
+                        };
+                        g.cover_url = Some(resolved);
                     }
                 }
                 if ov.custom_exe_path.is_some() {

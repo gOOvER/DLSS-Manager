@@ -1071,15 +1071,40 @@ async fn search_steam_store(query: String) -> Result<Vec<SteamSearchResult>, Str
                 .and_then(|v| v.as_str())
                 .unwrap_or_default()
                 .to_string();
+            let tiny_image = item
+                .get("tiny_image")
+                .and_then(|v| v.as_str())
+                .unwrap_or_default()
+                .to_string();
             if !app_id.is_empty() && !name.is_empty() {
-                let hero_url = format!(
-                    "https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/{}/library_600x900.jpg",
-                    app_id
-                );
-                let header_url = format!(
-                    "https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/{}/header.jpg",
-                    app_id
-                );
+                let resolved_cover = crate::scanner::resolve_steam_cover_url(&app_id);
+                let has_local_hash = !resolved_cover.ends_with("/library_600x900.jpg");
+                let tiny_has_hash = tiny_image.contains(&format!("/apps/{}/", app_id))
+                    && tiny_image
+                        .split(&format!("/apps/{}/", app_id))
+                        .nth(1)
+                        .map(|rest| rest.contains('/'))
+                        .unwrap_or(false);
+
+                let hero_url = if has_local_hash {
+                    resolved_cover.clone()
+                } else if tiny_has_hash {
+                    tiny_image.clone()
+                } else {
+                    resolved_cover
+                };
+
+                let header_url = if !tiny_image.is_empty() {
+                    tiny_image
+                } else if has_local_hash {
+                    hero_url.clone()
+                } else {
+                    format!(
+                        "https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/{}/header.jpg",
+                        app_id
+                    )
+                };
+
                 out.push(SteamSearchResult {
                     app_id,
                     name,
@@ -1091,6 +1116,105 @@ async fn search_steam_store(query: String) -> Result<Vec<SteamSearchResult>, Str
     }
 
     Ok(out)
+}
+
+/// Fetches the official cover image URL for a Steam `app_id` using:
+/// 1. Local `<SteamPath>\appcache\librarycache\<app_id>` (instant hashed portrait capsule/header)
+/// 2. Official Steam Web API `IStoreBrowseService/GetItems/v1` (`include_assets: true`) when `steam_api_key` is set
+/// 3. Steam Store `appdetails?appids=<app_id>` (`header_image` / `capsule_image`)
+pub async fn fetch_steam_artwork_via_api(
+    client: &reqwest::Client,
+    app_id: &str,
+    steam_api_key: &str,
+) -> String {
+    let clean_id = app_id.trim();
+    let local_resolved = crate::scanner::resolve_steam_cover_url(clean_id);
+    if !local_resolved.ends_with("/library_600x900.jpg") {
+        return local_resolved;
+    }
+
+    if let Ok(appid_num) = clean_id.parse::<u64>() {
+        let key_trimmed = steam_api_key.trim();
+        if !key_trimmed.is_empty() {
+            let input_json = format!(
+                r#"{{"ids":[{{"appid":{}}}],"context":{{"language":"english","country_code":"US"}},"data_request":{{"include_assets":true}}}}"#,
+                appid_num
+            );
+            let encoded_json: String = input_json
+                .bytes()
+                .map(|b| match b {
+                    b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' => {
+                        (b as char).to_string()
+                    }
+                    _ => format!("%{:02X}", b),
+                })
+                .collect();
+            let browse_url = format!(
+                "https://api.steampowered.com/IStoreBrowseService/GetItems/v1/?key={}&input_json={}",
+                key_trimmed, encoded_json
+            );
+            if let Ok(resp) = client.get(&browse_url).send().await {
+                if let Ok(json) = resp.json::<serde_json::Value>().await {
+                    if let Some(assets) = json
+                        .get("response")
+                        .and_then(|r| r.get("store_items"))
+                        .and_then(|arr| arr.as_array())
+                        .and_then(|arr| arr.first())
+                        .and_then(|item| item.get("assets"))
+                    {
+                        let fmt_str = assets
+                            .get("asset_url_format")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("store_item_assets/steam/apps/${FILENAME}");
+                        for field in &[
+                            "library_capsule_2x",
+                            "library_capsule",
+                            "hero_capsule",
+                            "header",
+                            "main_capsule",
+                        ] {
+                            if let Some(fname) = assets.get(*field).and_then(|v| v.as_str()) {
+                                if !fname.is_empty() {
+                                    let rel = fmt_str.replace("${FILENAME}", fname);
+                                    return format!(
+                                        "https://shared.akamai.steamstatic.com/{}",
+                                        rel.trim_start_matches('/')
+                                    );
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Fallback: Steam Store appdetails API
+        let details_url = format!(
+            "https://store.steampowered.com/api/appdetails?appids={}",
+            appid_num
+        );
+        if let Ok(resp) = client.get(&details_url).send().await {
+            if let Ok(json) = resp.json::<serde_json::Value>().await {
+                if let Some(data) = json
+                    .get(&clean_id.to_string())
+                    .and_then(|entry| entry.get("data"))
+                {
+                    if let Some(hdr) = data.get("header_image").and_then(|v| v.as_str()) {
+                        if !hdr.is_empty() {
+                            return hdr.to_string();
+                        }
+                    }
+                    if let Some(cap) = data.get("capsule_image").and_then(|v| v.as_str()) {
+                        if !cap.is_empty() {
+                            return cap.to_string();
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    local_resolved
 }
 
 #[tauri::command]
@@ -1117,6 +1241,34 @@ async fn save_game_display_override(
         .map(|g| g.clone())
         .unwrap_or_else(|_| detect_gpu_info());
 
+    let clean_app_id = custom_app_id.filter(|s| !s.trim().is_empty());
+    let mut clean_cover_url = custom_cover_url.filter(|s| !s.trim().is_empty());
+
+    if let Some(ref aid) = clean_app_id {
+        if aid.chars().all(|c| c.is_ascii_digit()) {
+            let needs_api_resolve = clean_cover_url
+                .as_deref()
+                .map(|u| {
+                    u.ends_with(&format!("/apps/{}/library_600x900.jpg", aid))
+                        || u.ends_with(&format!("/apps/{}/header.jpg", aid))
+                })
+                .unwrap_or(true);
+            if needs_api_resolve {
+                if let Ok(client) = reqwest::Client::builder()
+                    .user_agent("DLSS-Manager/1.0.0-beta.1")
+                    .timeout(std::time::Duration::from_secs(8))
+                    .build()
+                {
+                    clean_cover_url = Some(
+                        fetch_steam_artwork_via_api(&client, aid, &config.steam_api_key).await,
+                    );
+                } else {
+                    clean_cover_url = Some(crate::scanner::resolve_steam_cover_url(aid));
+                }
+            }
+        }
+    }
+
     let (games, backups) = {
         let db = state.db.lock().map_err(|e| e.to_string())?;
         let mut overrides = db.load_overrides().unwrap_or_default();
@@ -1125,18 +1277,8 @@ async fn save_game_display_override(
             ..Default::default()
         });
         ov.custom_name = custom_name.filter(|s| !s.trim().is_empty());
-        ov.custom_app_id = custom_app_id.filter(|s| !s.trim().is_empty());
-        ov.custom_cover_url = custom_cover_url.filter(|s| !s.trim().is_empty());
-        if ov.custom_cover_url.is_none() {
-            if let Some(ref aid) = ov.custom_app_id {
-                if aid.chars().all(|c| c.is_ascii_digit()) {
-                    ov.custom_cover_url = Some(format!(
-                        "https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/{}/library_600x900.jpg",
-                        aid
-                    ));
-                }
-            }
-        }
+        ov.custom_app_id = clean_app_id;
+        ov.custom_cover_url = clean_cover_url;
         db.save_override(&ov).map_err(|e| e.to_string())?;
         (
             db.load_games().unwrap_or_default(),
@@ -1188,10 +1330,7 @@ async fn reset_game_display_override(
             g.cover_url = Some("assets/icons/starcitizen_cover.png".to_string());
         } else if let Some(id) = aid {
             g.app_id = Some(id.clone());
-            g.cover_url = Some(format!(
-                "https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/{}/library_600x900.jpg",
-                id
-            ));
+            g.cover_url = Some(crate::scanner::resolve_steam_cover_url(&id));
         }
         g.dlss_sr_preset = None;
         g.dlss_rr_preset = None;
@@ -1551,12 +1690,21 @@ async fn reresolve_games_via_steam_api(
             .as_ref()
             .map(|id| !id.is_empty() && id.chars().all(|c| c.is_ascii_digit()))
             .unwrap_or(false);
-        if has_valid_appid && g.cover_url.is_some() {
+        let has_hashed_cover = g
+            .cover_url
+            .as_deref()
+            .map(|u| !u.ends_with("/library_600x900.jpg") && !u.ends_with("/header.jpg"))
+            .unwrap_or(false);
+        if has_valid_appid && has_hashed_cover {
             continue;
         }
 
         let norm = normalize_game_name_for_match(&g.name);
-        let mut found: Option<(String, String)> = owned_map.get(&norm).cloned();
+        let mut found: Option<(String, String)> = if has_valid_appid {
+            Some((g.app_id.clone().unwrap_or_default(), g.name.clone()))
+        } else {
+            owned_map.get(&norm).cloned()
+        };
 
         // Fallback to Steam Store search API if not in owned games
         if found.is_none() {
@@ -1568,10 +1716,8 @@ async fn reresolve_games_via_steam_api(
         }
 
         if let Some((app_id, _official_name)) = found {
-            let hero_url = format!(
-                "https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/{}/library_600x900.jpg",
-                app_id
-            );
+            let hero_url =
+                fetch_steam_artwork_via_api(&client, &app_id, &config.steam_api_key).await;
             g.app_id = Some(app_id.clone());
             g.cover_url = Some(hero_url.clone());
             new_overrides.push(GameOverride {

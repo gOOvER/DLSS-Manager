@@ -11,6 +11,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Custom `DM` (DLSS Manager) Application Icon & Branding (`src-tauri/icons/`, `ui/assets/logo.png`):**
+  - Replaced the legacy `DU` icon with a custom high-contrast **DM** monogram icon across the Windows executable resource table (`icon.ico`, `dlss_manager.ico`), taskbar/window icon (`32x32.png`, `128x128.png`, `128x128@2x.png`, `icon.png`), in-app sidebar & Info page (`ui/assets/logo.png`), and the `dlssdb.goover.dev` web portal (`favicon.png`).
+- **Online Database Personal API Key & Community Game Reporting (`src-tauri/src/game_db.rs`, `ui/app.js`):**
+  - Added personal API key authentication (`dlss_live_...` via `X-API-Key` / `Bearer`) for syncing with `https://dlssdb.goover.dev/api/v1/games.json`.
+  - Added interactive **📤 Spiel an Online-DB melden** modal on game cards and in the Game Details view with a mandatory **Status toggle (`✅ Geht (Funktioniert)` / `❌ Geht nicht (Probleme / Blockiert)`)** and optional fields for recommended in-game settings, DLSS presets, and notes.
+  - Added optional automatic background game discovery reporting (`auto_report_games_to_db`) that skips already-known games to preserve Cloudflare D1 Free Tier write quotas.
+- **Steam Web API (`IStoreBrowseService/GetItems/v1` & `appdetails`) + Local `librarycache` Hashed Artwork Resolver:**
+  - Automatically resolves Valve's new 40-character SHA1 hashed store asset URLs (`.../steam/apps/<appid>/<sha1_hash>/library_capsule.jpg` & `header.jpg`) for 2025/2026 Steam games (such as **Global Rescue** `2873660`, **How to Fish** `4001890`, **Directive 8020** `2255370`, **City Transport Simulator 2026** `4148530`) via the official Steam Web API (`IStoreBrowseService/GetItems/v1` with `include_assets`, `storesearch`, and `appdetails`) as well as local `<SteamPath>\appcache\librarycache\<appid>` inspection.
+- **New & Updated Game Compatibility Profiles (`src-tauri/src/game_db.rs`):**
+  - Added **Global Rescue** (`2873660`, `GR.exe`, `DStorage`).
+  - Updated **Star Citizen** recommended setting to `Graphics Renderer: Vulkan`.
+  - Updated **Overwatch 2** (`2357570`) to include `FSR 3/4` and `XeSS` alongside `DLSS`.
+
+### Fixed
+- **Uninstalled Ghost Directory & Battle.net Sub-Flavor Filtering (`src-tauri/src/scanner.rs`, `src-tauri/src/database.rs`):**
+  - Filtered out uninstalled leftover game directories (such as an uninstalled Battle.net `Overwatch\_retail_` folder that only left behind an orphaned `nvngx_dlss.dll` without `Overwatch.exe`) by verifying that both the game root and any Battle.net flavor directory (`_retail_`, `_classic_`, `_ptr_`, `_beta_`) contain a valid shipping `.exe` executable.
+- **Steam Store Search Modal Preview Images (`search_steam_store`):**
+  - Fixed broken preview images for 2025/2026 Steam titles in the **✏️ Edit Display & Artwork** dialog by using hashed `tiny_image` / `IStoreBrowseService` asset URLs instead of legacy unhashed `/header.jpg` paths.
+
 ## [1.0.0-beta.1] - 2026-10-31
 
 ### Added
