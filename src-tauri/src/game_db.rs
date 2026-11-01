@@ -89,7 +89,7 @@ pub fn default_seed_game_db() -> Vec<GameProfileEntry> {
             recommended_settings: vec![
                 "Upscaling: DLSS (Quality or Balanced at 1440p/4K)".to_string(),
                 "NVIDIA DLSS Preset: Preset K (Transformer Gen 2 — sharper distant ship hulls & HUD MFD text)".to_string(),
-                "Graphics Renderer: DirectX 11 or Vulkan (Beta)".to_string(),
+                "Graphics Renderer: Vulkan".to_string(),
             ],
         },
         GameProfileEntry {
