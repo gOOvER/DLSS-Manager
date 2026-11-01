@@ -2153,44 +2153,62 @@ window.openEditDisplayModal = function (gameId) {
   const backdrop = document.getElementById("secondary-modal-backdrop");
   const modal = document.getElementById("secondary-modal-content");
   const de = isDe();
+  const isSteamGame =
+    String(game.launcher || "").toLowerCase() === "steam" || game.launcher_name === "Steam";
 
   modal.innerHTML = `
     <div class="modal-header">
       <div class="modal-header-info">
         <h3>✏️ ${de ? "Anzeige & Cover bearbeiten" : "Edit Display & Artwork"} — ${escapeHtml(game.name)}</h3>
         <div class="muted" style="font-size:0.76rem">${
-          de
-            ? "Suche im Steam-Store nach offiziellem Cover oder lege einen eigenen Anzeigenamen fest."
-            : "Search Steam for official cover art or set a custom display title."
+          isSteamGame
+            ? de
+              ? "Suche im Steam-Store nach offiziellem Cover oder lege einen eigenen Anzeigenamen fest."
+              : "Search Steam for official cover art or set a custom display title."
+            : de
+            ? "Lege einen eigenen Anzeigenamen oder eine eigene Cover-Bild-URL fest."
+            : "Set a custom display title or custom cover image URL."
         }</div>
       </div>
       <button class="btn btn-secondary btn-card-action" onclick="closeSecondaryModal()">✕ ${de ? "Schließen" : "Close"}</button>
     </div>
     <div class="modal-body" style="gap:14px">
-      <div class="preset-field">
-        <label>${de ? "Im Steam-Store nach offiziellem Cover & App-ID suchen" : "Search Steam Store for Official Cover & App ID"}</label>
-        <div style="display:flex;gap:8px">
-          <input type="text" id="edit-steam-query" class="toolbar-select" style="flex:1"
-                 value="${escapeHtml(game.name)}" placeholder="${de ? "z.B. Overwatch 2, Diablo IV, Cyberpunk 2077" : "e.g. Overwatch 2, Diablo IV, Cyberpunk 2077"}" />
-          <button class="btn btn-primary" onclick="runSteamStoreSearch()">🔎 ${de ? "Steam durchsuchen" : "Search Steam"}</button>
-        </div>
-      </div>
-      <div id="steam-search-results" class="steam-search-grid"></div>
+      ${
+        isSteamGame
+          ? `<div class="preset-field">
+               <label>${de ? "Im Steam-Store nach offiziellem Cover & App-ID suchen" : "Search Steam Store for Official Cover & App ID"}</label>
+               <div style="display:flex;gap:8px">
+                 <input type="text" id="edit-steam-query" class="toolbar-select" style="flex:1"
+                        value="${escapeHtml(game.name)}" placeholder="${de ? "z.B. Overwatch 2, Diablo IV, Cyberpunk 2077" : "e.g. Overwatch 2, Diablo IV, Cyberpunk 2077"}" />
+                 <button class="btn btn-primary" onclick="runSteamStoreSearch()">🔎 ${de ? "Steam durchsuchen" : "Search Steam"}</button>
+               </div>
+             </div>
+             <div id="steam-search-results" class="steam-search-grid"></div>`
+          : ""
+      }
 
       <div class="preset-field">
         <label>${de ? "Anzeigename" : "Display Name"}</label>
         <input type="text" id="edit-custom-name" class="toolbar-select" value="${escapeHtml(game.name)}" />
       </div>
-      <div class="preset-select-grid">
-        <div class="preset-field">
-          <label>${de ? "Steam App-ID (für Hero- & Cover-Artwork)" : "Steam App ID (for Hero & Portrait Artwork)"}</label>
-          <input type="text" id="edit-custom-appid" class="toolbar-select" value="${escapeHtml(game.app_id || "")}" placeholder="z.B. 2357570" />
-        </div>
-        <div class="preset-field">
-          <label>${de ? "Eigene Cover-Bild-URL (Optional)" : "Custom Cover Image URL (Optional)"}</label>
-          <input type="text" id="edit-custom-cover" class="toolbar-select" value="${escapeHtml(game.cover_url || "")}" placeholder="https://..." />
-        </div>
-      </div>
+      ${
+        isSteamGame
+          ? `<div class="preset-select-grid">
+               <div class="preset-field">
+                 <label>${de ? "Steam App-ID (für Hero- & Cover-Artwork)" : "Steam App ID (for Hero & Portrait Artwork)"}</label>
+                 <input type="text" id="edit-custom-appid" class="toolbar-select" value="${escapeHtml(game.app_id || "")}" placeholder="z.B. 2357570" />
+               </div>
+               <div class="preset-field">
+                 <label>${de ? "Eigene Cover-Bild-URL (Optional)" : "Custom Cover Image URL (Optional)"}</label>
+                 <input type="text" id="edit-custom-cover" class="toolbar-select" value="${escapeHtml(game.cover_url || "")}" placeholder="https://..." />
+               </div>
+             </div>`
+          : `<input type="hidden" id="edit-custom-appid" value="${escapeHtml(game.app_id || "")}" />
+             <div class="preset-field">
+               <label>${de ? "Eigene Cover-Bild-URL (Optional)" : "Custom Cover Image URL (Optional)"}</label>
+               <input type="text" id="edit-custom-cover" class="toolbar-select" value="${escapeHtml(game.cover_url || "")}" placeholder="https://..." />
+             </div>`
+      }
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="resetDisplayOverrideNow('${game.id}')">${de ? "Auf Standard zurücksetzen" : "Reset to Default"}</button>
@@ -2199,7 +2217,9 @@ window.openEditDisplayModal = function (gameId) {
   `;
 
   backdrop.style.display = "flex";
-  runSteamStoreSearch();
+  if (isSteamGame) {
+    runSteamStoreSearch();
+  }
 };
 
 window.runSteamStoreSearch = async function () {
