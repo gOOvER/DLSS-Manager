@@ -30,6 +30,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Filtered out uninstalled leftover game directories (such as an uninstalled Battle.net `Overwatch\_retail_` folder that only left behind an orphaned `nvngx_dlss.dll` without `Overwatch.exe`) by verifying that both the game root and any Battle.net flavor directory (`_retail_`, `_classic_`, `_ptr_`, `_beta_`) contain a valid shipping `.exe` executable.
 - **Steam Store Search Modal Preview Images (`search_steam_store`):**
   - Fixed broken preview images for 2025/2026 Steam titles in the **✏️ Edit Display & Artwork** dialog by using hashed `tiny_image` / `IStoreBrowseService` asset URLs instead of legacy unhashed `/header.jpg` paths.
+- **NVIDIA DRS DLSS Preset Persistence & `.exe` Profile Binding (`src-tauri/src/gpu_nvapi.rs`, `src-tauri/src/lib.rs`):**
+  - Bound per-game DLSS Preset overrides directly to the game's shipping `.exe` (`NvAPI_DRS_FindApplicationByName` `0xEEE566B2` & `NvAPI_DRS_CreateApplication` `0x4347A9DE`) so DLSS Manager targets the exact same `nvdrsdb.bin` driver profile used by the NVIDIA driver and NVIDIA App.
+  - Added automatic DLSS Preset re-enforcement on **DLSS Manager startup** (`get_initial_state`) and **immediately before launching any game** (`launch_game_cmd`), ensuring that GeForce driver updates or NVIDIA App background optimizations do not permanently reset configured presets.
 
 ## [1.0.0-beta.1] - 2026-10-31
 

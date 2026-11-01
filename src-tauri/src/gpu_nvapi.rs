@@ -423,6 +423,27 @@ pub fn apply_nvapi_dlss_presets(
             num_of_settings: u32,
         }
 
+        #[repr(C)]
+        struct NvDrsApplicationV1 {
+            version: u32,
+            is_predefined: u32,
+            app_name: [u16; NVDRS_UNICODE_STRING_MAX],
+            user_friendly_name: [u16; NVDRS_UNICODE_STRING_MAX],
+            launcher: [u16; NVDRS_UNICODE_STRING_MAX],
+        }
+
+        fn encode_wide(input: &str) -> [u16; NVDRS_UNICODE_STRING_MAX] {
+            let mut buf = [0u16; NVDRS_UNICODE_STRING_MAX];
+            for (i, u) in input
+                .encode_utf16()
+                .take(NVDRS_UNICODE_STRING_MAX - 1)
+                .enumerate()
+            {
+                buf[i] = u;
+            }
+            buf
+        }
+
         fn make_dword_setting(id: u32, val: u32) -> NvDrsSetting {
             let mut s = NvDrsSetting {
                 version: (std::mem::size_of::<NvDrsSetting>() as u32) | (1 << 16),
@@ -467,6 +488,17 @@ pub fn apply_nvapi_dlss_presets(
                 unsafe extern "C" fn(*mut c_void, *const u16, *mut *mut c_void) -> c_int;
             type DrsCreateProfileFn =
                 unsafe extern "C" fn(*mut c_void, *const NvDrsProfile, *mut *mut c_void) -> c_int;
+            type DrsFindApplicationByNameFn = unsafe extern "C" fn(
+                *mut c_void,
+                *const u16,
+                *mut *mut c_void,
+                *mut NvDrsApplicationV1,
+            ) -> c_int;
+            type DrsCreateApplicationFn = unsafe extern "C" fn(
+                *mut c_void,
+                *mut c_void,
+                *mut NvDrsApplicationV1,
+            ) -> c_int;
             type DrsSetSettingFn =
                 unsafe extern "C" fn(*mut c_void, *mut c_void, *mut NvDrsSetting) -> c_int;
 
@@ -478,6 +510,8 @@ pub fn apply_nvapi_dlss_presets(
             let base_prof_ptr = query(0xDA84_66A0);
             let find_prof_ptr = query(0x7E4A_9A0B);
             let create_prof_ptr = query(0xCC17_6068);
+            let find_app_ptr = query(0xEEE5_66B2);
+            let create_app_ptr = query(0x4347_A9DE);
             let set_setting_ptr = query(0x577D_D202);
 
             if init_ptr.is_null()
@@ -513,26 +547,71 @@ pub fn apply_nvapi_dlss_presets(
             }
 
             let mut h_profile: *mut c_void = std::ptr::null_mut();
-            if let Some(gname) = game_name {
-                if !find_prof_ptr.is_null() {
-                    let find_prof: DrsFindProfileByNameFn = std::mem::transmute(find_prof_ptr);
-                    let mut wide_name = [0u16; NVDRS_UNICODE_STRING_MAX];
-                    for (i, u) in gname.encode_utf16().take(NVDRS_UNICODE_STRING_MAX - 1).enumerate()
-                    {
-                        wide_name[i] = u;
-                    }
-                    let _ = find_prof(h_session, wide_name.as_ptr(), &mut h_profile);
-                    if h_profile.is_null() && !create_prof_ptr.is_null() {
-                        let create_prof: DrsCreateProfileFn = std::mem::transmute(create_prof_ptr);
-                        let prof_info = NvDrsProfile {
-                            version: (std::mem::size_of::<NvDrsProfile>() as u32) | (1 << 16),
-                            profile_name: wide_name,
-                            gpu_support: 1,
-                            is_predefined: 0,
-                            num_of_apps: 0,
-                            num_of_settings: 0,
-                        };
-                        let _ = create_prof(h_session, &prof_info, &mut h_profile);
+            let clean_exe_filename: Option<String> = exe_name
+                .map(|s| s.trim())
+                .filter(|s| !s.is_empty())
+                .and_then(|s| {
+                    std::path::Path::new(s)
+                        .file_name()
+                        .map(|n| n.to_string_lossy().to_lowercase())
+                });
+
+            // 1. Prefer finding NVIDIA's official driver profile bound to the game's .exe (same profile used by NVIDIA App)
+            if let Some(ref exe_file) = clean_exe_filename {
+                if !find_app_ptr.is_null() {
+                    let find_app: DrsFindApplicationByNameFn = std::mem::transmute(find_app_ptr);
+                    let wide_exe = encode_wide(exe_file);
+                    let mut app_info = NvDrsApplicationV1 {
+                        version: (std::mem::size_of::<NvDrsApplicationV1>() as u32) | (1 << 16),
+                        is_predefined: 0,
+                        app_name: [0u16; NVDRS_UNICODE_STRING_MAX],
+                        user_friendly_name: [0u16; NVDRS_UNICODE_STRING_MAX],
+                        launcher: [0u16; NVDRS_UNICODE_STRING_MAX],
+                    };
+                    let _ = find_app(
+                        h_session,
+                        wide_exe.as_ptr(),
+                        &mut h_profile,
+                        &mut app_info,
+                    );
+                }
+            }
+
+            // 2. Fallback: find or create profile by game name, and bind the .exe to it if newly created
+            if h_profile.is_null() {
+                if let Some(gname) = game_name {
+                    if !find_prof_ptr.is_null() {
+                        let find_prof: DrsFindProfileByNameFn = std::mem::transmute(find_prof_ptr);
+                        let wide_name = encode_wide(gname);
+                        let _ = find_prof(h_session, wide_name.as_ptr(), &mut h_profile);
+                        if h_profile.is_null() && !create_prof_ptr.is_null() {
+                            let create_prof: DrsCreateProfileFn =
+                                std::mem::transmute(create_prof_ptr);
+                            let prof_info = NvDrsProfile {
+                                version: (std::mem::size_of::<NvDrsProfile>() as u32) | (1 << 16),
+                                profile_name: wide_name,
+                                gpu_support: 1,
+                                is_predefined: 0,
+                                num_of_apps: 0,
+                                num_of_settings: 0,
+                            };
+                            let _ = create_prof(h_session, &prof_info, &mut h_profile);
+                            if !h_profile.is_null() && !create_app_ptr.is_null() {
+                                if let Some(ref exe_file) = clean_exe_filename {
+                                    let create_app: DrsCreateApplicationFn =
+                                        std::mem::transmute(create_app_ptr);
+                                    let mut app_info = NvDrsApplicationV1 {
+                                        version: (std::mem::size_of::<NvDrsApplicationV1>() as u32)
+                                            | (1 << 16),
+                                        is_predefined: 0,
+                                        app_name: encode_wide(exe_file),
+                                        user_friendly_name: wide_name,
+                                        launcher: [0u16; NVDRS_UNICODE_STRING_MAX],
+                                    };
+                                    let _ = create_app(h_session, h_profile, &mut app_info);
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -566,7 +645,6 @@ pub fn apply_nvapi_dlss_presets(
             let _ = destroy_sess(h_session);
         }
 
-        let _ = exe_name;
         Ok(format!(
             "Applied NVIDIA DRS DLSS Presets (SR: {}, RR: {}, FG: {})",
             sr_preset, rr_preset, fg_preset

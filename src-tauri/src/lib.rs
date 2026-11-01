@@ -188,10 +188,69 @@ async fn get_initial_state(state: State<'_, AppState>) -> Result<InitialPayload,
 
     let (games, backups) = {
         let db = state.db.lock().map_err(|e| e.to_string())?;
-        let g = db.load_games().unwrap_or_default();
+        let mut g = db.load_games().unwrap_or_default();
+        db.apply_overrides_and_config(&mut g, &config);
         let b = db.load_backups().unwrap_or_default();
         (g, b)
     };
+
+    // Auto-enforce saved Global & Per-Game NVIDIA DRS DLSS Presets on startup
+    // (protects against GeForce Driver updates or NVIDIA App optimization resets)
+    if gpu.vendor.eq_ignore_ascii_case("NVIDIA") {
+        let _ = apply_nvapi_dlss_presets(
+            None,
+            None,
+            &config.global_dlss_preset,
+            &config.global_dlss_rr_preset,
+            &config.global_dlss_fg_preset,
+        );
+        let mut enforced_games = 0usize;
+        for g in &games {
+            let has_override = g.dlss_sr_preset.is_some()
+                || g.dlss_rr_preset.is_some()
+                || g.dlss_fg_preset.is_some();
+            if has_override {
+                let resolved_exe = g
+                    .custom_exe_path
+                    .clone()
+                    .filter(|s| !s.trim().is_empty())
+                    .or_else(|| {
+                        find_primary_game_executable(Path::new(&g.path))
+                            .map(|p| p.to_string_lossy().to_string())
+                    });
+                let sr = g
+                    .dlss_sr_preset
+                    .as_deref()
+                    .unwrap_or(&config.global_dlss_preset);
+                let rr = g
+                    .dlss_rr_preset
+                    .as_deref()
+                    .unwrap_or(&config.global_dlss_rr_preset);
+                let fg = g
+                    .dlss_fg_preset
+                    .as_deref()
+                    .unwrap_or(&config.global_dlss_fg_preset);
+                let _ = apply_nvapi_dlss_presets(
+                    Some(&g.name),
+                    resolved_exe.as_deref(),
+                    sr,
+                    rr,
+                    fg,
+                );
+                enforced_games += 1;
+            }
+        }
+        if enforced_games > 0 {
+            push_log(
+                &state,
+                "INFO",
+                format!(
+                    "Auto-enforced NVIDIA DRS DLSS presets (Global + {} per-game profile(s)).",
+                    enforced_games
+                ),
+            );
+        }
+    }
 
     push_log(
         &state,
@@ -607,7 +666,7 @@ async fn restore_backup(
         .map(|g| g.clone())
         .unwrap_or_else(|_| detect_gpu_info());
 
-    let (mut games, backups) = {
+    let (games, backups) = {
         let db = state.db.lock().map_err(|e| e.to_string())?;
         (
             db.load_games().unwrap_or_default(),
@@ -663,7 +722,7 @@ async fn restore_all_for_game(
         .map(|g| g.clone())
         .unwrap_or_else(|_| detect_gpu_info());
 
-    let (mut games, backups) = {
+    let (games, backups) = {
         let db = state.db.lock().map_err(|e| e.to_string())?;
         (
             db.load_games().unwrap_or_default(),
@@ -731,7 +790,7 @@ async fn restore_tech_group_for_game(
         .map(|g| g.clone())
         .unwrap_or_else(|_| detect_gpu_info());
 
-    let (mut games, backups) = {
+    let (games, backups) = {
         let db = state.db.lock().map_err(|e| e.to_string())?;
         (
             db.load_games().unwrap_or_default(),
@@ -884,6 +943,40 @@ async fn launch_game_cmd(
         .iter_mut()
         .find(|g| g.id == game_id)
         .ok_or_else(|| format!("Game not found: {}", game_id))?;
+
+    // Re-enforce NVIDIA DRS DLSS presets right before launching the game
+    // so NVIDIA App background optimizations cannot override user settings
+    if let Ok(gpu) = state.gpu.lock() {
+        if gpu.vendor.eq_ignore_ascii_case("NVIDIA") {
+            let resolved_exe = game
+                .custom_exe_path
+                .clone()
+                .filter(|s| !s.trim().is_empty())
+                .or_else(|| {
+                    find_primary_game_executable(Path::new(&game.path))
+                        .map(|p| p.to_string_lossy().to_string())
+                });
+            let sr = game
+                .dlss_sr_preset
+                .as_deref()
+                .unwrap_or(&config.global_dlss_preset);
+            let rr = game
+                .dlss_rr_preset
+                .as_deref()
+                .unwrap_or(&config.global_dlss_rr_preset);
+            let fg = game
+                .dlss_fg_preset
+                .as_deref()
+                .unwrap_or(&config.global_dlss_fg_preset);
+            let _ = apply_nvapi_dlss_presets(
+                Some(&game.name),
+                resolved_exe.as_deref(),
+                sr,
+                rr,
+                fg,
+            );
+        }
+    }
 
     // 1. Custom exe override
     if let Some(ref exe) = game.custom_exe_path {
@@ -1311,7 +1404,7 @@ async fn reset_game_display_override(
         .map(|g| g.clone())
         .unwrap_or_else(|_| detect_gpu_info());
 
-    let (mut games, backups) = {
+    let (games, backups) = {
         let db = state.db.lock().map_err(|e| e.to_string())?;
         let _ = db.delete_override(&game_id);
         (
@@ -1367,7 +1460,7 @@ async fn save_game_dlss_presets(
         .map(|g| g.clone())
         .unwrap_or_else(|_| detect_gpu_info());
 
-    let (games, backups, game_name_opt) = {
+    let (games, backups, game_name_opt, game_path_opt) = {
         let db = state.db.lock().map_err(|e| e.to_string())?;
         let mut overrides = db.load_overrides().unwrap_or_default();
         let mut ov = overrides.remove(&game_id).unwrap_or(GameOverride {
@@ -1381,18 +1474,26 @@ async fn save_game_dlss_presets(
         db.save_override(&ov).map_err(|e| e.to_string())?;
 
         let g_list = db.load_games().unwrap_or_default();
-        let gname = g_list
-            .iter()
-            .find(|g| g.id == game_id)
-            .map(|g| g.name.clone());
+        let matched_game = g_list.iter().find(|g| g.id == game_id);
+        let gname = matched_game.map(|g| g.name.clone());
+        let gpath = matched_game.map(|g| g.path.clone());
         let b_list = db.load_backups().unwrap_or_default();
-        (g_list, b_list, gname)
+        (g_list, b_list, gname, gpath)
     };
 
     if gpu.vendor.eq_ignore_ascii_case("NVIDIA") {
+        let resolved_exe = custom_exe_path
+            .clone()
+            .filter(|s| !s.trim().is_empty())
+            .or_else(|| {
+                game_path_opt.and_then(|p| {
+                    find_primary_game_executable(Path::new(&p))
+                        .map(|exe| exe.to_string_lossy().to_string())
+                })
+            });
         let msg = apply_nvapi_dlss_presets(
             game_name_opt.as_deref(),
-            custom_exe_path.as_deref(),
+            resolved_exe.as_deref(),
             &sr_preset,
             &rr_preset,
             &fg_preset,
