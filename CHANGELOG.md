@@ -12,8 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- **Custom `DM` (DLSS Manager) Application Icon & Branding (`src-tauri/icons/`, `ui/assets/logo.png`):**
-  - Replaced the legacy `DU` icon with a custom high-contrast **DM** monogram icon across the Windows executable resource table (`icon.ico`, `dlss_manager.ico`), taskbar/window icon (`32x32.png`, `128x128.png`, `128x128@2x.png`, `icon.png`), in-app sidebar & Info page (`ui/assets/logo.png`), and the `dlssdb.goover.dev` web portal (`favicon.png`).
+- **Custom `DM` (DLSS Manager) Application Icon & Branding (`src-tauri/icons/`, `ui/index.html`, `ui/assets/logo.png`):**
+  - Replaced the legacy `DU` icon with a custom high-contrast **DM** monogram icon across the Windows executable resource table (`icon.ico`, `dlss_manager.ico`), taskbar/window icon (`32x32.png`, `128x128.png`, `128x128@2x.png`, `icon.png`), in-app sidebar & Info page (embedded directly as an inline Base64 PNG in `ui/index.html` plus `ui/assets/logo.png`), and the `dlssdb.goover.dev` web portal (`favicon.png`).
 - **Online Database Personal API Key & Community Game Reporting (`src-tauri/src/game_db.rs`, `ui/app.js`):**
   - Added personal API key authentication (`dlss_live_...` via `X-API-Key` / `Bearer`) for syncing with `https://dlssdb.goover.dev/api/v1/games.json`.
   - Added interactive **📤 Spiel an Online-DB melden** modal on game cards and in the Game Details view with a mandatory **Status toggle (`✅ Geht (Funktioniert)` / `❌ Geht nicht (Probleme / Blockiert)`)** and optional fields for recommended in-game settings, DLSS presets, and notes.

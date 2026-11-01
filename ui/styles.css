@@ -54,9 +54,13 @@ body {
 }
 
 .brand-logo {
-  width: 42px;
-  height: 42px;
-  border-radius: 10px;
+  width: 44px;
+  height: 44px;
+  border-radius: 11px;
+  object-fit: cover;
+  flex-shrink: 0;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(118, 185, 0, 0.35);
 }
 
 .brand-text h1 {
