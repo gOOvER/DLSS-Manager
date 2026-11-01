@@ -14,10 +14,10 @@ jobs:
     steps:
     - uses: actions/checkout@v7
 
-    - name: Set up uv with Python 3.14.7 (free-threaded)
+    - name: Set up uv with Python 3.15 (free-threaded)
       uses: astral-sh/setup-uv@v7
       with:
-        python-version: "3.14.7+freethreaded"
+        python-version: "3.15+freethreaded"
         enable-cache: true
 
     - name: Fetch download count and update README
@@ -32,7 +32,7 @@ jobs:
             page = 1
 
             while True:
-                url = f"https://api.github.com/repos/Recol/DLSS-Updater/releases?page={page}&per_page=100"
+                url = f"https://api.github.com/repos/gOOvER/DLSS-Manager/releases?page={page}&per_page=100"
                 headers = {"Authorization": f"token {os.environ['GITHUB_TOKEN']}"}
                 response = requests.get(url, headers=headers)
 

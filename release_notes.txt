@@ -1,3 +1,85 @@
+Version 1.0.0-beta.1 (2026-10-30) [BETA]:
+Added:
+  - Rebranded application to DLSS Manager (1.0.0-beta.1) while preserving AGPL-3.0
+    license and full upstream attribution to Recol (Deco).
+  - Native RSI Launcher / Star Citizen support:
+      Auto-detection of Roberts Space Industries library paths and StarCitizen/<Channel>
+      (LIVE, PTU, EPTU, TECH-PREVIEW, HOTFIX) game roots.
+      Dedicated RSI brand card, icon (rsi.png), and cyan-blue theme styling.
+  - Local offline disk cache fallback (whitelist_cache.csv) for the community
+    blacklist when offline or when GitHub is unreachable.
+  - FSR 4 support for Vulkan games and Radeon RX 6000 (RDNA 2) discrete GPUs
+    (merged from upstream 5.2.0).
+
+Changed:
+  - Updated AMD FSR to FidelityFX SDK 2.4.0 (Upscaling 4.1.2 DX12/Vulkan,
+    Frame Generation 4.0.2 DX12/Vulkan, Ray Regeneration 1.2.1, Loader 2.3.0.4555).
+  - Updated Flet UI framework to 1.0.5 and added free-threaded Python 3.15 support
+    alongside Python 3.14t, including conditional PyInstaller GIL flags.
+  - Improved 4-component DLL version comparison (major.minor.patch.build) so
+    versions like XeSS 2.0.2.68 compare accurately.
+  - Optimized SQLite bulk operations (chunked IN clauses, temporary FTS5 trigger
+    drop + single rebuild on bulk Steam app list imports) and lazy anyio lock initialization.
+  - Cached release notes in memory after first load to avoid repeated disk reads.
+
+Fixed:
+  - Restoring a game after an FSR 4 upgrade now restores the original FidelityFX
+    DLL instead of leaving the game without FSR.
+  - Corrected GPU architecture detection for Radeon RX 6400 / 6500 XT (Navi 24)
+    and Radeon RX 7600M XT.
+  - Prevented concurrent bulk scan/update runs from overlapping and added
+    generation-guarded cancellation for progressive card/backup loading.
+  - Fixed admin elevation argument quoting on Windows using subprocess.list2cmdline.
+
+Security:
+  - Enforced strict filename/path-traversal validation and SHA-256 verification
+    for DLL downloads and self-update assets.
+  - Enforced HTTPS-only download URLs pinned to the official repository path.
+  - Replaced cmd.exe shell invocation in WSL2 URL opener with rundll32.exe
+    url.dll,FileProtocolHandler.
+
+================================================================================
+LEGACY CHANGELOG (DLSS Updater <= 5.2.0 - Upstream Release History by Recol)
+================================================================================
+Version 5.2.0:
+Added:
+  - FSR 4 now comes to Vulkan games. A Vulkan game that ships only FSR 3.1
+    gets the same FSR 4 upgrade DirectX 12 games already had: the new loader
+    goes in under the game's existing FidelityFX file name, with the Vulkan
+    upscaling and frame generation DLLs alongside it. It is all-or-nothing,
+    and Restore takes the game back to exactly how it was.
+  - FSR 4 upgrades now work on Radeon RX 6000 (RDNA 2) GPUs. AMD added RX 6000
+    support in FSR Upscaling 4.1.2, so FSR 3.1 games on those cards now get the
+    upgrade instead of being skipped. RDNA 2 integrated graphics (Ryzen 6000,
+    Steam Deck and similar) are still skipped, since AMD doesn't list them as
+    supported.
+
+Changed:
+  - Updated AMD FSR to FidelityFX SDK 2.4.0:
+      FSR Upscaling 4.1.1 -> 4.1.2 (DX12 and, new, Vulkan)
+      FSR Frame Generation 4.0.1 -> 4.0.2 (DX12 and, new, Vulkan)
+      FSR Ray Regeneration 1.2.0 -> 1.2.1
+      FSR Loader 2.3.0.2740 -> 2.3.0.4555, plus the new Vulkan loader 1.0.2
+      FSR Radiance Caching 0.9.0 (preview, still opt-in) rebuilt with the SDK
+  - Updated the UI framework (Flet) from 1.0.2 to 1.0.5. Among its fixes, the
+    app no longer turns off HDR or dims external monitors on Windows while it
+    is open, and controls keep their focus and scroll position when something
+    above them is shown or hidden.
+  - Updated the other bundled libraries to their latest releases (msgpack,
+    platformdirs, winloop, multidict, qh3, urllib3-future, certifi, tzdata).
+
+Fixed:
+  - Restoring a game after an FSR 4 upgrade left it with no FSR at all. The
+    upgrade replaced the game's original FidelityFX DLL without keeping a
+    backup, so Restore removed the new effect DLLs and left the new loader with
+    nothing to load. The original is now always backed up, and Restore puts
+    it back. A game upgraded by an earlier version has no such backup: use
+    your launcher's "verify files" option to get its original FSR back.
+  - Radeon RX 6400 / 6500 XT (and the other Navi 24 cards) were detected as
+    RDNA 3, and the Radeon RX 7600M XT as an older GPU. Both are now
+    identified correctly, which also corrects the GPU line in the Proton
+    upscaler panel on Linux.
+
 Version 5.1.2:
 Security:
   - Updated the libraries the app ships with to their latest releases,

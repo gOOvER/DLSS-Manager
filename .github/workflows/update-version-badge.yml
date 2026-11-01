@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - dlss_updater/version.py
+      - src-tauri/Cargo.toml
   workflow_dispatch:
 
 jobs:
@@ -15,18 +15,17 @@ jobs:
       contents: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
 
-      - name: Read version from version.py
+      - name: Read version from Cargo.toml
         id: get_version
         run: |
-          VERSION=$(grep -oP '(?<=__version__ = ")[^"]+' dlss_updater/version.py)
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          VERSION=$(grep -m1 -oP '^version\s*=\s*"\K[^"]+' src-tauri/Cargo.toml)
+          echo "VERSION=${VERSION//-/--}" >> $GITHUB_ENV
 
       - name: Generate version badge
         run: |
-          VERSION=${{ env.VERSION }}
-          curl -o version.svg "https://img.shields.io/badge/version-$VERSION-blue"
+          curl -fsSL -o version.svg "https://img.shields.io/badge/version-${VERSION}-blue"
 
       - name: Commit version badge
         env:
@@ -38,10 +37,4 @@ jobs:
           if ! git diff --staged --quiet; then
             git commit -m "Update version badge to $VERSION"
             git push origin main
-          else
-            echo "Badge already up to date, nothing to commit"
           fi
-
-      - name: Debug
-        run: |
-          git remote -v

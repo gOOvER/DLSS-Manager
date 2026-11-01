@@ -18,22 +18,25 @@ jobs:
     
     - name: Get release info
       id: release_info
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GH_REPO: ${{ github.repository }}
       run: |
         $headers = @{
-            "Authorization" = "Bearer ${{ secrets.GITHUB_TOKEN }}"
+            "Authorization" = "Bearer $env:GH_TOKEN"
             "Accept" = "application/vnd.github.v3+json"
         }
-        $latest_release = Invoke-RestMethod -Uri "https://api.github.com/repos/${{ github.repository }}/releases/latest" -Headers $headers
+        $latest_release = Invoke-RestMethod -Uri "https://api.github.com/repos/$env:GH_REPO/releases/latest" -Headers $headers
         $version = $latest_release.tag_name -replace '^[vV]', ''
-        $msiUrl = "https://github.com/${{ github.repository }}/releases/download/$($latest_release.tag_name)/DLSS.Updater.$version.msi"
+        $msiUrl = "https://github.com/$env:GH_REPO/releases/download/$($latest_release.tag_name)/DLSS.Manager.$version.msi"
 
         # Download MSI to calculate hash and extract ProductCode
-        Invoke-WebRequest -Uri $msiUrl -OutFile "DLSS.Updater.msi"
-        $hash = (Get-FileHash -Path "DLSS.Updater.msi" -Algorithm SHA256).Hash
+        Invoke-WebRequest -Uri $msiUrl -OutFile "DLSS.Manager.msi"
+        $hash = (Get-FileHash -Path "DLSS.Manager.msi" -Algorithm SHA256).Hash
 
         # Extract ProductCode from MSI using COM
         $installer = New-Object -ComObject WindowsInstaller.Installer
-        $database = $installer.OpenDatabase("$PWD\DLSS.Updater.msi", 0)
+        $database = $installer.OpenDatabase("$PWD\DLSS.Manager.msi", 0)
         $view = $database.OpenView("SELECT Value FROM Property WHERE Property = 'ProductCode'")
         $view.Execute()
         $record = $view.Fetch()
@@ -49,29 +52,35 @@ jobs:
       
     - name: Build manifest files
       id: build_manifests
+      env:
+        VERSION: ${{ steps.release_info.outputs.VERSION }}
+        MSI_URL: ${{ steps.release_info.outputs.URL }}
+        HASH: ${{ steps.release_info.outputs.HASH }}
+        PRODUCT_CODE: ${{ steps.release_info.outputs.PRODUCT_CODE }}
+        TAG_NAME: ${{ steps.release_info.outputs.TAG_NAME }}
       run: |
-        $version = "${{ steps.release_info.outputs.VERSION }}"
-        $msiUrl = "${{ steps.release_info.outputs.URL }}"
-        $hash = "${{ steps.release_info.outputs.HASH }}"
-        $productCode = "${{ steps.release_info.outputs.PRODUCT_CODE }}"
-        $tagName = "${{ steps.release_info.outputs.TAG_NAME }}"
+        $version = $env:VERSION
+        $msiUrl = $env:MSI_URL
+        $hash = $env:HASH
+        $productCode = $env:PRODUCT_CODE
+        $tagName = $env:TAG_NAME
 
         # Create manifest directory
-        $manifestDir = "manifests/r/Recol/DLSSUpdater/$version"
+        $manifestDir = "manifests/g/gOOvER/DLSSManager/$version"
         New-Item -Path $manifestDir -ItemType Directory -Force
 
         # Create version manifest
-        $versionContent = "PackageIdentifier: Recol.DLSSUpdater`r`n"
+        $versionContent = "PackageIdentifier: gOOvER.DLSSManager`r`n"
         $versionContent += "PackageVersion: $version`r`n"
         $versionContent += "DefaultLocale: en-US`r`n"
         $versionContent += "ManifestType: version`r`n"
         $versionContent += "ManifestVersion: 1.6.0"
 
-        $versionPath = Join-Path $manifestDir "Recol.DLSSUpdater.yaml"
+        $versionPath = Join-Path $manifestDir "gOOvER.DLSSManager.yaml"
         Set-Content -Path $versionPath -Value $versionContent -NoNewline
 
         # Create installer manifest
-        $installerContent = "PackageIdentifier: Recol.DLSSUpdater`r`n"
+        $installerContent = "PackageIdentifier: gOOvER.DLSSManager`r`n"
         $installerContent += "PackageVersion: $version`r`n"
         $installerContent += "MinimumOSVersion: 10.0.0.0`r`n"
         $installerContent += "Platform:`r`n"
@@ -98,24 +107,24 @@ jobs:
         $installerContent += "ManifestType: installer`r`n"
         $installerContent += "ManifestVersion: 1.6.0"
 
-        $installerPath = Join-Path $manifestDir "Recol.DLSSUpdater.installer.yaml"
+        $installerPath = Join-Path $manifestDir "gOOvER.DLSSManager.installer.yaml"
         Set-Content -Path $installerPath -Value $installerContent -NoNewline
         
         # Create locale manifest
-        $localeContent = "PackageIdentifier: Recol.DLSSUpdater`r`n"
+        $localeContent = "PackageIdentifier: gOOvER.DLSSManager`r`n"
         $localeContent += "PackageVersion: $version`r`n"
         $localeContent += "PackageLocale: en-US`r`n"
-        $localeContent += "Publisher: Recol`r`n"
-        $localeContent += "PublisherUrl: https://github.com/Recol`r`n"
-        $localeContent += "PublisherSupportUrl: https://github.com/Recol/DLSS-Updater/issues`r`n"
-        $localeContent += "Author: Deco`r`n"
-        $localeContent += "PackageName: DLSS Updater`r`n"
-        $localeContent += "PackageUrl: https://github.com/Recol/DLSS-Updater`r`n"
+        $localeContent += "Publisher: gOOvER`r`n"
+        $localeContent += "PublisherUrl: https://github.com/gOOvER`r`n"
+        $localeContent += "PublisherSupportUrl: https://github.com/gOOvER/DLSS-Manager/issues`r`n"
+        $localeContent += "Author: gOOvER, Deco (Recol)`r`n"
+        $localeContent += "PackageName: DLSS Manager`r`n"
+        $localeContent += "PackageUrl: https://github.com/gOOvER/DLSS-Manager`r`n"
         $localeContent += "License: AGPL-3.0`r`n"
-        $localeContent += "LicenseUrl: https://github.com/Recol/DLSS-Updater/blob/main/LICENSE`r`n"
+        $localeContent += "LicenseUrl: https://github.com/gOOvER/DLSS-Manager/blob/main/LICENSE`r`n"
         $localeContent += "ShortDescription: A tool to update DLSS, XeSS, and DirectStorage DLLs for various games`r`n"
         $localeContent += "Description: |`r`n"
-        $localeContent += "  DLSS Updater is a utility that automatically updates DLSS (Deep Learning Super Sampling), XeSS (Intel Xe Super Sampling), and DirectStorage DLLs for games across multiple platforms.`r`n"
+        $localeContent += "  DLSS Manager is a utility that automatically updates DLSS (Deep Learning Super Sampling), XeSS (Intel Xe Super Sampling), and DirectStorage DLLs for games across multiple platforms.`r`n"
         $localeContent += "  `r`n"
         $localeContent += "  Note: This application requires administrative privileges to modify game files.`r`n"
         $localeContent += "Tags:`r`n"
@@ -124,12 +133,12 @@ jobs:
         $localeContent += "- gaming`r`n"
         $localeContent += "- xess`r`n"
         $localeContent += "- directstorage`r`n"
-        $localeContent += "ReleaseNotes: https://github.com/Recol/DLSS-Updater/releases/tag/$tagName`r`n"
-        $localeContent += "ReleaseNotesUrl: https://github.com/Recol/DLSS-Updater/releases/tag/$tagName`r`n"
+        $localeContent += "ReleaseNotes: https://github.com/gOOvER/DLSS-Manager/releases/tag/$tagName`r`n"
+        $localeContent += "ReleaseNotesUrl: https://github.com/gOOvER/DLSS-Manager/releases/tag/$tagName`r`n"
         $localeContent += "ManifestType: defaultLocale`r`n"
         $localeContent += "ManifestVersion: 1.6.0"
         
-        $localePath = Join-Path $manifestDir "Recol.DLSSUpdater.locale.en-US.yaml"
+        $localePath = Join-Path $manifestDir "gOOvER.DLSSManager.locale.en-US.yaml"
         Set-Content -Path $localePath -Value $localeContent -NoNewline
         
         # Save the manifest directory path for later steps
@@ -138,14 +147,17 @@ jobs:
     
     - name: Check for existing PR
       id: check_pr
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        REPO_OWNER: ${{ github.repository_owner }}
       run: |
         $headers = @{
-            "Authorization" = "Bearer ${{ secrets.GITHUB_TOKEN }}"
+            "Authorization" = "Bearer $env:GH_TOKEN"
             "Accept" = "application/vnd.github.v3+json"
         }
         
-        # Search for PRs
-        $searchUrl = "https://api.github.com/search/issues?q=repo:microsoft/winget-pkgs+is:pr+is:open+Recol.DLSSUpdater"
+        # Search for PRs authored by repository owner
+        $searchUrl = "https://api.github.com/search/issues?q=repo:microsoft/winget-pkgs+is:pr+is:open+author:$($env:REPO_OWNER)+gOOvER.DLSSManager"
         Write-Host "Searching for PRs at: $searchUrl"
         
         try {
@@ -155,14 +167,19 @@ jobs:
             if ($response.total_count -gt 0) {
                 $pr = $response.items | Select-Object -First 1
                 Write-Host "Found PR #$($pr.number): $($pr.title)"
-                echo "PR_NUMBER=$($pr.number)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-                echo "HAS_PR=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
                 
-                # Get the PR details to find the branch name
+                # Get the PR details to find and validate the branch name
                 $prDetailsUrl = "https://api.github.com/repos/microsoft/winget-pkgs/pulls/$($pr.number)"
                 $prDetails = Invoke-RestMethod -Uri $prDetailsUrl -Headers $headers -Method Get
                 $branchName = $prDetails.head.ref
-                echo "PR_BRANCH=$branchName" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+                if ($branchName -match '^[A-Za-z0-9._/-]+$' -and $prDetails.head.repo.owner.login -eq $env:REPO_OWNER) {
+                    echo "PR_NUMBER=$($pr.number)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+                    echo "HAS_PR=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+                    echo "PR_BRANCH=$branchName" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+                } else {
+                    Write-Host "Ignoring untrusted PR branch or owner"
+                    echo "HAS_PR=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+                }
             } else {
                 Write-Host "No existing PR found"
                 echo "HAS_PR=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
@@ -177,22 +194,26 @@ jobs:
       if: steps.check_pr.outputs.HAS_PR == 'true'
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        REPO_OWNER: ${{ github.repository_owner }}
+        VERSION: ${{ steps.release_info.outputs.VERSION }}
+        MANIFEST_DIR: ${{ steps.build_manifests.outputs.MANIFEST_DIR }}
+        PR_BRANCH: ${{ steps.check_pr.outputs.PR_BRANCH }}
       run: |
-        $version = "${{ steps.release_info.outputs.VERSION }}"
-        $manifestDir = "${{ steps.build_manifests.outputs.MANIFEST_DIR }}"
-        $prBranch = "${{ steps.check_pr.outputs.PR_BRANCH }}"
+        $version = $env:VERSION
+        $manifestDir = $env:MANIFEST_DIR
+        $prBranch = $env:PR_BRANCH
         
         # Configure git
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
         git config --global user.name "github-actions[bot]"
         
         # Clone the fork and checkout the PR branch
-        git clone https://github.com/vedantmgoyal9/winget-pkgs.git winget-pkgs
+        git clone "https://github.com/$($env:REPO_OWNER)/winget-pkgs.git" winget-pkgs
         cd winget-pkgs
-        git checkout $prBranch
+        git checkout -- $prBranch
         
         # Create directory structure for the package version
-        $repoManifestDir = "manifests/r/Recol/DLSSUpdater/$version"
+        $repoManifestDir = "manifests/g/gOOvER/DLSSManager/$version"
         New-Item -Path $repoManifestDir -ItemType Directory -Force
         
         # Copy manifest files from the build step
@@ -200,18 +221,22 @@ jobs:
         
         # Commit and push changes
         git add .
-        git commit -m "Update Recol.DLSSUpdater to version $version"
+        git commit -m "Update gOOvER.DLSSManager to version $version"
         git push origin $prBranch
       shell: pwsh
     
     - name: Create new PR
       if: steps.check_pr.outputs.HAS_PR == 'false'
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
+        MANIFEST_DIR: ${{ steps.build_manifests.outputs.MANIFEST_DIR }}
       run: |
-        $manifestDir = "${{ steps.build_manifests.outputs.MANIFEST_DIR }}"
+        $manifestDir = $env:MANIFEST_DIR
 
         # Download wingetcreate
         $headers = @{
-            "Authorization" = "Bearer ${{ secrets.GITHUB_TOKEN }}"
+            "Authorization" = "Bearer $env:GH_TOKEN"
             "Accept" = "application/vnd.github.v3+json"
         }
         $latestRelease = Invoke-RestMethod -Uri "https://api.github.com/repos/microsoft/winget-create/releases/latest" -Headers $headers
@@ -219,5 +244,5 @@ jobs:
         Invoke-WebRequest -Uri $asset.browser_download_url -OutFile "wingetcreate.exe"
         
         # Submit the manifest using wingetcreate
-        .\wingetcreate.exe submit $manifestDir --token "${{ secrets.WINGET_TOKEN }}"
+        .\wingetcreate.exe submit $manifestDir --token $env:WINGET_TOKEN
       shell: pwsh

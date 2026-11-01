@@ -1,14 +1,14 @@
 $ErrorActionPreference = 'Stop'
 
 # Remove desktop shortcut if present
-$shortcutPath = Join-Path ([Environment]::GetFolderPath("Desktop")) "DLSS Updater.lnk"
+$shortcutPath = Join-Path ([Environment]::GetFolderPath("Desktop")) "DLSS Manager.lnk"
 if (Test-Path $shortcutPath) {
     Remove-Item $shortcutPath -Force
 }
 
 $packageArgs = @{
     packageName    = $env:ChocolateyPackageName
-    softwareName   = 'DLSS Updater*'
+    softwareName   = 'DLSS Manager*'
     fileType       = 'msi'
     silentArgs     = "/qn /norestart"
     validExitCodes = @(0, 3010, 1641)

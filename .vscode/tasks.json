@@ -1,0 +1,78 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Build DLSS Manager .exe Only (Fast Test Build)",
+      "type": "shell",
+      "command": "${env:USERPROFILE}\\.cargo\\bin\\cargo-tauri.exe",
+      "args": [
+        "build",
+        "--no-bundle"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/src-tauri"
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "focus": false
+      },
+      "problemMatcher": "$rustc"
+    },
+    {
+      "label": "Build Full Installers (.msi + .exe)",
+      "type": "shell",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}/build_rust_installer.ps1"
+      ],
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "focus": false
+      },
+      "problemMatcher": "$rustc"
+    },
+    {
+      "label": "Validate OnlineDB (api/v1/games.json)",
+      "type": "shell",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile",
+        "-Command",
+        "$db = Get-Content '../DLSS-Manager-OnlineDB/api/v1/games.json' -Raw | ConvertFrom-Json; Write-Host \"Validated $($db.games.Count) game profiles (Schema v$($db.schema_version))\" -ForegroundColor Green"
+      ],
+      "group": "test",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "focus": false
+      }
+    },
+    {
+      "label": "🚀 Push OnlineDB & DLSS-Manager to GitHub",
+      "type": "shell",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile",
+        "-Command",
+        "git -C '../DLSS-Manager-OnlineDB' add -A; git -C '../DLSS-Manager-OnlineDB' commit -m 'feat: update OnlineDB Worker & D1' 2>$null; git -C '../DLSS-Manager-OnlineDB' push origin main; git add -A; git commit -m 'feat: DLSS Manager v1.0.0-beta.1 Rust/Tauri & dlssdb.goover.dev' 2>$null; git push origin main"
+      ],
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "focus": true
+      }
+    }
+  ]
+}

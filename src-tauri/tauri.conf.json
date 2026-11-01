@@ -1,0 +1,52 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "DLSS Manager",
+  "version": "1.0.0-1",
+  "identifier": "io.github.goover.dlss-manager",
+  "build": {
+    "frontendDist": "../ui"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "title": "DLSS Manager",
+        "width": 1340,
+        "height": 860,
+        "minWidth": 1024,
+        "minHeight": 680,
+        "resizable": true,
+        "fullscreen": false,
+        "center": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["msi", "nsis"],
+    "publisher": "gOOvER (based on DLSS Updater by Recol)",
+    "copyright": "Copyright (C) 2024-2026 Recol (Deco), gOOvER. Licensed under AGPL-3.0-only.",
+    "category": "Game",
+    "shortDescription": "DLSS, FSR, XeSS, DirectStorage, and Streamline DLL Manager",
+    "longDescription": "Automatically detects and updates NVIDIA DLSS, AMD FSR, Intel XeSS, DirectStorage, and Streamline DLLs across Steam, Epic, GOG, Ubisoft, EA, Battle.net, Xbox, and RSI (Star Citizen) libraries.",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.ico",
+      "icons/icon.png"
+    ],
+    "windows": {
+      "wix": {
+        "language": "en-US"
+      },
+      "nsis": {
+        "installMode": "currentUser"
+      }
+    }
+  }
+}
+

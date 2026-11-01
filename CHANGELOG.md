@@ -1,0 +1,2093 @@
+# Changelog
+
+All notable changes to **DLSS Manager** will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+> [!NOTE]
+> **Beta Release Series:** **DLSS Manager** starts at version `1.0.0-beta.1`. All `1.0.0-beta.x` releases are currently designated as **Beta**.
+> Versions `5.2.0` and older listed at the bottom of this document belong to the **Legacy Changelog** of the upstream project ([DLSS Updater](https://github.com/Recol/DLSS-Updater) by Recol).
+
+## [Unreleased]
+
+## [1.0.0-beta.1] - 2026-10-31
+
+### Added
+- **Complete Rewrite in Rust + Tauri v2 (`dlss-manager`):**
+  - Replaced the legacy Python/Flet runtime (`~125 MB` installer) with a native **Rust + Tauri v2** desktop application (`~2.9 MB` NSIS `.exe` / `~3.9 MB` WiX `.msi` installer) with instant startup (`< 10 ms` initial state load).
+  - Multi-threaded game library scanner powered by **Rayon** (`src-tauri/src/scanner.rs`) scanning all mounted drives (`A:`–`Z:`), Windows Registry entries, Steam `libraryfolders.vdf` / `appmanifest_*.acf`, Epic `.item` manifests, GOG Galaxy, Ubisoft Connect, EA App / Origin, Battle.net, Xbox (`XboxGames`), RSI Launcher (`StarCitizen`), and legacy `config.toml` / `dlss_updater.db` configurations.
+- **Full Feature Parity with Python `v5.2.0` (`src-tauri/src/` & `ui/`):**
+  - **Card Context Menu (`⋮` & Right-Click):** Quick actions on every game card to update outdated DLLs, inspect technology groups, configure NVIDIA DLSS Presets, edit display title & cover art, launch the game (`steam://rungameid/` or auto-detected shipping `.exe`), open the installation directory in Windows Explorer, copy the path, or ignore/unignore the game.
+  - **Multi-Select / Batch Selection Mode (`☑ Select`):** Select multiple games via card checkboxes (`Select Outdated`, `Select All`, `Clear`) and run `⚡ Update Selected (N)` in one click.
+  - **Edit Display Dialog & Live Steam Store Artwork Search (`search_steam_store`):** Automatically converts Battle.net sub-flavor folders (e.g., `_retail_` under `Overwatch` -> `Overwatch 2` with official Steam cover art) and CamelCase folder names (`ForzaHorizon5` -> `Forza Horizon 5`), plus an interactive **Edit Display & Artwork** modal that queries the Steam Store API for official `library_hero.jpg` / `header.jpg` covers and persists overrides in SQLite (`game_overrides`).
+  - **Steam Web API Integration & Re-Resolution (`validate_and_save_steam_api`, `reresolve_games_via_steam_api`):** Collapsible Steam Web API card in the Games header and Settings to validate a Steam API key (`ISteamWebAPIUtil/GetSupportedAPIList`), auto-detect the user's 64-bit Steam ID from `<SteamPath>\config\loginusers.vdf`, and batch re-resolve missing App IDs & official cover art across all launchers via `IPlayerService/GetOwnedGames` + Steam Store search.
+  - **Dedicated `Info` & Diagnostics Page (`#view-info`):** Added a 5th sidebar view (`ℹ️ Info`) displaying version & license details (`v1.0.0-beta.1` without `"Rust"` suffix), hardware/storage diagnostics, one-click AppData / Cache / Backups folder openers, supported technology reference table, and inline release notes.
+  - **Global & Per-Game NVIDIA DLSS Preset Overrides (`nvapi64.dll` DRS):** Native FFI integration with NVIDIA's Driver Settings API (`nvapi_QueryInterface`) to configure DLSS Super Resolution (`Default`, `Latest`, `Preset J`, `Preset K`, `Preset L`, `Preset M`), Ray Reconstruction (`Default`, `Latest`, `Preset D`, `Preset F`), and Frame Generation (`Default`, `Latest`, `Preset A`, `Preset B`) globally and per game.
+  - **Technology Scope & Batch Update Checklist (`enabled_technologies`):** Enable or disable individual upscaler technologies (`DLSS`, `DLSS-G`, `DLSS-RR`, `DLSS 5`, `Streamline`, `DStorage`, `FSR 3/4`, `FSR VK`, `XeSS`, `XeSS-FG`, `XeLL`) in Settings or via the `Update All` scope checklist modal; disabled technologies stay visible and restorable in game details without triggering update badges.
+  - **Per-Technology Group Restore (`restore_tech_group_for_game`):** Restore a single technology group (e.g. only `DLSS` or only `Streamline`) inside the Game Details Modal in addition to full-game restore.
+  - **All-or-Nothing FSR 3.1 → FSR 4 Side-by-Side Upgrades & Restore (`update_game_dll`):** Upgrading `amd_fidelityfx_dx12.dll` or `amd_fidelityfx_vk.dll` on FSR 4-capable GPUs installs the FidelityFX loader under the game's existing filename alongside `amd_fidelityfx_upscaler_*.dll` and `amd_fidelityfx_framegeneration_*.dll` (`added_by_updater: true`), and `Restore` cleanly removes added companion DLLs while restoring the original monolith.
+  - **Known-Bad Build / Watermark Detection & DLSS 5 Neural Rendering (`nvngx_dlssnr.dll`):** Flags known watermarked dev builds (`DLSS 310.7`) for update even when version numbers match, and supports `nvngx_dlssnr.dll` (`DLSS 5`) on RTX 50 Blackwell GPUs.
+  - **Ignore List, Folder Blacklist Manager & `Hide Ignored` Toggle:** Ignored games never count toward `Needs Update` or `Update All`, can be toggled between dimmed and hidden directly from the Games status bar or Settings, and custom folder names can be blacklisted from scans.
+  - **Live Light / Dark Theme Switcher, Application Activity Logs & In-App Update Check:** Instant `[data-theme="light"]` / `[data-theme="dark"]` switching without restart, session log viewer (`📋 Logs`) with `INFO`/`WARN`/`ERROR` badges, Hub launcher folder explorer dialog, and GitHub release update check (`check_app_update`).
+- **Hardware-Aware GPU Auto-Detection & Strict Update Filtering (`src-tauri/src/gpu_nvapi.rs`):**
+  - Automatic detection of **NVIDIA** (via native `nvml.dll` CUDA Compute Capability + Windows Display Class Registry), **AMD Radeon** (`RDNA 2 / 3 / 4`), and **Intel Arc / Xe** GPUs, prioritizing dedicated GPUs over integrated CPU graphics.
+  - Strict hardware capability filtering (`GpuInfo::supports_dll_type`): never offers incompatible updates that the detected GPU does not support (e.g. hides AMD FSR & Intel XeSS updates on NVIDIA RTX GPUs, hides NVIDIA DLSS / Streamline on AMD & Intel GPUs, and gates DLSS Frame Generation to RTX 40/50 Ada & Blackwell series).
+- **Hero-Card Games Library & Technology-Grouped UI (`ui/`):**
+  - Streamlined 4-view navigation (`Hub`, `Games`, `Backups`, `Settings`) removing the cluttered 15-file DLL Repository view.
+  - Grouped all upscaler binaries into concise **Technology Groups** across the Hub strip, Game Hero Cards, Game Details Modal, and Game-Grouped Backups view.
+  - Responsive flex truncation (`min-width: 0`, `overflow-x: hidden`, ellipsis with hover tooltips) in the Game Details Modal and Backups view so long installation paths or multi-DLL Streamline bundles never clip action buttons or cause horizontal scrollbars.
+  - Stable alphabetical default sorting (`Name A–Z`) so updating a game card updates its status in place (`✓ Up to date`) without shifting the card out from under the cursor, plus per-subfolder backup hashing for multi-binary games (e.g., `3DMark`, `Longvinter`) and automatic read-only attribute clearing before overwriting DLLs.
+  - Clean, fixed-geometry Hero Cards (`204px` Steam `library_hero.jpg` / `header.jpg` banner + bottom-weighted gradient scrim + `52px` fixed footer) matching the classic card layout without inline DLL list clutter.
+  - Interactive status filter chips (`All`, `Needs Update`, `Up to Date`, `Backups`, `Show/Hide Ignored`), launcher dropdown filter, sorting (`Name A–Z`, `Outdated First`, `Name Z–A`, `Most Technologies`), and grid density switcher (`S`, `M`, `L`).
+- **Star Citizen Integration (`LauncherType::Rsi` -> `"Star Citizen"`):**
+  - Renamed launcher label from `"RSI Launcher"` to **`"Star Citizen"`** and embedded the official Star Citizen icon (`ui/assets/icons/starcitizen.png`) and hero cover artwork (`ui/assets/icons/starcitizen_cover.png`).
+  - Automatic discovery of `StarCitizen` installations via `%APPDATA%\rsilauncher\logs\log.log` (`[Launcher::launch]` & path parsing) and across all drives and release channels (`LIVE`, `PTU`, `EPTU`, `TECH-PREVIEW`, `HOTFIX`, `4.0_PREVIEW`), fast targeted scanning of `Bin64\` + `EasyAntiCheat\` (skipping the 150+ GB `Data.p4k`, `user\`, and `logbackups\`), and direct launching via `RSI Launcher.exe`.
+- **Cloudflare Pages Online Game Compatibility & Settings Database (`src-tauri/src/game_db.rs` & `DLSS-Manager-OnlineDB`):**
+  - Offline-first online game profile database (`https://dlssdb.goover.dev/api/v1/games.json` with automatic fallback to `dlss-manager-onlinedb.pages.dev`, GitHub Raw, local sibling `DLSS-Manager-OnlineDB/api/v1/games.json`, and built-in seed profiles).
+  - Annotates scanned games in the Game Details Modal (`☁️ Game Compatibility & Recommended Settings DB`) with Anti-Cheat policies (`safe`, `signed_only`, `driver_override_only`, `blocked`), unsupported technology explanations (e.g., why `Star Citizen` compiles FSR 2 / TSR into `StarCitizen.exe` & `Data.p4k`), recommended in-game graphics settings, and 1-click **✨ Apply Recommended Presets**.
+- **Native Win32 PE Version Parser & SQLite WAL Storage:**
+  - Zero-dependency Win32 `GetFileVersionInfoW` + binary `VS_FIXEDFILEINFO` (`0xFEEF04BD`) version parser (`src-tauri/src/pe_version.rs`) with automatic DLSS 4.5 Preset (`J`/`K`/`M`) detection.
+  - Embedded `rusqlite` (`bundled` SQLite with `WAL` + `FTS5`) database (`%LOCALAPPDATA%\Recol\DLSS-Updater\dlss_manager_v2.db`) and automatic SHA-256 verified DLL caching & timestamped backups.
+
+### Changed
+- **Project Rebranding (`DLSS Manager`):** Rebranded application, installers, GitHub workflows, and desktop identity to **DLSS Manager** (`https://github.com/gOOvER/DLSS-Manager`) while preserving `AGPL-3.0-only` licensing, `%LOCALAPPDATA%\Recol\DLSS-Updater` compatibility, and full upstream credit to **Recol (Deco)**.
+- **Repository Cleanup:** Removed all legacy Python files, PyInstaller `.spec` files, and virtual environments in favor of the pure Rust workspace (`src-tauri/`, `ui/`, `build_rust_installer.ps1`).
+
+---
+
+# Legacy Changelog (DLSS Updater <= 5.2.0)
+
+> [!IMPORTANT]
+> The entries below are preserved as **Legacy** from the upstream project [**DLSS Updater**](https://github.com/Recol/DLSS-Updater) by **Recol (Deco)** prior to the **DLSS Manager** `1.0.0-beta.1` fork and rebrand.
+
+## [5.2.0] - Legacy (DLSS Updater)
+
+### Added
+  - FSR 4 now comes to Vulkan games. A Vulkan game that ships only FSR 3.1
+    gets the same FSR 4 upgrade DirectX 12 games already had: the new loader
+    goes in under the game's existing FidelityFX file name, with the Vulkan
+    upscaling and frame generation DLLs alongside it. It is all-or-nothing,
+    and Restore takes the game back to exactly how it was.
+  - FSR 4 upgrades now work on Radeon RX 6000 (RDNA 2) GPUs. AMD added RX 6000
+    support in FSR Upscaling 4.1.2, so FSR 3.1 games on those cards now get the
+    upgrade instead of being skipped. RDNA 2 integrated graphics (Ryzen 6000,
+    Steam Deck and similar) are still skipped, since AMD doesn't list them as
+    supported.
+
+
+### Changed
+  - Updated AMD FSR to FidelityFX SDK 2.4.0:
+      FSR Upscaling 4.1.1 -> 4.1.2 (DX12 and, new, Vulkan)
+      FSR Frame Generation 4.0.1 -> 4.0.2 (DX12 and, new, Vulkan)
+      FSR Ray Regeneration 1.2.0 -> 1.2.1
+      FSR Loader 2.3.0.2740 -> 2.3.0.4555, plus the new Vulkan loader 1.0.2
+      FSR Radiance Caching 0.9.0 (preview, still opt-in) rebuilt with the SDK
+  - Updated the UI framework (Flet) from 1.0.2 to 1.0.5. Among its fixes, the
+    app no longer turns off HDR or dims external monitors on Windows while it
+    is open, and controls keep their focus and scroll position when something
+    above them is shown or hidden.
+  - Updated the other bundled libraries to their latest releases (msgpack,
+    platformdirs, winloop, multidict, qh3, urllib3-future, certifi, tzdata).
+
+
+### Fixed
+  - Restoring a game after an FSR 4 upgrade left it with no FSR at all. The
+    upgrade replaced the game's original FidelityFX DLL without keeping a
+    backup, so Restore removed the new effect DLLs and left the new loader with
+    nothing to load. The original is now always backed up, and Restore puts
+    it back. A game upgraded by an earlier version has no such backup: use
+    your launcher's "verify files" option to get its original FSR back.
+  - Radeon RX 6400 / 6500 XT (and the other Navi 24 cards) were detected as
+    RDNA 3, and the Radeon RX 7600M XT as an older GPU. Both are now
+    identified correctly, which also corrects the GPU line in the Proton
+    upscaler panel on Linux.
+
+
+## [5.1.2] - Legacy (DLSS Updater)
+
+### Security
+  - Updated the libraries the app ships with to their latest releases,
+    picking up their security fixes. This includes the networking stack
+    (httpx2, httpcore2, urllib3-future, truststore), the root certificate
+    bundle (certifi), image handling (Pillow 13.0.0), and multidict,
+    filelock, platformdirs, tomlkit and chardet.
+  - No changes to how the app looks or behaves.
+
+
+## [5.1.1] - Legacy (DLSS Updater)
+
+### Added
+  - The navigation pill's icons now move on hover, the same way the Hub's
+    do: the rocket lifts off, the controller tilts, the Backups arrow
+    rewinds, the gear turns, and Home gives a small hop.
+  - More of the app moves the same way. Hovering a game card drops its
+    update arrow and rewinds its restore arrow. Each Settings tile's icon
+    has its own motion. Restore buttons in the backup lists rewind on hover.
+  - Ticking a game for bulk update pops its checkbox.
+  - The Games refresh button keeps spinning until the refresh finishes,
+    rather than turning once. A second click while it runs is ignored.
+
+
+### Changed
+  - A game's Restore menu is now grouped by technology, like its Update
+    menu: "Restore DLSS (3)", "Restore Streamline (6)", each with its
+    technology's colour, instead of one row for every DLL.
+
+
+### Fixed
+  - Restoring one technology (XeSS, DLSS, FSR...) from a game's DLL groups
+    window always failed with "No backups found for group", even when the
+    backups were there. Restore All was unaffected. (#324)
+
+
+## [5.1.0] - Legacy (DLSS Updater)
+
+### Added
+  - The Hub's icons now move when you hover a card: the rocket lifts off,
+    the DLSS sparkle twinkles, the Backups arrow rewinds, the Settings gear
+    turns, the Games controller tilts, and the update badge nudges. The
+    large faint icon in each card's corner drifts along with it.
+
+  - A Select button in the Games header. It puts a checkbox on every game so
+    you can pick several and update just those, without having to discover
+    the checkbox that only appears when you hover a card. Esc or Done leaves
+    selection mode.
+
+
+### Fixed
+  - Several icons never changed after the app started: the tick on a
+    selected game, the hourglass while a game updates, the badges on the Hub
+    and the Steam API pill, and the sun/moon on the Theme setting. They now
+    follow what they are meant to show.
+  - Messages in the Launchers view (paths copied, auto-detect results,
+    "could not open") and in the DLSS overlay dialog never appeared. They do
+    now.
+  - A settings panel that failed its validation crashed instead of showing
+    what was wrong.
+  - After opening any settings panel, Esc stopped taking you back a screen
+    for the rest of the session.
+  - Clearing a selection left the highlight on every game that had been
+    ticked, until you next hovered it.
+  - Updating a game whose files are in use no longer holds up the rest of
+    the update. Locked files are retried together once everything else is
+    done, and one that stays locked now says "File is in use - close the
+    game and try again" instead of just its DLL type. A locked file also no
+    longer leaves an extra backup behind.
+  - Launching a game from its card, and opening links from the menu or the
+    update dialog, no longer freezes the window while Windows hands the link
+    over.
+
+
+### Changed
+  - Less redrawing: switching theme no longer redraws screens you are not
+    looking at, scan and update progress redraws only the progress display,
+    typing in the Blacklist and Ignored Games searches redraws only the list,
+    and background loading stops redrawing a screen once you leave it.
+  - Updated the UI framework (Flet) to 1.0.2.
+
+
+## [5.0.3] - Legacy (DLSS Updater)
+
+### Fixed
+  - "scanned 3d ago" in the Games header, and the times shown against your
+    backups, were out by your timezone. Scan times are stored in UTC and were
+    being read as if they were local, so the age of a scan was inflated by
+    your offset from UTC - the header could never say a scan was fresher than
+    an hour old in the UK, two hours in most of Europe, and further west it
+    counted backwards. Everything that shows a stored time now converts it
+    first, so the Games header, the Hub and the backup lists agree with each
+    other and with the clock.
+
+  - The refresh button in the Games library now counts as a scan. It re-reads
+    every DLL your library knows about from disk, which is exactly what the
+    "scanned X ago" line reports, but only a full scan ever updated that
+    timestamp - so the counter sat unchanged however many times you pressed
+    refresh.
+
+
+### Changed
+  - Updates now install through Windows Installer directly instead of a
+    PowerShell helper script. DLSS Updater is unsigned, and an unsigned
+    program that downloads an installer, writes a script next to it and runs
+    that script hidden with the execution policy switched off looks, feature
+    for feature, like malware - which is how 5.0.2 came to be flagged as
+    Trojan:Script/Wacatac.C!ml by Windows Defender within hours of release
+    (issue #306). None of that is needed: msiexec can outlive the app on its
+    own. Nothing is written to disk and no shell is involved any more.
+
+    One thing changes for you: the app no longer restarts itself once an
+    update finishes. Open it again from the Start Menu.
+
+  - The Windows executable now carries proper publisher details - product
+    name, version, company and copyright - visible in its Properties dialog
+    and in Task Manager. It shipped with none of them, which left Defender
+    with nothing to identify the program by beyond a brand-new file it had
+    never seen before. It is not a substitute for signing, but it is the part
+    that costs nothing.
+
+  - Installers downloaded by the in-app updater are cleaned up on the next
+    update check, rather than being left in your temp folder.
+
+
+## [5.0.2] - Legacy (DLSS Updater)
+
+### Improved
+  - Updated the Flet UI framework from 0.86.5 to 1.0.0, its first stable
+    release, on both platforms. Text fields and dropdowns were moved to
+    Flet 1.0's new border styling and keep exactly the look they had.
+
+  - Pinning DLSS Updater to the Windows taskbar is more reliable. The app
+    used to search for its window after it appeared and label it for the
+    taskbar then, retrying for a few seconds, so a pin made during that
+    gap could point at Flet's own client instead of DLSS Updater. Flet
+    now labels the window as it is created, before it is ever shown.
+
+  - On Linux (Flatpak) the window now reports itself as DLSS Updater
+    instead of "flet", so desktops that match windows by their class
+    show the right name and icon in the taskbar and window switcher.
+
+  - The search boxes in the Blacklist and Ignore List panels have a
+    visible outline in dark mode. It was drawn black before, so the box
+    blended into the background.
+
+
+## [5.0.1] - Legacy (DLSS Updater)
+
+### Fixed
+  - Ignored games no longer count towards "needs update". Ignoring a game
+    already stopped it being updated - the update run has always skipped
+    ignored games - but every count still included it, so "Update all (11)"
+    could run on eight games. The Games header, its "Needs update" and
+    "Up to date" chips, the Hub's "N games need updates" pill and CTA, and
+    the app bar's "N updates available" pill now all leave ignored games out,
+    and they react the moment a game is ignored rather than on the next
+    reload. "Has backups" deliberately still counts them, because restoring
+    an ignored game is still something you can do.
+    The Games header also says how many are ignored - "165 games - 12 need
+    updates - 3 ignored - scanned 2d ago" - so a count that no longer covers
+    the whole library explains itself.
+
+  - "Hide ignored games" now stays hidden. Cards created after the toggle was
+    set came back visible: on a large library the games loaded in the
+    background after the first screenful ignored the filter entirely, and any
+    rebuild - the refresh button, or the reload after a scan - brought every
+    ignored game back with the menu still reading "Hide ignored games". The
+    search box and the status filter chips were losing their filtering the
+    same way on a rebuild, and no longer do.
+
+  - "Hide ignored games" is remembered between sessions, like the sort order
+    and card size it sits beside in the same menu. It used to reset to
+    showing every ignored game on each launch. New installs still show
+    ignored games, dimmed, so an ignored game never looks deleted.
+
+
+## [5.0.0] - Legacy (DLSS Updater)
+New:
+  - Added support for DLSS 5 Neural Rendering (nvngx_dlssnr.dll). NVIDIA
+    released it on 3rd September alongside NBA 2K27. It runs alongside Super
+    Resolution, Ray Reconstruction and Frame Generation rather than replacing
+    any of them, so a game can ship it next to the DLSS DLLs you already
+    update.
+    It is treated like any other DLSS DLL: covered by the existing DLSS
+    toggle in Update Preferences, found by scans, backed up before it is
+    replaced, and listed in the update summary. Games that have it show a
+    "DLSS 5" chip alongside their other technology chips.
+    Two things worth knowing before you enable it. It needs an RTX 50 series
+    card - nothing older can run it. And the DLL is about 158 MB, which is
+    roughly twice the size of the next largest file the app downloads, so the
+    first update after installing this version will take noticeably longer.
+
+
+### Changed
+  - The app can now fetch a DLL from somewhere other than the DLL repository's
+    dlls/ folder, which is what makes the above possible. GitHub refuses any
+    file over 100 MB in a repository, so nvngx_dlssnr.dll is published as a
+    release asset instead and the manifest points at it. Nothing changes for
+    the other DLLs, and a download location is only accepted if it is on the
+    DLL repository itself.
+
+
+## [4.9.0] - Legacy (DLSS Updater)
+New:
+  - "Start Update" now asks what to update before it runs. Pressing it opens a
+    short checklist of the technologies the run is allowed to touch, with the
+    run itself as the last entry. Untick XeSS and FSR and the next run leaves
+    them where they are, replacing only the DLSS and Streamline binaries. Each
+    row carries its own technology colour, as a swatch and as the tint the row
+    takes on hover, so the menu speaks the same visual vocabulary the rest of
+    the app already uses for DLSS, XeSS, FSR and DirectStorage. Whenever the
+    run is narrower than everything, the button carries a count, so a narrowed
+    scope is visible without opening the menu at all.
+    Every bulk-update button works this way now - "Start Update" on Launchers,
+    "Update all (N)" on the Hub, and "Update all (N)" in the Games library,
+    which previously had no way to narrow a run at all. All three share a
+    single scope: narrow it in one place and the others already show it.
+    Scanning is deliberately unscoped, so the Hub card's "Scan for games"
+    state runs immediately, with no checklist.
+    A narrowed scope lasts exactly one run and then reverts to your saved
+    preferences. That is the right default for "just this once, only DLSS", and
+    it means a one-off narrowing can never quietly become permanent - including
+    when a run fails partway through. When you do want it to stick, "Make this
+    my default" writes the current ticks straight into Update Preferences, and
+    "Reset" puts them back to whatever is saved.
+    Unticking everything greys out the run entry rather than offering a run
+    that would touch nothing. The button itself stays live, since it is now the
+    only way back into the checklist to tick something again.
+  - The update summary now tells you when a run was deliberately narrowed. A
+    narrowed run and a broken one otherwise look identical - both report far
+    fewer games than you expected - so the dialog names what the run covered,
+    what it excluded, and how many DLLs it skipped for that reason.
+  - Technologies you have excluded are now shown rather than hidden. A game's
+    DLL list dims the rows it will not touch and explains why on hover, and the
+    grouped DLL dialog keeps the excluded group in place, marks it "(updates
+    disabled)" and greys out its Update button - which, for an excluded
+    technology, could only ever have reported everything as skipped. Restore is
+    deliberately left working: rolling a backup back is not an update, and
+    there is no reason to block it.
+  - A handful of animation and scrolling polish items: the Hub's update card
+    now cross-fades between "No games scanned yet", "N games need updates"
+    and "Everything is up to date" instead of swapping the text instantly,
+    and a theme toggle deliberately does not trigger it. In Games, the
+    filter chips and the selection bar share one slot and fade between each
+    other instead of blinking when you tick a card's checkbox. The per-game
+    update and restore result dialogs, and the Application Logs panel, now
+    show a rounded, draggable scrollbar thumb while you scroll, and popup
+    menus across the app ease open while tab indicators glide between tabs
+    instead of jumping.
+  - Right-clicking a launcher card now opens the same menu as its "⋮"
+    button - copy path(s), open the folder, auto-detect, and clear -
+    matching the context menu game cards already have.
+  - A first accessibility pass adds screen-reader labels to the app's
+    highest-traffic controls: the Start Update button, the Hub and Games
+    bulk-update buttons, a game card's click-to-view-details area, and a launcher card's
+    artwork banner. A game card's name, launcher, status and DLL version
+    now read as a single phrase instead of four separate fragments; its
+    Update, Restore, kebab menu and selection checkbox are unaffected and
+    remain individually reachable.
+
+Fixes:
+  - Your technology preferences did not bind on the update path that actually
+    runs. Disabling DirectStorage in Update Preferences stopped the app looking
+    for DirectStorage DLLs during a scan, but nothing checked that preference
+    again when an update was started - and updates run from the cached scan
+    results. So a scan taken while DirectStorage was enabled, followed by
+    disabling it, still replaced every DirectStorage DLL it had found. Since
+    the whole reason to disable DirectStorage is that some games stop launching
+    when it is replaced, the one setting meant to prevent that did not.
+    The scope is now enforced where the files are actually written, so it binds
+    regardless of how old the scan is or which pipeline runs.
+  - Enabling a technology no longer requires a rescan to take effect. Scanning
+    used to look only for the technologies that were enabled at the time, so
+    turning XeSS back on found nothing until the whole library was scanned
+    again - the cached results simply had no XeSS in them. Scanning now finds
+    every technology, and the choice of what to update is applied at update
+    time, so widening the scope takes effect immediately.
+
+
+## [4.8.1] - Legacy (DLSS Updater)
+New:
+  - Games can now be updated in hand-picked batches. Hovering a card in the
+    Games view reveals a checkbox in its top-left corner; ticking one enters
+    selection mode, where every card keeps its checkbox and the filter chips
+    give way to a selection bar - "N selected", Update selected (N), Select all
+    and Clear. A selected card is marked by an accent-filled tick and a
+    matching accent border, so a selection reads across a grid of box art at a
+    glance. "Update all" hides itself for as long as anything is selected: two
+    bulk actions side by side, one offering the whole library and one the two
+    games you picked, is a misclick waiting to happen. It returns, with its
+    original count, the moment the selection is cleared.
+    Select all takes every game visible in the current launcher tab,
+    which makes "update only this launcher" a two-click operation without a
+    separate code path for it. The selection is a set of game ids shared across
+    every launcher tab, so it survives tab switches and filter changes, and it
+    is dropped whenever the cards are rebuilt by a rescan or a database delete,
+    since the retained ids could otherwise name games that no longer exist.
+    The run itself reuses the library-wide pipeline rather than looping the
+    per-game one: the selected cards' DLL paths are collected into the same
+    {launcher: [path]} shape the updater already accepts, so a selection gets
+    the parallel high-performance pipeline, the cancellable progress overlay
+    and one summary dialog at the end - not a dialog per game. Because the
+    paths come from the database rather than from scan results, a selection can
+    be updated with no scan cache present at all.
+    The rollback-compatibility warning runs once for the whole selection rather
+    than once per game. Flagged DLL versions are vendor-signed, so a bad
+    version is bad regardless of which game carries it; the check is made over
+    the union of the selection's DLL filenames and yields one warning entry per
+    DLL, so a forty-game selection still shows a single dialog. Choosing "skip
+    flagged" narrows the DLL list before the update starts.
+  - The Games grid now has a card size setting - Compact, Comfortable or Large
+    - in the header's options menu, remembered between sessions. Compact fits
+    noticeably more of a large library on screen. The preference had been
+    written to config.toml and read back for some time, but nothing had ever
+    applied it; it is now wired to the grid.
+    Cell geometry is derived rather than hand-written: a card is a flexible
+    banner over a fixed 52px footer, so each density states its cell width and
+    banner target and the aspect ratio is computed from them. That keeps the
+    footer from being clipped, or trailed by a grey gap, at any size. The
+    loading placeholder follows the same target, so a compact cell no longer
+    lays out against a banner height meant for a comfortable one.
+
+Fixes:
+  - Extracted the update pipeline's shared tail (overlay, progress, cancelled
+    versus summary reporting, badge and backup reconciliation) so the
+    library-wide update and the new selection update cannot drift apart.
+
+
+## [4.8.0] - Legacy (DLSS Updater)
+New:
+  - Ray Reconstruction presets D and F are now selectable, globally and per
+    game, matching the dropdown the NVIDIA App added for DLSS 4.5 Ray
+    Reconstruction Gen 2. Preset F is that Gen 2 model; Preset D is the
+    first-generation DLSS 4 model. The driver has accepted presets A-O all
+    along - it publishes the whole range for "Override DLSS-RR preset" -
+    but only those two are meaningful models, so those are the two offered,
+    the same pair the NVIDIA App exposes. Linux gets both through DXVK-NVAPI.
+
+Maintenance:
+  - Removed dead code across the codebase: 44 unused imports, five values that
+    were computed and then never read, and a leftover import in the package
+    __init__ that was not part of its public __all__. One of the five, in the
+    Steam API card's hover handler, had been resolving an accent colour for a
+    border glow that was never implemented.
+
+
+## [4.7.1] - Legacy (DLSS Updater)
+Fixes:
+  - Games that move their DLLs in a patch kept failing on the old location,
+    run after run, and no amount of rescanning cleared it (issue #281).
+    Rescanning does find the new paths - it just never removed the old ones.
+    Post-scan cleanup deletes DLL records whose file is gone, except where the
+    record still holds a restorable backup, because deleting it would take the
+    backup with it. That exemption meant every DLL you had ever updated stayed
+    pinned to a path the game no longer uses and was retried forever. Which is
+    why Streamline looked singled out in Mafia: The Old Country, Subnautica 2
+    and S.T.A.L.K.E.R. 2 - those sl.* DLLs simply happened to be the ones with
+    backups. Such records are now retired instead of deleted: the backup stays
+    restorable, but the dead path is no longer an update target. Retiring is
+    reversible, so a drive that is merely offline, or a game that moves its
+    DLLs back, loses nothing - the records return on the next scan that finds
+    the path.
+  - A DLL whose file has gone now reports "File no longer exists - the game may
+    have been patched. Run a rescan." instead of a bare "Error". The updater
+    already knew how to skip a missing file quietly; the check sat just below a
+    permissions read that threw first.
+
+Build:
+  - Fixed, again, the malformed pyinstaller dependency that makes `uv sync`
+    fail outright - reintroduced by an automated dependency bump after 4.7.0
+    had corrected it.
+
+
+## [4.7.0] - Legacy (DLSS Updater)
+New:
+  - FSR 4 upgrades for games that ship FSR 3.1. Where a game has only the older
+    FidelityFX library, DLSS Updater can now install the FSR 4 DLL set beside
+    it - the loader under the name the game loads, plus the upscaler and frame
+    generation components the game never shipped. This only happens on RDNA 3
+    and RDNA 4 GPUs; on any other card the upgrade is skipped, because FSR 4
+    cannot run there and installing it would remove working FSR 3.1 upscaling.
+    The install is all-or-nothing: if any file fails to write, the whole set is
+    rolled back and the game is left exactly as it was.
+  - Restore understands added files. DLLs the updater created (rather than
+    replaced) are recorded as such, and restoring them removes them again,
+    returning the game to the DLLs it originally shipped.
+  - FSR Ray Regeneration (amd_fidelityfx_denoiser_dx12.dll) is now updated,
+    at 1.2.0. Call of Duty: Black Ops 7 and Crimson Desert ship this component.
+  - Preliminary support for AMD FSR Radiance Caching. It is OFF by default and
+    is deliberately not covered by the FSR toggle: AMD ships this component as
+    a preview (version 0.9.0) for engine developers, and no released game uses
+    it. Settings > Update Preferences has a separate opt-in under FSR, which
+    warns before enabling and can be turned back off at any time.
+
+FSR Fixes:
+  - FSR 4 updates could be rejected outright. The FidelityFX loader DLL
+    reports a loader/SDK version (1.0.2), which was being checked against an
+    FSR minimum of 3.1.0 - a bar no loader AMD ships can clear. The loader is
+    now exempt; the FSR version is read from the effect DLLs, where it lives.
+  - The bundled FidelityFX versions shown before the DLL cache finished
+    loading were wrong (every FSR DLL claimed 4.0.2.0). They now show the real
+    per-DLL versions, which genuinely differ: upscaling is FSR 4, frame
+    generation is still FSR 3.1.5, and the DX12/Vulkan libraries are SDK 1.1.4.
+
+Linux:
+  - Enabling FSR 4 RDNA 3 mode under Proton-CachyOS gave you no FSR 4 upgrade
+    at all. That fork removed PROTON_FSR4_RDNA3_UPGRADE, but the app still
+    emitted it, so the launch option was ignored. RDNA 3 mode is now tracked
+    as its own Proton capability: GE-Proton still gets the RDNA 3 variable,
+    while CachyOS and Proton-EM fall back to PROTON_FSR4_UPGRADE. The toggle
+    also greys out on builds that don't support it.
+
+Downloads:
+  - Large DLL downloads could be cancelled mid-transfer on slower connections.
+    The 120-second cap covered the whole file, penalising size rather than
+    stalls - libxess.dll alone is ~78 MB. Downloads now time out only after 60
+    seconds with no data received.
+
+Build:
+  - Fixed a malformed pyinstaller dependency that made `uv sync` fail outright.
+  - Pinned interpreter moves to Python 3.14.7 free-threaded across the local
+    build, CI, and the Flathub source manifests.
+
+
+## [4.6.3] - Legacy (DLSS Updater)
+UI Improvements:
+  - The hub's Games hero now keeps its caption legible over any artwork: a
+    proper bottom scrim sits behind the title and stat chips (the old one
+    never actually rendered), a subtle unifying tint stops one bright cover
+    from blowing out the mosaic, and a hairline outline keeps the hero's
+    edge visible in light mode, where bright artwork used to merge into the
+    page background.
+  - The Backups view now opens with summary tiles - total backups, disk
+    space used, and most recent backup - instead of a mostly blank page.
+    Unlinked games show their real artwork when it is still cached, rather
+    than a generic folder icon. "Clear All Backups" is no longer the most
+    prominent control on the screen: it is outlined at rest and only fills
+    red on hover.
+  - The app bar now shows an "N updates available" pill on the views that
+    don't already display the count (Launchers, Backups, Settings); clicking
+    it jumps to the Games library. On the hub and in Games, which lead with
+    the same number themselves, it stays hidden. It uses the same count as
+    those surfaces, refreshed once the DLL cache is ready and after every
+    update run. The heart button no longer competes with it: it rests as a
+    quiet outline and fills pink on hover.
+  - Custom Folder launcher tiles no longer carry a teal outline that read as
+    a keyboard-focus ring; they now use the same wash treatment as branded
+    tiles, in a neutral steel tone. The launcher grid also gained bottom
+    breathing room so the last row can scroll clear of the action bar
+    instead of being clipped behind it.
+  - Settings tile watermark icons no longer clip off the card edge
+    underneath the chevron; they sit wholly inside the tile, clear of the
+    trailing controls.
+  - The floating navigation pill no longer looks stamped onto the page in
+    light mode: it is a white surface with a soft drop shadow instead of a
+    near-invisible fill ringed by a dark outline and a heavy hover-grade
+    shadow. Dark mode is unchanged.
+  - Long game titles ("Ghost of Tsushima DIRECTOR'S CUT") no longer wrap to
+    a second line and eat into the card artwork; they truncate with an
+    ellipsis, with the full name still available in the hover tooltip.
+
+Bug Fixes:
+  - Launcher cards' path-status icon never changed: it was assigned through
+    a field name Flet does not have, which Flet accepts silently. The green
+    check / amber warning for valid / inaccessible paths now actually shows.
+
+
+## [4.6.2] - Legacy (DLSS Updater)
+Bug Fixes:
+  - Fixed the app failing to start on a clean Windows install (Issue #265).
+    The installer never actually shipped the Flet UI client: the flet-desktop
+    package contains no client binary, so on first launch the app downloaded
+    a ~40MB archive from GitHub before it could open a window. On a machine
+    whose certificate store could not verify GitHub - a fresh Windows 11
+    install that has not yet fetched its root certificates, or anything
+    behind TLS inspection - that download failed and the app died with an
+    SSL error and no window at all.
+
+    Existing installs never hit this because the client had already been
+    cached by an earlier successful launch. Only genuinely new installs were
+    affected. The client is now bundled inside the installer, so first launch
+    needs no download at all and is faster besides.
+  - The certificate bundle is now shipped with the app rather than relying on
+    the machine's own certificate store, so DLL downloads, update checks and
+    Steam artwork keep working on systems with an incomplete or out-of-date
+    root store.
+  - A failure during startup now shows an error dialog naming the problem and
+    the log file, instead of the app silently not appearing.
+  - The window-resize handler had never run: it was registered under a name
+    Flet does not use, and Flet accepts unknown handler names without
+    complaint. Resizing now redraws as intended.
+
+Other:
+  - The build now fails loudly if the UI client is missing, rather than
+    producing an installer that works on the build machine and breaks on a
+    clean one.
+
+
+## [4.6.1] - Legacy (DLSS Updater)
+New Features:
+  - The hub now tells you whether there is anything to do. It leads with
+    "N games need updates" and offers Update all and Rescan right there,
+    instead of only reporting how many games and backups exist. Previously
+    the app's two primary actions, Scan and Start Update, existed solely at
+    the bottom of the Launchers screen.
+  - The Games library gained a matching "Update all (N)" button, next to the
+    count that was already shown there.
+  - Games can now be sorted: Name (A-Z), Name (Z-A), Most DLLs, and Outdated
+    first. The choice is remembered between sessions. The preference already
+    existed in the config file but nothing read it and there was no way to
+    set it.
+
+Bug Fixes:
+  - Launcher cards showed "0 games" after every restart, even with a full
+    library and a saved scan on disk. The counts lived only on the cards
+    themselves and were filled in solely by a fresh scan, so they were empty
+    until you scanned again. They are now restored from the saved scan.
+  - The hub and the Games library disagreed about how many games needed
+    updates - the hub could report 2 where Games reported 12. The hub
+    computes its count at startup, before the DLL cache finishes downloading
+    and replaces the built-in fallback version table, so it was comparing
+    installed DLLs against stale "latest" versions. Every surface that
+    depends on those versions is now re-derived once the cache is ready.
+  - "Scan and Update" discarded the scan it had just performed. The app kept
+    believing no scan had ever run: a stale "no scan performed yet" line,
+    empty launcher game counts, and a hub still asking you to scan, all
+    immediately after a successful scan-and-update.
+  - In the Backups list the last game group could sit underneath the
+    floating navigation bar with no way to scroll it clear. The Games and
+    Settings views already reserved that space.
+  - The Games header clipped its refresh button at narrow window widths. The
+    header now yields the subtitle (whose counts the filter chips restate)
+    rather than pushing controls off-screen.
+  - The hub cut off its card titles at short window heights - the Settings
+    card and the update button could be completely unreachable at the
+    minimum window size. The hub now scrolls instead of clipping, and is
+    unchanged on a normal-sized window.
+
+Other:
+  - Dark mode had no elevation hierarchy: the page background, panel
+    surfaces and header bands were all the same grey, so the Backups and
+    Games header bands were invisible against the page behind them. The dark
+    surface palette has been re-based so raised surfaces actually read as
+    raised. Light mode is unchanged, and every accent wash renders exactly as
+    before.
+  - Database connections now consistently enforce foreign keys and a busy
+    timeout. Only a handful of the three dozen connection sites did, which
+    meant cascading deletes silently did not happen - the source of the
+    stranded backup records the previous release worked around. Post-scan
+    cleanup also no longer discards DLL records that still hold a restorable
+    backup.
+
+
+## [4.6.0] - Legacy (DLSS Updater)
+New Features:
+  - The app can now update itself (Issue #254). The version badge beside the
+    title becomes an "update available" button when a new release exists:
+    on Windows it downloads the installer, verifies it, and installs it on
+    your click, relaunching when it is done — no visit to the releases page.
+    The badge shows live download progress, and can be dismissed to stay
+    hidden until the next release.
+  - Two new preferences under UI Preferences → Application Updates: check
+    for updates on launch (on by default), and download updates
+    automatically in the background (off by default).
+  - Downloads are verified against the SHA-256 digest GitHub publishes for
+    each release asset, and a download that fails verification is deleted
+    rather than kept.
+
+Bug Fixes:
+  - Linux update checks pointed at the wrong file. The check looked for a
+    "DLSS_Updater_Linux" tarball that releases stopped shipping before
+    4.3.1, so every Linux user was sent to the generic releases page
+    instead of the actual Flatpak bundle. It now finds the .flatpak asset.
+  - Flatpak bundles installed from GitHub releases had no update channel
+    at all: they were built without an origin remote, so "flatpak update"
+    could never find a newer version and the only way to upgrade was to
+    download each bundle by hand. Bundles now register
+    https://recol.github.io/dlss-updater-flatpak/ at install time, so
+    "flatpak update" and desktop software centres (GNOME Software, KDE
+    Discover) pick up new releases on their own.
+
+Other:
+  - Updated the Flet UI framework to 0.86.4 on both platforms (bug-fix
+    releases: embedded-app service registration and an in-process
+    transport option, no API changes). The previous 0.86.2 -> 0.86.4 pin
+    bump had not taken effect because the lockfile was never regenerated,
+    and flet-desktop was left a version behind at 0.86.3; both are now
+    pinned and locked at 0.86.4.
+  - Linux self-updates stop at the download. A Flatpak cannot install
+    packages from inside its own sandbox without host D-Bus access that
+    amounts to a sandbox escape, so on Linux the badge saves the bundle to
+    your Downloads folder and shows the one-line install command. The
+    Flathub build does not offer downloads at all — its updates come
+    through Flathub.
+  - The Flatpak update channel keeps recent versions and ships static
+    deltas between them, so from the next release onwards an update
+    downloads only the changed objects rather than the whole bundle. This
+    release seeds the channel, so it has no earlier version to diff
+    against yet.
+
+
+## [4.5.1] - Legacy (DLSS Updater)
+New Features:
+  - Scans and batch updates can now be cancelled: the loading overlay has a
+    Cancel button that stops the run at the next safe boundary (updates
+    finish the DLL currently being written and skip the rest — a file is
+    never left half-written; backups already taken are kept). A snackbar
+    reports how far the run got, e.g. "Update cancelled — processed 12 of
+    40 DLLs".
+  - Pressing Update before any scan no longer dead-ends in a "Scan
+    Required" error — the app now offers "Scan and Update" to run both in
+    one go, with the same progress and Cancel support.
+  - Backups in the "Unlinked games" section (games dropped from the
+    library by a rescan or reset) can now be restored, not just deleted:
+    the saved DLL is copied back to its original location if the game is
+    still installed there, with clear errors when the backup file or the
+    game folder is gone, or the game is running.
+  - Three additional Streamline DLLs are now detected and updated:
+    sl.directsr.dll (DirectSR), sl.dlss_d.dll (DLSS Ray Reconstruction)
+    and sl.nis.dll (NIS upscaling). These were previously downloaded to
+    the local cache but never matched against games.
+  - Streamline updates are now enabled by default on fresh installs
+    (existing installations keep their saved preference).
+
+Bug Fixes:
+  - Blacklist overrides now actually stick (Issue #253): saving an
+    override worked, but reopening the Blacklist Manager compared the
+    stored (lower-cased) name against the display name, so every toggle
+    showed as off — and saving again from that state silently wiped the
+    override. The panel now compares names case-insensitively, and the
+    save confirmation reminds you to rescan for overridden games to
+    appear in the library.
+
+Other:
+  - Updated the Flet UI framework to 0.86.2 on both platforms (bug-fix
+    release: Flutter 3.44.7, no API changes).
+  - Removed the vestigial high-performance mode setting: the
+    high-performance update pipeline has been the only update path for a
+    while (the old toggle was already non-functional), so the dead
+    setting, its config plumbing and an unused warning dialog are gone.
+    Existing config files with the old key still load fine.
+
+
+## [4.4.3] - Legacy (DLSS Updater)
+UI Polish:
+  - Game titles on cards are now prettified for display: names stored
+    without spaces (e.g. "BlackMythWukong", "ForzaHorizon6") render as
+    "Black Myth Wukong", "Forza Horizon 6". Display-only — search,
+    matching and paths are unaffected.
+  - The hide/edit/menu buttons on game cards now appear on hover instead
+    of sitting permanently over the artwork.
+  - The Games Library header now shows game-centric stats ("14 games ·
+    2 need updates · scanned 3d ago") instead of duplicating backup
+    totals, and the launcher tab row is hidden when only one launcher
+    has games.
+  - Backup groups show a rotating expand chevron and their most recent
+    backup date; the Filter by Game control was restyled to match the
+    app's pill design and hides itself when there is nothing to filter.
+  - The Launchers tile on the home screen now carries the same visual
+    weight as the other tiles in both themes (its teal accent previously
+    blended much weaker).
+  - The Application Logs badge now counts only warnings and errors
+    (red when errors are present) instead of saturating at 99+ with
+    routine log chatter.
+  - Light mode: artwork on the home-screen mosaic and game cards is no
+    longer veiled by the caption scrim (the white wash is now confined
+    to the caption band).
+
+Bug Fixes:
+  - Restored ALL hover effects across the app (game-card shadow/scale and
+    footer button expansion, hub tiles, settings tiles, floating pill,
+    logger panel, backup rows). Two separate causes: Flet 0.86 changed
+    hover event data from the string "true" to a boolean (all 14 handlers
+    now accept both forms), and ft.Card has no on_hover/shadow/border
+    fields at all — those writes were silently dead, so game and backup
+    cards never received hover events; their hover wiring and border glow
+    now live on the cards' content containers, with elevation driving the
+    Material shadow.
+  - Backups whose game was removed or rescanned out of the library are
+    no longer invisible: they now appear in a delete-only "Unlinked
+    games" section of the Backups view, so the header totals finally
+    match what is listed (previously 6 of 8 backups could not be seen
+    or deleted individually). Deleting them works; restoring is
+    unavailable since the game is gone.
+  - Toggling the theme no longer leaves the top app bar in the previous
+    theme until the next navigation — it re-themes in place, in both
+    directions.
+
+
+## [4.4.2] - Legacy (DLSS Updater)
+Performance:
+  - Much faster batch updates: removed a per-DLL system-wide process scan
+    from the file-lock check and stopped re-parsing DLL versions during the
+    apply phase.
+  - Parallel scanning of non-Steam launcher libraries (EA, Epic, GOG,
+    Battle.net, Xbox, custom folders) and of Proton/Wine prefixes on Linux.
+  - Faster game resolution: the NVIDIA NvAPI interface is now loaded once
+    per session instead of per probe.
+  - Steam requests share one pooled HTTP connection, artwork downloads run
+    at doubled concurrency, DLL downloads use 256 KB chunks, and backup
+    restores use the OS fast-copy path.
+  - Database tuning: proper SQLite pragmas on all connections and no more
+    per-call connection churn (previously one per search keystroke).
+  - Snappier search and UI: indexed exact/prefix search, launcher path
+    validation moved off the startup path, targeted queries for hub and
+    backup artwork, cached per-card update counts, and view-scoped redraws
+    in Backups.
+
+
+## [4.4.1] - Legacy (DLSS Updater)
+New Features:
+  - The Edit display dialog (game-card pencil icon) now also searches the
+    Steam Store in addition to the local app index. Store results merge in
+    behind the instant local results, need no Steam API credentials, and
+    handle punctuation and fuzzy matching server-side. When a Steam API key
+    is configured, games you own are floated to the top of the results.
+  - The Edit display dialog has been redesigned in the hero style introduced
+    in 4.4.0: brand-washed header band with the search field and current
+    override state (as a status pill) integrated into it, and search results
+    upgraded to rich cards with large capsule artwork, shimmer loading
+    placeholders and an accent-highlighted selected state. Also fixes the
+    dead empty band that could appear between the search field and the
+    results list.
+
+Bug Fixes:
+  - Fixed Edit display search finding nothing for punctuated or multi-word
+    titles such as "S.T.A.L.K.E.R. 2: Heart of Chornobyl" (Issue #246).
+    The local search index tokenized names without spaces, so queries like
+    "stalker 2" could never match, and punctuation like the dots in
+    "S.T.A.L.K.E.R." crashed the query into a dead fallback path. Names are
+    now indexed and queried through one shared space-preserving
+    normalization; existing installs upgrade via a one-time in-place index
+    rebuild on first launch (works offline, no app-list re-download).
+
+
+## [4.4.0] - Legacy (DLSS Updater)
+New Features:
+  - Complete "hero" visual redesign, extending the game-card design language
+    across the whole application:
+    - Hub: the Games card is now a hero backed by a mosaic of your own cached
+      game artwork with stat pills (game count, backups, last scan); the side
+      cards use brand-color gradient washes with watermark glyphs
+    - Games Library: the Steam API card has been demoted to a compact status
+      pill in the header (click it to configure); filter chips now show live
+      counts with semantic colors; the header and launcher tabs use the
+      Games accent
+    - Launchers: rebuilt as a responsive grid of banner cards matching the
+      games grid - brand-color gradient banner with a circular launcher
+      badge (real brand icons for Steam, Epic, GOG, Ubisoft, EA, Xbox and
+      Battle.net), game-count pill, and a fixed footer holding path chips
+      and actions; tapping a card opens its detected-games list in a
+      brand-accented slide panel; launchers without a configured path
+      render dimmed and tap straight into folder setup
+    - Settings: tiles swap outline borders for quiet accent washes and faint
+      watermark icons, with a subtle hover lift
+    - Backups: returns as a first-class destination - reachable from a new
+      hub card and the navigation pill - with per-game artwork thumbnails in
+      the group headers
+    - App-wide chrome: subtly tinted window background, brand-washed app bar
+      with a version pill, restyled Application Logs bar, and accent-colored
+      slide-panel headers (NVIDIA green for DLSS Settings)
+
+Bug Fixes:
+  - Fixed the light theme rendering large surfaces (hub cards, app bar,
+    washed headers) near-black: translucent brand-wash gradients let the
+    card shadow's black show through in light mode. Washes are now opaque,
+    pre-blended against the themed surface.
+  - Fixed views keeping their previous theme after a live theme toggle:
+    the UI client drops updates sent to detached (inactive) views, so
+    views are now rebuilt with fresh, theme-correct controls the next time
+    they are opened after a toggle (hub, games, launchers, backups and the
+    app bar all heal this way)
+  - Fixed custom-launcher borders never rendering (they were set on a
+    property the old control ignored)
+  - A configured launcher with 0 games no longer shows an alarming
+    accent-colored count badge
+
+Internal improvements:
+  - Updated Flet to 0.86.0 on both platforms. Drop-in upgrade (no API
+    changes were required); brings ResponsiveRow state retention across
+    breakpoint resizes and faster session patching for large control trees.
+    The flet.exe child-process architecture is unchanged, so the taskbar
+    AppUserModelID handling still applies as-is.
+  - New shared hero_surface module providing the design primitives (scrim
+    gradients, brand washes, watermark glyphs, badge pills) used by all
+    restyled components
+
+
+## [4.3.2] - Legacy (DLSS Updater)
+Bug Fixes:
+  - Fixed the DLSS 310.7 "development build - do not redistribute" in-game
+    watermark (Issue #241). The 310.7 DLSS DLLs originally published to the
+    DLL repository were NVIDIA's dev-variant builds, which carry the exact
+    same file version (310.7.0.0) as the clean release builds - so the
+    version-based update check could never replace them. The app now
+    recognises these known-bad builds by SHA256: the local DLL cache is
+    automatically re-downloaded on startup, and games that were already
+    updated to a watermarked DLL are replaced with the clean release build
+    on the next update pass (single-game or batch), even though the version
+    numbers match. Simply update the affected games again to clear the
+    watermark.
+
+
+## [4.3.1] - Legacy (DLSS Updater)
+Bug Fixes:
+  - Fixed the harmless-but-noisy "Failed to record update history:
+    <built-in function all_tasks> returned a result with an exception set"
+    warning during large batch updates. Update-history rows are now written
+    directly on the worker thread instead of through a nested per-thread
+    event loop, which raced the free-threaded interpreter's asyncio
+    internals. (The fix landed in the 4.3.0 codebase; this is its first
+    Windows release.)
+
+Internal improvements:
+  - Completed the migration from raw asyncio APIs to anyio across the whole
+    codebase (~40 files): sleeps, locks, semaphores, events, timeouts,
+    cancellation handling and subprocess launching now use their anyio
+    equivalents. Direct asyncio usage remains only for individually
+    cancellable background tasks (create_task/Task), which structured
+    concurrency deliberately does not replace (see task_registry.py).
+    This also removes the last code paths capable of spinning up nested
+    per-thread event loops on the free-threaded interpreter.
+  - Groundwork for Flathub distribution: the app now detects which Flatpak
+    channel it runs under (FLATPAK_ID), points "flatpak override" hints at
+    the correct app ID, and directs update checks to Flathub in that build.
+  - Updated Flet to 0.85.3 on both platforms (Linux was previously on
+    0.85.2), unifying the UI framework pin across Windows and Linux.
+
+
+## [4.3.0] - Legacy (DLSS Updater)
+New Features:
+  - Proton Upscalers panel (Linux): the "Linux DLSS SR Presets" panel is now
+    a per-title Proton upscaler configurator covering all three GPU vendors:
+    - DLSS Ray Reconstruction preset override and Frame Generation override
+      via DXVK-NVAPI (parity with the Windows per-game dialog), plus new
+      "Latest" and "Preset J" SR preset choices.
+    - DLSS / FSR 4 / XeSS DLL upgrade toggles and on-screen indicators via
+      the community Proton forks' launch options (GE-Proton, Proton-CachyOS,
+      Proton-EM), with an RDNA3/RDNA4 mode switch for FSR 4.
+    - Per-game validation: the panel reads Steam's compat-tool mapping
+      (config.vdf CompatToolMapping) to show which Proton build a selected
+      game runs under and disables upgrade toggles that build doesn't ship
+      (Valve's upstream Proton has none of the upgrade downloaders).
+    - GPU vendor auto-detection (NVIDIA/AMD/Intel via sysfs PCI ids) gates
+      the vendor sections and recommends RDNA3 mode on RX 7000 GPUs.
+    - Backwards compatible: configs saved by older versions generate
+      byte-identical launch options, and the generated string still works as
+      environment variables in Heroic/Lutris.
+
+
+## [4.2.3] - Legacy (DLSS Updater)
+Modernized async/dependency stack:
+  - Replaced the DLL-download fallback library (requests, now in upstream
+    feature-freeze) with niquests, a maintained drop-in replacement with
+    HTTP/2 and HTTP/3 support.
+  - Settings storage migrated from config.ini to config.toml (via msgspec).
+    Migration is automatic and non-destructive - the old config.ini is left
+    untouched on disk.
+  - Adopted anyio for structured concurrency across the update/scan/database
+    pipeline: several separate, independently-sized thread pools were
+    consolidated into shared, properly-bounded worker limiters, and manual
+    task-cancellation logic was replaced with correct-by-construction cancel
+    scopes.
+  - Logging now runs through a background queue instead of blocking the
+    calling thread/task on every log call.
+
+Bug Fixes:
+  - Fixed a deadlock in the high-performance batch DLL updater that could
+    freeze the update progress dialog partway through a large batch (a
+    nested event loop was re-acquiring a shared concurrency limiter that
+    belonged to a different loop instance, permanently blocking a worker
+    thread). Discovered via live testing of the above migration.
+  - Fixed the Games Library not reflecting newly-updated DLL versions after
+    a batch update if the Games tab hadn't been opened yet that session -
+    it now reconciles versions from disk automatically the next time it
+    loads instead of requiring a manual refresh.
+  - Fixed HyperParallelLoader (used for batched game/backup loading) briefly
+    blocking the UI event loop while dispatching thread-pool work.
+
+
+## [4.2.2] - Legacy (DLSS Updater)
+Linux Update Reliability Fix (Issue #240):
+  - Fixed: The high-performance updater's memory-mapped source-DLL cache used
+    os.O_BINARY, a Windows-only flag that doesn't exist on Linux/macOS. This made
+    caching fail for every DLL on every scan on Linux (falling back to slower
+    plain file-copy updates every time) and is now guarded with getattr() so it's
+    a no-op on POSIX platforms.
+  - Fixed: Steam libraries whose default install path is a symlink (e.g. Linux's
+    ~/.steam/steam pointing at ~/.local/share/Steam) were scanned twice - once via
+    fast appmanifest-based auto-detection and once via a redundant "manual path"
+    fallback - because the two paths were compared as literal strings instead of
+    their resolved real paths. This caused every installed Steam game's DLLs to be
+    processed twice per scan, and could make one of the duplicate update attempts
+    fail with a spurious "file is in use"/FileNotFoundError once the first attempt
+    had already replaced the file.
+  - Hardened is_file_in_use()/is_file_in_use_async() to treat a file that
+    disappears between the existence check and the open as "not in use" instead
+    of letting the FileNotFoundError surface as an update failure.
+
+
+## [4.2.1] - Legacy (DLSS Updater)
+Per-Game DLSS Preset Overrides (Windows):
+  - New "DLSS Settings" action on every game (right-click a card, or use the new
+    overflow "⋮" menu on the card) opens a per-game preset panel that forces SR / RR / FG
+    presets for just that game via its NVIDIA per-application driver profile - the same
+    mechanism the NVIDIA App uses for per-game overrides:
+      - Super Resolution (SR): Default / Latest / Preset J / K / L / M
+      - Ray Reconstruction (RR): Default / Latest model
+      - Frame Generation (FG): Default / Latest / Preset A / B
+  - Per-game overrides take priority over the global "DLSS Settings" override for that
+    game and apply at the next game launch. The panel reads back the value the driver is
+    actually applying and distinguishes NVIDIA's predefined value from your own override.
+  - The game's executable is detected automatically (NVIDIA driver lookup -> folder
+    heuristic -> Steam manifest). When it can't be determined, a "Change executable" file
+    picker lets you point at the correct .exe. Your executable choice and preset
+    selections are remembered between sessions.
+  - "Reset to default" clears the per-game override (reverting to the game's predefined
+    value) in one click. Windows + NVIDIA only; the option is hidden on other systems.
+
+Games Library UI Redesign:
+  - Game cards redesigned around a full-bleed hero banner: artwork fills the entire
+    card behind a bottom gradient, with the title and an at-a-glance status line
+    ("Needs update" / "Up to date") legible over any art.
+  - Switched the fetched artwork from Steam's small "header" capsule image to its
+    "library_hero" banner - the same full-bleed asset Steam's own client uses - so cards
+    no longer show large black/empty backgrounds around a small logo. Existing cached
+    artwork is automatically refreshed once on upgrade. The art is also zoomed and
+    reframed toward its lower, art-dense region so the plain space some banners have
+    near the top no longer shows as a stray dark band.
+  - The DLL status badge and Update/Restore buttons are compact icons by default and
+    expand to labelled buttons on hover; they now have a fixed-height footer band so
+    they're never clipped or hidden, regardless of window width or how many DLLs a game
+    has (this fixes an issue where they could disappear when resizing the window).
+  - Per-game actions are consolidated into a single "⋮" menu on each card (mirroring the
+    right-click menu): Launch, DLSS Settings, Open folder, Copy path, Hide, and Edit
+    display. The separate "Play" button has been removed - Launch now lives in the menu.
+  - The Hide and Edit display icons remain directly accessible on each card.
+
+Database Integrity Fix:
+  - Fixed a long-standing issue where SQLite foreign-key enforcement was not enabled on
+    database connections, so "ON DELETE CASCADE" cleanups never ran - removing a game
+    could leave orphaned backup, ignore-list, DLL, and update-history rows behind.
+    Foreign keys are now enabled on every connection, so deleting a game correctly cleans
+    up its related rows.
+
+
+## [4.2.0] - Legacy (DLSS Updater)
+Linux / Flatpak Fixes (Issue #228):
+  - Custom and launcher folder paths now expand "~" and environment variables
+    (e.g. "~/.steam" or "$HOME/Games"), so home-relative paths resolve correctly
+    instead of being silently rejected as "Directory does not exist".
+  - Adding a folder by hand on Linux that lives outside the Flatpak sandbox now shows
+    the Flatpak permission instructions (the "flatpak override --filesystem" command)
+    instead of a misleading "Directory does not exist" error.
+  - Auto-Detect now works for Steam on Linux: it probes the common native and Flatpak
+    Steam install locations and reads libraryfolders.vdf, rather than relying on the
+    Windows-only registry (which always returned nothing on Linux).
+
+
+## [4.1.9] - Legacy (DLSS Updater)
+Desktop UX & UI Improvements:
+  - Light/dark theme switching is now live — the whole UI re-themes instantly with a
+    subtle cascade animation, with no application restart required (the old "Restart
+    Required" dialog has been removed).
+  - Game cards now have a right-click context menu (Update all DLLs, Restore from
+    backup, Open folder, Copy path, Launch via Steam, Ignore/Unignore, Edit display) —
+    the menu reflects each card's current state (disabled actions, ignore status).
+  - Games Library: the search box is now a native search field with live game-name
+    suggestions and recent-search history, plus status filter chips (Needs update /
+    Up to date / Has backups) for quick filtering. It collapses to a search icon
+    (consistent with the options/refresh icons) and expands on click, auto-collapsing
+    when emptied.
+  - Settings view redesigned with a denser, two-column responsive tile layout and an
+    inline light/dark theme toggle switch right on the Theme tile.
+  - Launchers tab now uses a two-column responsive card layout and shows a clear
+    "rescan recommended" prompt when the last scan is stale (7+ days) or missing.
+  - Home page Games card gained a stats strip showing DLL backup count & size and the
+    time since your last scan.
+  - Undo support: removing a launcher path or toggling a game's ignored state now shows
+    an "Undo" action in the confirmation snackbar. The snackbar auto-dismisses after a
+    few seconds and the Undo button is now clearly legible in both light and dark themes.
+  - The floating action pill moved to the bottom-left and no longer overlaps the
+    launcher action bar or scrollable content (added bottom clearance to scroll areas).
+  - Slim, rounded, auto-hiding scrollbars across all scroll areas.
+  - Log count badge now caps at "99+" to stay compact.
+  - Increased the window minimum size (820x560) to prevent button-wrap clipping at
+    narrow widths.
+
+
+## [4.1.8] - Legacy (DLSS Updater)
+UI Polish:
+  - Fixed hub card stat badges ("3 configured", "14 games found") showing incorrect
+    yellowish background; they now correctly display a subtle accent-tinted background
+    in both light and dark modes.
+  - Games Library header decluttered: "Hide ignored games" and "Delete Database" moved
+    into a compact options menu (⊞ icon), keeping only search, options, and refresh
+    visible in the header bar.
+  - Search bar now collapses to an icon by default and expands to full width on click;
+    auto-collapses when cleared and focus is lost.
+  - Removed the "Application" button from the top bar; "Check for Updates" is now a
+    tile in the Settings view alongside other app settings.
+
+Edit Game (Issue #202):
+  - New "Edit game" button on every game card lets you update a game's name and image.
+  - Search uses the local FTS5 app-list database (no credentials required). Steam API
+    credentials (Settings) improve search result quality when configured.
+  - The override is cosmetic only — backups, merge keys, and the global updater are
+    unaffected; the original folder-derived name is preserved internally.
+  - Override survives rescans: stored in dedicated columns that the scanner never
+    touches, so a rescan cannot revert a manually set link.
+  - Existing overrides can be cleared from the same dialog with one click.
+
+
+## [4.1.7] - Legacy (DLSS Updater)
+DLSS Settings - Global Preset Overrides for SR / RR / FG (Windows):
+  - New "DLSS Settings" card on the home page lets you force global DLSS presets
+    across every DLSS game via the NVIDIA driver's NvAPI Driver Settings (the same
+    mechanism as the NVIDIA App's global override):
+      - Super Resolution (SR): Default / Latest / Preset J / K / L / M
+      - Ray Reconstruction (RR): Default / Latest model
+      - Frame Generation (FG): Default / Latest model
+  - The selection is written to the driver base profile and applied the next time
+    each game launches. The panel reads and displays the currently applied driver
+    preset for each component on open (including presets set by the NVIDIA App).
+  - Caveat: the NVIDIA App's DLSS override also writes per-game overrides that take
+    priority over this global setting for those games. To let this global setting
+    apply, set the DLSS override to Default/Off in the NVIDIA App. The panel notes
+    this inline.
+  - Windows + NVIDIA only; the existing Linux DLSS SR preset panel is unchanged.
+Dependency Upgrades:
+  - flet 0.85.0 -> 0.85.2 and flet-desktop 0.85.0 -> 0.85.2 (Windows).
+  - Restored nvidia-ml-py for NVIDIA GPU/architecture detection.
+
+
+## [4.1.6] - Legacy (DLSS Updater)
+Linux Flatpak Launch Failure on Steam Deck / CachyOS (Issue #217):
+  - Fixed: v4.1.5 Flatpak failed to launch on Steam Deck, CachyOS, and other distros
+    running modern Linux kernels with strict W^X enforcement. The PyInstaller bootloader
+    exited immediately with:
+        "Failed to load Python shared library '/tmp/_MEI.../libpython3.14t.so.1.0':
+         cannot enable executable stack as shared object requires: Invalid argument"
+
+
+## [4.1.5] - Legacy (DLSS Updater)
+HDR Disabled by Folder Picker on Windows 11 (Issue #216):
+  - Fixed: On Windows 11 (notably 24H2 with HDR enabled), clicking the "Add Sub-Folder"
+    button on a launcher card disabled system HDR while the file dialog was open.
+  - Root cause: the FilePicker was held as a long-lived instance with no proper
+    page attachment, so the underlying Win32 IFileOpenDialog opened as an
+    unowned top-level window (NULL hwndOwner). On Windows 11, focus transferring
+    to an unowned, non-HDR-aware dialog crosses the focus-group boundary and
+    trips the per-app HDR auto-arbitration ("Automatically Manage Color for apps"),
+    which disables HDR for the foreground window.
+  - Fix: FilePicker is now instantiated inline at the point of use, matching the
+    canonical Flet 0.85 pattern (FilePicker is a Service subclass — the Service
+    base class auto-attaches to the active page, parenting the dialog to the
+    Flet window so it inherits the same focus group and HDR is no longer disabled).
+  - Note: an interim attempt to do this via page.overlay.append() failed with
+    "Unknown control: FilePicker" because in 0.85 FilePicker is no longer a
+    valid overlay child. Inline instantiation is the supported approach.
+Dependency Upgrades:
+  - flet 0.84.0 -> 0.85.0 (declarative router, use_dialog() hook, video/audio improvements).
+  - flet-desktop 0.84.0 -> 0.85.0 (matches flet).
+  - requests 2.33.1 -> 2.34.0.
+  - idna 3.13 -> 3.14 (transitive, via requests).
+  - All upgrades performed via `uv lock --upgrade`; runtime/free-threaded behaviour
+    unchanged on Python 3.14t. Flet 0.85 release notes contain no FilePicker, page.overlay,
+    or window/HDR-related changes, so the Issue #216 fix is unaffected by the bump.
+Free-Threaded Python Pin Bumped to 3.14.3:
+  - Project's pinned interpreter (.python-version) bumped from "3.14+freethreaded" to
+    "3.14.3+freethreaded" — the highest 3.14 free-threaded build that astral-sh
+    (python-build-standalone) currently publishes for BOTH Windows and Linux x86_64-gnu.
+    Linux is behind Windows on patch releases (3.14.5 is Windows-only at the time of
+    bump; the same patch on Linux isn't published yet). Pinning the highest common
+    version keeps reproducibility across platforms.
+    PyInstaller specs (both Windows and Linux) continue to pass
+    [('X gil=0', None, 'OPTION')] at the bootloader level, so the bundled executable
+    starts with the GIL disabled even if a loaded C extension hasn't declared
+    Py_MOD_GIL_NOT_USED.
+  - All CI/CD workflows pinned to match the new interpreter version:
+    .github/workflows/python-app.yml ("3.14" -> "3.14.3+freethreaded"),
+    .github/workflows/pylint.yml ("3.14" -> "3.14.3+freethreaded"),
+    .github/workflows/update-download-badge.yml ("3.14t" -> "3.14.3+freethreaded"),
+    .github/workflows/build-flatpak.yml (uv python install/pin "3.14t" -> "3.14.3+freethreaded"),
+    .github/workflows/codspeed.yml ("3.14" -> "3.14.3t", and renamed step from "Set up Python 3.10"
+    to "Set up Python 3.14.3 (free-threaded)" — the codspeed workflow was previously running
+    benchmarks on regular GIL-enabled CPython, not the free-threaded interpreter the app
+    actually ships with). build_flatpak.sh and build_msi.ps1 comment/pin also updated.
+PEP 639 License Metadata Migration:
+  - Briefcase 0.4.2 now warns that the PEP 621 `license.file = "LICENSE"` format under
+    [tool.briefcase] is deprecated in favour of PEP 639. Migrated both [project] and
+    [tool.briefcase] to use `license = "AGPL-3.0-only"` (SPDX expression) plus
+    `license-files = ["LICENSE"]`. Resolves the warning emitted during `briefcase package
+    windows` and matches modern packaging tooling (setuptools >= 77, hatchling, uv).
+GIL-Unlock Audit:
+  - Audited all 34 cp314t-tagged native extensions in the dependency tree. Of those,
+    only msgpack 1.1.2's _cmsgpack module still triggers the runtime GIL re-enable
+    warning. The msgpack-python main branch has added `#cython: freethreading_compatible
+    = True` post-1.1.2, so the next msgpack release will fix this upstream. Until then,
+    PYTHON_GIL=0 / -X gil=0 keep the GIL disabled at runtime (set at the PyInstaller
+    bootloader for bundled builds; defense-in-depth env var added to the Flatpak
+    finish-args). All other native extensions (aiohttp, charset_normalizer, frozenlist,
+    markupsafe, msgspec, multidict, Pillow, propcache, psutil, rapidfuzz, winloop,
+    PyYAML, yarl, cffi) load cleanly without re-enabling the GIL.
+  - msgpack is pulled in transitively by Flet (both 0.84-linux and 0.85-win32) for its
+    RPC protocol — it is NOT a Linux-only dependency. The "serious-python" project is
+    not in play here: Flet on desktop uses the system / PyInstaller-bundled Python,
+    not serious-python (which targets mobile/web).
+  - Linux GIL-unlock confirmed wired end-to-end: DLSS_Updater_Linux.spec carries the
+    same -X gil=0 bootloader OPTION as Windows, build_flatpak.sh exports PYTHON_GIL=0
+    during the PyInstaller build phase, and io.github.recol.dlss-updater.yml now
+    sets --env=PYTHON_GIL=0 in finish-args for the runtime sandbox.
+
+Flet 0.85 API Migration:
+  - Migrated 137 call sites across 30 files from the removed module-level helpers
+    (ft.padding.all/symmetric/only/horizontal/vertical, ft.margin.*, ft.border.*,
+    ft.border_radius.*) to the new capitalized classmethods (ft.Padding.*, ft.Margin.*,
+    ft.Border.*, ft.BorderRadius.*).
+  - This was a hard removal in 0.85 (not a deprecation), so the app would crash on
+    startup without the migration (e.g. AttributeError on ft.padding.all in
+    LoadingOverlay.__init__).
+
+
+## [4.1.4] - Legacy (DLSS Updater)
+Security - GitPython newline-injection bypass of CVE-2026-42215 (Issue #210):
+  - Bumped GitPython 3.1.49 -> 3.1.50, which patches a newline-injection bypass in
+    config_writer().set_value(). The original CVE-2026-42215 patch validated only the
+    `value` argument; `section` and `option` were still passed to configparser without
+    newline validation, allowing an attacker who controlled the section string to
+    inject a forged [core] header with hooksPath -> attacker-controlled directory and
+    achieve RCE on the next git hook trigger.
+  - GitPython is a transitive dependency in this project (pulled in by briefcase, used
+    only at MSI build time), so end users of the shipped binaries were not exploitable
+    via DLSS Updater itself. The bump removes the vulnerable resolution from the lock
+    file regardless.
+Dependency Upgrades:
+  - briefcase 0.4.1 -> 0.4.2 (MSI build tooling).
+  - markdown-it-py 4.0.0 -> 4.2.0.
+  - pip 26.1 -> 26.1.1.
+  - propcache 0.4.1 -> 0.5.2.
+  - pyinstaller-hooks-contrib 2026.4 -> 2026.5.
+  - rich 14.3.4 -> 15.0.0.
+  - tomlkit 0.14.0 -> 0.15.0.
+  - urllib3 2.6.3 -> 2.7.0 (transitive, via requests).
+  - tenacity 9.1.4 newly resolved (transitive, via briefcase 0.4.2).
+  - All upgrades performed via `uv lock --upgrade`; runtime/free-threaded behaviour
+    unchanged on Python 3.14t.
+
+
+## [4.1.3] - Legacy (DLSS Updater)
+Update Summary: Show Game Names (Issue #207):
+  - Fixed: The Update Complete summary screen was showing "common" instead of the actual game
+    name for every updated DLL. Caused by the high-performance updater finding "steamapps" in
+    the path and returning the next part ("common") rather than skipping to the game folder.
+  - Game names are now resolved using the same launcher-aware extract_game_name() logic used
+    across the rest of the app (handles Steam, EA, Epic, GOG, Ubisoft and custom folder paths).
+  - Standard (fallback) update path also fixed: tuples were being passed to the summary dialog
+    raw instead of being formatted into human-readable "GameName (DLL type)" strings.
+
+
+## [4.1.2] - Legacy (DLSS Updater)
+Windows Taskbar Pinning Fix (Issue #184):
+  - Fixed: Pinning the app to the taskbar previously pinned flet.exe (the Flet GUI engine),
+    causing a white screen when launched from the pinned shortcut.
+  - The app now sets AppUserModelID ("io.github.recol.DLSSUpdater") and RelaunchCommand on
+    flet.exe's window at startup using SHGetPropertyStoreForWindow. Windows uses RelaunchCommand
+    when pinning, so the pinned shortcut correctly points to DLSS_Updater.exe.
+  - Also sets SetCurrentProcessExplicitAppUserModelID in the main process for proper Jump List support.
+  - MSI installer: Start Menu shortcut now includes the System.AppUserModel.ID property so
+    pinning from the Start Menu works correctly without running the app first.
+
+
+## [4.1.1] - Legacy (DLSS Updater)
+DLL Rollback Compatibility Warning:
+  - New feature that warns you before updating to a DLL version you've already rolled back from
+    in multiple other games — a strong signal that this specific version may cause issues on
+    your system.
+  - Before starting an update, the app cross-references the target DLL version against your
+    own rollback history. If you've reverted from v{target} of the same DLL in two or more
+    other games within the past 48 hours, a warning dialog lists the affected games and lets
+    you choose: Cancel, Skip flagged DLLs, or Update anyway.
+  - Inline amber "Rolled back in N games" chip appears in the DLL Details dialog next to any
+    DLL whose latest version matches a version you've recently rolled back from.
+  - Pure local SQL — no telemetry, no cloud service, no data leaves your machine. The signal
+    is entirely derived from your own restore actions.
+  - Handles repo updates gracefully: if a newer version ships later, old flags naturally
+    expire as they no longer match the current target version.
+  - Database migration adds `restored_at` and `post_update_version` columns to `dll_backups`;
+    existing backups are preserved.
+
+Rollback Warning Fixes:
+  - Fixed: the rollback compatibility detection was keying on `original_version` (the version
+    you rolled back TO) instead of `post_update_version` (the version you rolled back FROM).
+    Warnings now correctly fire when you're about to update to a version you've previously
+    rolled back from.
+  - Changed the flag threshold from ">=2 distinct games" to ">=2 total rollback events"
+    for the same (DLL, version). DLLs are vendor-signed, so the same version is identical
+    across every game it ships in — a bad version is bad universally, regardless of which
+    game(s) you rolled it back from. This also means small libraries actually benefit from
+    the warning, and repeated rollbacks of the same DLL in a single game count as the
+    signal they are.
+  - Warning dialog and inline chip now show event count (e.g. "Rolled back 3x") and the
+    distinct games affected as context.
+
+DLL Details Dialog Backup Sync Fix:
+  - Fixed: the per-game DLL details dialog (opened by tapping the status badge on a game
+    card) showed stale "backed up" state for each DLL after recent updates or restores —
+    the dialog was refreshing current DLL versions from disk but reusing the cached
+    backup_groups from when the card was built. It now re-queries backup groups from the
+    database on every open, so the Restore-per-DLL options reflect the current DB state
+    without waiting for an app restart.
+
+Update/Restore Button Sync Fixes:
+  - The per-game Update button no longer stays enabled when all DLLs are already at the latest
+    version. It now disables (with an "All DLLs are up to date" tooltip) and the dropdown only
+    lists groups that actually have an outdated DLL.
+  - After a successful update, the Restore menu is immediately refreshed to include the newly
+    created backups — previously you had to re-open the view for them to appear.
+  - "Refresh all badges" now re-fetches backup groups via a single batched query, keeping
+    Restore menus in sync after global updates too.
+  - The Update button's state (items + enabled/disabled + colors) is now rebuilt in-place
+    whenever DLLs change, so it stays accurate after any update or restore.
+
+Flatpak Runtime Upgrade (Issue #204):
+  - Upgraded Freedesktop Platform/SDK from 24.08 to 25.08. The 24.08 runtime is no longer
+    installable on newer Fedora versions, causing "runtime org.freedesktop.Platform/x86_64/24.08
+    which was not found" errors during install.
+  - 25.08 brings glibc 2.42 and GCC 15.1, and natively ships libsecret (required by Flet's
+    flutter_secure_storage); the bundled libsecret module is retained for forward compatibility.
+
+
+## [4.1.0] - Legacy (DLSS Updater)
+Personal Game Ignore List (Issue #194):
+  - Added per-game ignore toggle on each game card (eye icon) to exclude
+    specific games from DLL updates.
+  - Ignored games are visually dimmed (50% opacity) and their update buttons
+    are disabled to prevent accidental updates.
+  - Both "Update All" and individual game updates respect the ignore list.
+  - Ignore toggle button overlays the game card image (top-right corner) for
+    quick access without cluttering the action buttons row.
+  - "Hide ignored games" filter toggle moved to the Games view header bar.
+  - Added "Ignored Games" settings panel (Settings > Ignored Games) with
+    search and per-game toggle switches for bulk management.
+  - Ignore list is stored in the database and persists across sessions.
+  - Supports merged/multi-install games (ignoring applies to all installations).
+
+Outdated vs Current DLL Indicators:
+  - Game cards now show color-coded badges: amber "N/M outdated" when DLLs need
+    updates, green "N DLLs current" when everything is up to date.
+  - Detailed tooltips list each DLL's current vs latest version.
+
+Backup Disk Usage Display:
+  - Games view header now shows total backup count and disk usage (e.g. "43 backups · 1.2 GB").
+  - Loaded in parallel via HyperParallelLoader with zero additional latency.
+
+Enhanced FilePicker UX:
+  - Launcher cards with no paths now show a styled "Click to add a game folder"
+    drop zone with icon and description, instead of an empty card.
+  - Hover effect highlights the zone border for interactive feedback.
+
+Game Launch Button (Steam Only):
+  - Steam game cards now show a play button that launches the game via
+    steam://rungameid/{app_id} protocol. Cross-platform (Windows + Linux).
+
+DLL Badge Refresh:
+  - Game card DLL badges (outdated/current counts) now refresh automatically
+    after "Update All" completes, reading actual file versions from disk.
+  - Refresh Games button also re-reads DLL versions from the filesystem,
+    fixing stale badge counts after external updates.
+  - Settings panel ignore toggles now sync to game cards in real-time
+    (previously required reloading the Games view).
+
+
+## [4.0.1] - Legacy (DLSS Updater)
+Clipboard Fix (Issue #189):
+  - Fixed "Failed to copy to clipboard: 'Page' object has no attribute 'set_clipboard_async'"
+    error when clicking the copy button for Steam launch options in the Linux DLSS panel.
+    The method was using a non-existent API; updated to use ft.Clipboard().set().
+
+Flet Upgrade:
+  - Upgraded Flet from 0.83.0 to 0.84.0 on Linux (Windows was already on 0.84.0).
+
+
+## [4.0.0] - Legacy (DLSS Updater)
+Rescan Prompt After Path Changes (Issue #181):
+  - After removing a path or resetting paths on the Launchers page, a snackbar now
+    appears with a "Rescan" action button prompting the user to refresh the game list.
+    Previously there was no feedback that stale games might remain in the list.
+
+Steam Multi-Library Auto-Detect (Issue #180):
+  - Steam Auto-Detect now discovers all Steam library folders across multiple drives,
+    not just the primary installation. It reads Steam's libraryfolders.vdf (which the
+    scanner already used for game discovery) to find all configured library paths.
+    Previously only the registry install path (typically C: drive) was detected.
+
+Launcher Page Refresh Fix (Issue #179):
+  - Fixed Launchers page not refreshing after adding/removing paths or pressing Reset.
+    LauncherCard uses is_isolated=True but was calling page.update() (which skips isolated
+    controls) instead of self.update(). Changes were applied in Python but never sent to
+    the frontend until the user navigated away and back.
+
+Window State Persistence (Issue #183):
+  - The application now remembers window size, position, and maximized state between
+    sessions. On startup, the window restores to its previous location and dimensions.
+  - Debounced save on resize/move (300ms) to avoid excessive disk writes.
+  - Maximized state is preserved separately so restoring from maximized returns to the
+    previous normal size and position.
+  - Saved in existing config.ini under [WindowState] section.
+
+Steam Image Fix - New CDN URL format fallback (Issue #182):
+  - Fixed game art not loading for newer Steam games (e.g. Resident Evil 9: Requiem).
+    Steam has migrated newer titles to hash-based image URLs that cannot be predicted
+    from the app ID alone. When legacy CDN URLs return 404, the app now falls back to
+    the Steam appdetails API to resolve the actual header image URL.
+  - Affects any game released after Steam's CDN migration (~late 2025+).
+
+
+## [3.9.9] - Legacy (DLSS Updater)
+UI Fix - DLL Details dialog scaling:
+  - DLL Details dialog now scales responsively with the application window size instead
+    of using fixed dimensions. The dialog spans the full window minus small margins,
+    and the scroll area expands to fill available space. Fixes content and Close button
+    being cut off when the window is resized or minimized.
+
+
+## [3.9.8] - Legacy (DLSS Updater)
+Bug Fixes - Scanner crash and image loading:
+  - Fixed UnboundLocalError in find_all_dlls() where config_manager was inaccessible.
+    A redundant local import of config_manager inside the function caused Python to treat
+    it as a local variable for the entire function scope, making the module-level import
+    unreachable at the point of use (line 902). Removed the redundant local import.
+  - Fixed "can not serialize 'WindowsPath' object" error when loading uncached game images.
+    fetch_steam_image() returns a Path object but Flet's Image.src requires a string.
+
+
+## [3.9.7] - Legacy (DLSS Updater)
+MSI Build Fix - Free-threaded Python runtime (Issue #176):
+  - Fixed MSI installer failing to start with "Disabling the GIL is not supported by this build".
+    The GitHub Actions MSI workflow was using standard Python 3.14 instead of the free-threaded
+    variant (3.14t). The PyInstaller spec embeds -X gil=0 which requires free-threaded Python.
+  - Changed build-msi.yml to use python-version: "3.14t" matching the Flatpak build workflow.
+
+
+## [3.9.6] - Legacy (DLSS Updater)
+Steam API Integration - Dramatically improved game image loading (Issue #175):
+  - Added optional Steam API key support for accurate game app ID resolution.
+    Users can provide their free Steam Web API key to resolve game images
+    via their owned games list instead of relying on fuzzy name matching.
+  - Four-tier app ID resolution system:
+    1. Steam manifest detection (existing, 100% accurate for Steam games)
+    2. Steam API owned games lookup (new, ~99% accurate for all owned games)
+    3. Steam Store search API (new, ~90% accurate, no auth required)
+    4. FTS5 fuzzy database match (existing fallback)
+  - Steam API card on Games tab with:
+    - API key input with validation
+    - Auto-detected Steam ID from local Steam installation
+    - One-click "Re-resolve Games" to fix images from previous scans
+    - Link to get a free API key at steamcommunity.com/dev/apikey
+  - Smart cache invalidation: only re-fetches images when app ID actually changes.
+    Games resolved via manifest are never re-resolved (already 100% accurate).
+  - Added resolution_source tracking to game records for intelligent re-resolution.
+  - Re-resolution engine that batch-updates app IDs, clears old cached images,
+    and resets failed fetch flags when better app IDs are found.
+
+
+## [3.9.5] - Legacy (DLSS Updater)
+MSI Installer for Windows - Replaces portable ZIP for winget and Chocolatey distributions:
+  - Added MSI installer build using PyInstaller (onedir) + Briefcase external app packaging.
+  - Resolves Windows Defender false positive detection (Trojan:Win32/Wacatac.H!ml) that blocked
+    winget package submission. The onedir mode eliminates the self-extracting archive pattern
+    that triggers Defender's ML heuristic, and UPX compression is disabled for MSI builds.
+  - MSI installs to Program Files with proper Add/Remove Programs entry.
+  - Portable single-exe distribution remains available via direct download.
+  - New build-msi.yml GitHub Actions workflow automates MSI builds on release.
+  - Updated winget manifest from InstallerType: zip (portable) to InstallerType: msi.
+  - Updated Chocolatey package to embed MSI with proper install/uninstall via msiexec.
+  - Existing winget/Chocolatey users: uninstall old version, then install new MSI version.
+Build System:
+  - Added DLSS_Updater_MSI.spec for onedir PyInstaller builds (UPX disabled).
+  - Added Briefcase external app configuration in pyproject.toml.
+  - Briefcase >= 0.4.1 added as build dependency for MSI packaging via WiX Toolset.
+
+
+## [3.9.4] - Legacy (DLSS Updater)
+Framework Upgrade - Flet 0.82.2 → 0.83.0:
+  - Upgraded Flet from 0.82.2 to 0.83.0.
+  - Removed flet-desktop-light dependency (deprecated in Flet 0.83.0).
+    Linux builds now use flet-desktop which defaults to "light" flavor automatically.
+  - Performance gains from Flet's new Prop/value diffing engine (up to 6.7x for animated UIs,
+    1.5-3.4x for typical UI updates) — zero code changes required to benefit.
+  - page.update() double-fire eliminated automatically: redundant auto-update after an
+    explicit page.update() call is now skipped by the framework.
+  - ft.context.enable_auto_update() added as complement to disable_auto_update().
+  - New ft.Scrollbar and ft.ScrollbarOrientation available for future use.
+  - Fixed crash when navigating away from Settings and back.
+    Flet 0.83.0's diff engine corrupted __prev_classes['content'] on views attached via
+    Container.content. Replaced Container wrappers with Column wrappers in navigation
+    controller to avoid the bug entirely.
+  - Fixed logger panel toggle button not expanding/collapsing the log view.
+    LoggerPanel uses is_isolated=True but was calling page.update() which skips isolated
+    controls. Now correctly uses self.update() for panel-level changes.
+Bug Fixes:
+  - Fixed "Latest" DLL version numbers showing incorrect/stale values in the DLL Details
+    dialog on the Games page (Issue #167). Versions were hardcoded and never updated
+    from the local DLL cache. Latest versions are now read from the cached DLL files
+    after cache initialization, reflecting what games would actually be updated to.
+Dependencies:
+  - winloop 0.5.0 → 0.6.0 (Windows): Updated cp314t wheels for win_arm64/amd64/win32.
+  - packaging 25.0 → 26.0: Major version bump, pure Python, no breaking changes.
+  - aiohttp 3.13.3 → 3.13.4: Patch update with cp314t wheels.
+  - aiosqlite 0.22.0 → 0.22.1: Minor patch update.
+  - platformdirs 4.9.2 → 4.9.4: Minor patch update.
+
+
+## [3.9.3] - Legacy (DLSS Updater)
+Bug Fixes - Games Tab Progressive Loading:
+  - Fixed remaining game cards (beyond the initial 16) loading indefinitely as blank/grey boxes.
+    Background batch cards now trigger Steam image fetching the same way the initial batch does.
+  - Fixed a single exception in any background batch silently aborting all remaining card creation.
+    Each batch is now independently protected so a failure in one batch doesn't prevent the rest.
+Adjustments to default Linux permissions from :ro to :rw to enable writing to folders by default.
+Dependency upgrades to fix library CVE reports.
+
+
+## [3.9.2] - Legacy (DLSS Updater)
+Bug Fixes - Data Lifecycle and Version Handling:
+  Critical Fixes:
+  - Fixed phantom games persisting after uninstall. Games that are uninstalled now get cleaned up
+    during the next scan. The scanner now runs post-scan cleanup to remove games whose paths
+    no longer exist on the filesystem.
+  - Fixed orphan DLL records accumulating when DLLs are removed from game directories.
+    The cleanup process now removes DLL records for files that no longer exist.
+  - Fixed version display inconsistency showing comma-separated versions (310,4,0,0) instead of
+    dot-separated (310.4.0.0). All DLL versions are now normalized to dot format at extraction time.
+  - Fixed MergedGame AttributeError crash when clicking Update/Restore in DLL group dialog
+    for games with duplicate installations. Callbacks now always receive Game objects.
+  - Fixed "Up to date" dialog showing stale versions. The DLL dialog now refreshes versions
+    from the actual filesystem before displaying, ensuring accuracy.
+  - Added cleanup_duplicate_games() and cleanup_duplicate_backups() calls during post-scan
+    to prevent database bloat from duplicate entries.
+  UI Improvements:
+  - New shutdown progress dialog shows step-by-step progress when closing the application.
+    Displays current operation (9 steps total) with progress bar and spinner.
+    Prevents the appearance of the app "freezing" during cleanup.
+Database:
+  - Added cleanup_missing_games() - removes games whose paths no longer exist.
+  - Added cleanup_orphan_dlls() - removes DLL records for deleted files.
+  - Added perform_post_scan_cleanup() - unified post-scan cleanup orchestration.
+  - Added refresh_dll_versions_for_game() - re-reads DLL versions from filesystem.
+
+
+## [3.9.1] - Legacy (DLSS Updater)
+Linux DLSS SR Presets (Linux Only):
+  - Reintroduced DLSS Super Resolution preset configuration for Linux users.
+  - New "Linux DLSS SR Presets" tile in Settings (visible only on Linux with NVIDIA GPU).
+  - Configure SR presets (Default/K/L/M) for Proton/Wine games via DXVK-NVAPI environment variables.
+  - Preset K: Lighter preset, recommended for RTX 20/30 series GPUs.
+  - Preset L: Balanced preset for quality/performance trade-off.
+  - Preset M: Heavier preset, recommended for RTX 40/50 series GPUs.
+  - Additional toggles: DLSS Debug Overlay, Wayland support, HDR support.
+  - Live command preview shows generated Steam launch options.
+  - Copy to clipboard button for easy pasting into Steam's "Set Launch Options".
+  - Settings are persisted and remembered between sessions.
+Bug Fixes:
+  - Fixed "Copy Path" button crashing the application when clipboard is unavailable.
+    All clipboard operations now wrapped in try-except with user-friendly error messages.
+    Affected components: GameCard, LauncherCard, BackupCard, DLSSOverlayDialog, MainView.
+  - Fixed "Refresh Games" throwing ImportError: cannot import name 'fetch_and_cache_steam_image'.
+    The function was renamed to 'fetch_steam_image' but games_view.py still referenced the old name.
+  - Fixed theme toggle on Windows throwing "ModuleNotFoundError: No module named 'msgspec._core'".
+    PyInstaller's collect_all() doesn't recognize free-threaded Python extensions (.cp314t-*.pyd).
+    Added custom PyInstaller hook (hook-msgspec.py) to manually detect and bundle the C extension.
+  - Theme toggle now shows a restart dialog instead of attempting automatic restart.
+    Automatic restart had compatibility issues with PyInstaller's frozen executables on both
+    Windows and Linux. Users can choose "Restart Now" to exit or "Later" to continue working.
+
+
+## [3.9.0] - Legacy (DLSS Updater)
+Navigation Transition Performance Optimization:
+  - Reduced navigation transitions from ~600ms to <100ms (most views) / <200ms (games view).
+  - Content detachment: Only the active view's subtree is attached to the Flet control tree.
+    Inactive containers have content=None, removing their subtrees from serialization.
+  - Single page.update() per transition instead of 2 (no fade-out gap needed).
+  - GamesView isolation: Uses is_isolated=True so page.update() from navigation skips
+    the ~500+ control games subtree. All GamesView internal updates use self.update().
+  - ImageLoadCoordinator updated to use targeted view updates instead of page-level updates.
+  - Game card fallback image loading uses card-level self.update() (~21 controls vs ~4000).
+  Performance:
+  - Hub/Settings transitions: ~50-70ms (was ~600ms) — ~10x faster.
+  - Launchers transitions: ~120-160ms (was ~600ms) — ~4x faster.
+  - Games transitions: ~50-80ms (was ~600ms) — ~10x faster (with isolation).
+  - Games→Hub/Settings: ~30-40ms (was ~600ms) — ~18x faster.
+  - Python view objects persist through detach/reattach (state preserved).
+
+
+## [3.8.0] - Legacy (DLSS Updater)
+Hub-Based Navigation Redesign:
+  - Replaced tab-based navigation with a staggered/asymmetric hub home screen.
+  - Hub features 3 navigation cards: Launchers, Games, and Settings with left-edge accent bars.
+  - Cards have hover animations (scale + shadow + border glow) using GPU-accelerated transforms.
+  - Hub stats loaded via HyperParallelLoader showing game count and configured launcher count.
+  - Added floating pill navigation bar (capsule at bottom) shown when inside views.
+  - Pill features Home button + 3 view icons with active state (colored circle behind icon).
+  - Fade transitions between views (150ms opacity, GPU-accelerated, no layout recalc).
+  - Stack-based visibility toggle preserves view state across navigation (instant revisits).
+  - Navigation stack supports back navigation via Escape key or pill Home button.
+  - New Settings view provides access to Update Preferences, UI Preferences, Blacklist, Theme toggle.
+  - Removed standalone Backups tab (backup/restore already available per-game in Games view).
+  - All new components support ThemeAwareMixin for dark/light theme switching.
+  Performance:
+  - Hub screen: ~20 controls (3 cards x ~5 inner controls + layout wrappers).
+  - Floating pill: ~13 controls total.
+  - Fade transitions: 2x page.update() per transition (~300ms total).
+  - Removing Backups tab eliminates ~400-1000 controls from the tree.
+
+
+## [3.7.0] - Legacy (DLSS Updater)
+Free-Threaded Python GIL Fix - Resolved GIL re-enablement warning for msgpack:
+  - Added PyInstaller OPTION 'X gil=0' to force GIL disabled at bootloader level.
+  - Pinned msgpack>=1.1.2 (has Py_mod_gil declaration for free-threading compatibility).
+  - Added RuntimeWarning filter for GIL-related warnings as defense-in-depth.
+  - Windows and Linux builds now properly run with GIL disabled throughout.
+Flet 0.80.4 Migration - Major framework upgrade with breaking API changes:
+  Removed Features:
+  - Removed DLSS SR Preset Override feature entirely.
+    This feature allowed configuring DLSS Super Resolution presets (K/L/M) via Windows registry
+    or Linux environment variables. The feature has been deprecated as NVIDIA's driver now
+    handles preset selection automatically based on GPU architecture.
+  Linux Build Fix:
+  - Fixed GTK/SVG errors on Nobara 43 (Issue #127) caused by bundled system libraries.
+  - PyInstaller now excludes libstdc++, libgcc_s, libc.so to use Flatpak runtime libraries.
+  - This prevents CXXABI version conflicts with the Flatpak Freedesktop runtime.
+  Framework Upgrade:
+  - Upgraded from Flet 0.28.3 to Flet 0.80.4 (major version jump).
+  - Modernized entry point from ft.app() to ft.run().
+  - Updated all alignment constants to uppercase (ft.Alignment.CENTER, etc.).
+  - Migrated dialog operations to new API (show_dialog/pop_dialog).
+  - Updated FilePicker to use async service pattern (returns path directly).
+  - Fixed ExpansionTile parameter (initially_expanded -> expanded).
+  - Fixed PopupMenuItem parameter (text -> content).
+  - Fixed Dropdown parameter (on_change -> on_select).
+  - Fixed BlurStyle API (ShadowBlurStyle -> BlurStyle).
+  API Compatibility:
+  - Updated all UI components to use _page_ref for stored page reference.
+  - In Flet 0.80.4+, controls inherit read-only 'page' property.
+  - Updated session/client_storage usage for API compatibility.
+  Performance Optimization:
+  - Fixed sequential image loading (~1.9s) now batched for concurrent loading (~350-400ms).
+  - ImageLoadCoordinator batches page.update() calls (2 calls instead of 11 per tab).
+  - 50ms debounce window collects concurrent image loads for synchronized fade-in.
+  - Upgraded skeleton loaders to ft.Shimmer for GPU-accelerated animation.
+  - Documented Flet 0.80.4 performance patterns in CLAUDE.md for future reference.
+  - Replaced "More Options" menu (585ms expand, 1183ms collapse) with 3 popup buttons (~20-30ms each).
+  - New app bar layout: Community (pink heart), Preferences (orange gear), Application (blue grid).
+  - Native Flutter PopupMenuButton provides GPU-accelerated menu rendering.
+  - Eliminated 100+ nested controls in favor of lightweight popup menus.
+  - Logger panel: Replaced height animation with visible+opacity pattern (~50-100ms faster toggle).
+  - Games tab: Skip redundant rebuilds on tab switching when games already loaded (~1.5s saved).
+  - Games tab: Respects "Keep Games in Memory" preference for instant tab switching.
+  - Games tab: Progressive loading - first 16 cards shown instantly, rest load in background.
+  - Games tab: Performance logging for data loading and card creation timings.
+  - Backups tab: Switched from ResponsiveRow to virtualized GridView (only renders visible cards).
+  - Backups tab: Progressive loading - first 12 cards shown instantly, rest load in background.
+  - Backups tab: Parallel database queries with asyncio.gather() (~50% faster data loading).
+  - Backups tab: Skip redundant rebuilds on tab switching (instant return visits).
+  - Both tabs now scale to 200+ items with instant perceived loading.
+  - Tab switching: Removed 200ms artificial delay, instant visual switch now.
+  - Tab switching: Content visibility toggles immediately, shows loading indicator.
+  - Tab switching: Data loading runs non-blocking via asyncio.create_task.
+  - Tab switching: Cleanup runs non-blocking (asyncio.create_task).
+  - Tab switching: User sees instant response, data loads transparently in background.
+  Bug Fixes:
+  - Fixed Restore button disappearing when Games tab is resized to narrow width.
+    Root cause: Fixed 180px card height with clip behavior clipped wrapped buttons.
+    Fix: Increased card height to 220px and adjusted GridView aspect ratio (1.78 -> 1.45).
+  - Fixed search index being cleared on tab switch despite "Keep Games in Memory" preference.
+    Root cause: Duplicate clear_index() call in _cleanup_games_view() ignored user preference.
+    Fix: Removed redundant clear, now respects config_manager.get_keep_games_in_memory().
+  - Fixed database connection pool closing on every tab switch to Launchers.
+    Root cause: db_manager.close() was called when navigating to Launchers tab.
+    Fix: Pool now stays open for app lifetime, only closes on shutdown (~200-500ms saved per switch).
+Dependencies:
+  - Flet 0.28.3 -> 0.80.4
+  - flet-desktop 0.28.3 -> 0.80.4
+  - flet-desktop-light 0.28.3 -> 0.80.4 (Linux)
+
+
+## [3.6.1] - Legacy (DLSS Updater)
+GUI Unresponsiveness Fix - Critical fix for frozen/unclickable UI after launch:
+  Critical Fixes:
+  - Fixed LoadingOverlay blocking all mouse/keyboard input after hiding.
+    Root cause: The overlay set a custom `self.visible = False` attribute that
+    shadowed Flet's built-in visibility property. The Container remained rendered
+    and intercepted all input events while appearing invisible to users.
+    Fix: LoadingOverlay now dynamically adds/removes itself from page.overlay
+    in show()/hide() methods, ensuring proper event handling.
+  - Removed darkdetect dependency that caused blocking calls during startup.
+    The darkdetect.theme() call could hang for 2-10 seconds on:
+    - Linux Flatpak (D-Bus sandbox restrictions)
+    - Wayland sessions (portal access issues)
+    - Windows with certain antivirus software (registry query delays)
+    Theme is now loaded from saved user preference or defaults to dark mode.
+  - Fixed admin elevation race condition on Windows causing dual process instances.
+    ShellExecuteW is asynchronous - the original process would exit before the
+    elevated process fully started. Now uses ShellExecuteExW with proper process
+    handle waiting (2 second timeout) before exit.
+  Symptoms fixed:
+  - GUI opens but nothing is clickable or hoverable
+  - Only "Join Discord" and "Dismiss" banner visible but non-functional
+  - Can tab through items but cannot activate with space/enter
+  - Two DLSS_Updater.exe instances visible in Task Manager
+  - Processes persist after closing the window
+Dependencies:
+  - Removed darkdetect>=0.8.0 (no longer needed - caused blocking startup issues).
+
+
+## [3.5.6] - Legacy (DLSS Updater)
+Thread Safety & Memory Leak Fixes - Comprehensive fixes for Python 3.14 free-threaded mode:
+  Critical Fixes (P0):
+  - Fixed double-checked locking pattern in all singleton classes (DatabaseManager, ConfigManager, GameSearchService).
+    In free-threaded Python, multiple threads could pass the outer check simultaneously.
+  - Fixed thread-local database connections never being closed, causing memory leaks and file descriptor exhaustion.
+  - Fixed asyncio.create_task() being called from ThreadPoolExecutor workers (would crash or create orphan coroutines).
+  - Fixed SlidePanel overlay accumulation - panels now properly cleanup on all code paths including exceptions.
+  - Fixed missing theme deregistration in SlidePanel causing memory leaks with each panel open/close cycle.
+  - Fixed pool semaphore leak in database.py when aiosqlite.connect() raises exception.
+  - Fixed ThreadPoolExecutor shutdown race using wait=False (now uses wait=True with cancel_futures=True).
+  - Fixed fire-and-forget tasks in async_updater.py - evicted tasks now have proper exception handling.
+  - All UI fire-and-forget tasks now registered with task registry for proper shutdown tracking.
+  - Added SearchService shutdown() method and included in main_view shutdown sequence.
+  - Fixed memory-mapped file handle leak in cache_manager.py using try-finally cleanup.
+  - Fixed lock ordering deadlock risk in cache_manager.py by calling record_access() after releasing mmap_lock.
+  High Priority Fixes (P1):
+  - Fixed ConfigManager __init__ race condition by wrapping initialization in config lock.
+  - Fixed TOCTOU in database pool state by making ensure_pool() atomic.
+  - Added thread-safe lock for scanner.py global state (_dll_names_lower).
+  - Fixed exception swallowing in scanner ThreadPoolExecutor - now differentiates expected vs unexpected errors.
+  - Fixed os.scandir() resource leak by collecting subdirs first, then recursing AFTER closing scandir handle.
+  - Fixed game card dictionaries not being cleared in games_view.py on_view_hidden().
+  - Fixed cache dict modification during iteration in cache_manager.py by taking snapshot before iterating.
+  - Fixed MmapHandle reference count bug - added guard against going negative.
+  - All 11 scanner launcher tasks now registered with task registry for shutdown tracking.
+  - Fixed task registry TOCTOU race by adding periodic cleanup of done tasks.
+  - Fixed LATEST_DLL_PATHS unprotected reads - added get_dll_path() and get_all_dll_paths() thread-safe getters.
+  - Fixed ConfigParser save() not being thread-safe.
+  - Fixed LRU cache eviction bug using while loop instead of if (potentially evicting multiple entries).
+  Medium Priority Fixes (P2):
+  - Added thread-safe progress callback wrapper in scanner.py.
+  - Registered cache manager cleanup task with task registry.
+  - Added SearchBar cleanup() method for proper resource release.
+  - Removed unused _search_cache_lock in search_service.py.
+  New Utility Functions:
+  - task_registry: Added reset_shutdown_state(), get_active_task_count(), get_task_names().
+  - config: Added get_dll_path() and get_all_dll_paths() for thread-safe access.
+  - search_service: Added shutdown() method for graceful cleanup.
+
+
+## [3.5.5] - Legacy (DLSS Updater)
+Light/Dark Theme System - Complete theme support with automatic restart on toggle:
+  - Theme toggle re-enabled in Preferences menu (previously disabled).
+  - Application restarts automatically when theme is changed for clean rendering.
+  - OS theme detection on startup via darkdetect (respects system preference).
+  - User preference persists and overrides OS detection after manual toggle.
+  - WCAG AA compliant light mode palette (4.5:1 contrast minimum).
+  - Technology badges use container style in light mode (pale bg + brand text).
+  - Tab indicators adapt with darkened colors for light backgrounds.
+  - All dialogs, panels, and cards properly themed.
+Grouped DLL Dialog - New technology-grouped DLL view for better organization:
+  - DLLs now display grouped by technology (DLSS, Streamline, XeSS, FSR, DirectStorage).
+  - Click the DLL badge on any game card to open the new grouped dialog.
+  - Each technology group shows combined status (e.g., "2 updates" or "Up to date").
+  - Collapsible expansion panels reveal individual DLLs with version details.
+  - Per-group Update and Restore buttons for batch operations.
+  - Brand-colored indicators match technology (NVIDIA green, AMD red, Intel blue).
+  - Groups auto-expand when updates are available for quick visibility.
+Bug Fixes:
+  - Fixed race condition in game card UI lock that could block concurrent image loading.
+  - Fixed memory leak in progress task tracking during bulk update operations.
+  - Progress callback tasks now use bounded deque for O(1) cleanup instead of O(n²) list filtering.
+  - Fixed tab bar container background color not matching page background in both themes.
+  - Fixed launcher cards having tinted/colored backgrounds instead of transparent in light mode.
+Dependencies:
+  - Added darkdetect>=0.8.0 for cross-platform OS theme detection.
+
+
+## [3.5.4] - Legacy (DLSS Updater)
+Linux Flatpak Fixes - Resolved multiple launch and scan issues on Linux (Issues #122, #126, #127):
+  - Fixed FileNotFoundError when ~/.flet/bin directory doesn't exist.
+  - Fixed OSError "Read-only file system" on Flatpak by ensuring Flet directories are created.
+  - Added --filesystem=~/.flet:create permission to Flatpak build script.
+  - Fixed "Scan Failed" error caused by dict being passed as path (improved type validation).
+  - Fixed GTK/SVG icon loading failures on Nobara 43 (libstdc++ CXXABI conflict).
+  - Excluded system C++ libraries from PyInstaller bundle to use Flatpak runtime libraries.
+
+
+## [3.5.3] - Legacy (DLSS Updater)
+Linux Wayland Fix - Fixed launch failures on Fedora/Nobara with Wayland (Issue #122):
+  - Fixed app crash with "address already in use" error on port 8000.
+  - Fixed GIL warning about httptools.parser.parser module.
+  - Root cause: Flet incorrectly detected Wayland sessions as headless servers.
+  - Removed unnecessary web server dependencies (flet-web, uvicorn, httptools, fastapi).
+  - Added explicit desktop mode to prevent Flet's web server fallback.
+  - Added Wayland display detection workaround for Flet's is_linux_server() bug.
+  - Reduced Linux package size by ~3MB (32 fewer dependencies).
+
+
+## [3.5.2] - Legacy (DLSS Updater)
+Intel XeSS Frame Generation Support - New DLLs for Intel XeFG technology:
+  - Added libxess_fg.dll (XeSS Frame Generation SDK v1.2.2.118).
+  - Added libxell.dll (Intel XeLL library v1.2.1.13).
+  - Updated libxess.dll to v2.0.2.68 (from v2.0.1.41).
+  - Updated libxess_dx11.dll to v2.0.2.68 (from v2.0.1.41).
+  - New DLLs are part of the XeSS technology family and controlled by the XeSS update toggle.
+  - Intel XeSS Frame Generation provides AI-powered frame interpolation for Arc GPUs.
+Game Detection Improvements - Fixed duplicate game entries and multi-installation support:
+  - Fixed games with DLLs in different subdirectories appearing as separate entries.
+  - Games on multiple drives now merge into a single entry with combined DLL updates.
+  - Path display shows all installation locations with tooltip for multi-install games.
+  - Improved game root detection for Epic Games, EA, Ubisoft, GOG, and Battle.net launchers.
+
+
+## [3.5.1] - Legacy (DLSS Updater)
+Flatpak Distribution (Linux) - Replaces AppImage for improved Linux compatibility:
+  - Flatpak package available on Flathub and GitHub Releases.
+  - Eliminates library compatibility issues across different Linux distributions.
+  - Consistent runtime environment (Freedesktop 24.08) with all dependencies included.
+  - Automatic filesystem access for Steam, Wine, and common game directories.
+  - In-app dialog guides users to grant permissions for custom game locations.
+  - AppImage distribution has been discontinued in favor of Flatpak.
+  - Removed sudo/root elevation support on Linux (Flatpak handles permissions).
+  - Removed Linux privilege warning banner (no longer applicable with Flatpak).
+
+
+## [3.5.0] - Legacy (DLSS Updater)
+Keep Games in Memory Option - New UI preference for faster tab switching:
+  - Optional setting to retain search index when leaving Games tab.
+  - Faster re-entry to Games tab (no rebuild delay).
+  - Enabled by default for optimal responsiveness.
+  - Disable to reduce memory usage on low-RAM systems.
+  - Note: Requires app restart to take effect.
+UI Preferences Panel - New dedicated panel for interface settings:
+  - Moved Smooth Scrolling from Update Preferences to new UI Preferences panel.
+  - Accessible via Preferences > UI Preferences.
+  - Separates interface settings from DLL update configuration.
+New Slide-Out Panel UI - Modern settings panels replace popup dialogs:
+  - Settings, release notes, and blacklist now open in smooth slide-out panels.
+  - Panels slide in from the right side with fluid 300ms animations.
+Blacklist Manager Improvements:
+  - New search/filter field to quickly find games in large blacklists.
+  - Improved toggle cards with clearer status indicators.
+  - Real-time filtering as you type.
+Bug Fixes:
+  - Fixed settings dialog content truncation on smaller screens (Issue #113).
+  - Fixed UI preferences section being cut off on certain window managers.
+  - Experimental fix for the Epic Games launcher, with DLL's being detected as games.
+  - Improvements to the build script for Linux to enable support for LTS variants who are using glibc libraries older than 2.38.
+
+
+
+## [3.4.0] - Legacy (DLSS Updater)
+DLSS SR Preset Override - GPU-based preset recommendations:
+  - Configure DLSS Super Resolution presets (K/L/M) with automatic GPU detection.
+  - RTX 20/30 series (Turing/Ampere) → Preset K recommended.
+  - RTX 40/50 series (Ada Lovelace/Blackwell) → Preset M or K.
+  - Preset L is heavier and may reduce performance.
+  - Windows: System-wide registry override applied to all games.
+  - Linux: Generate Steam launch options with copy-to-clipboard.
+  - Linux: DLSS debug overlay support via DXVK-NVAPI environment variables.
+  - First-time setup: Dialog appears automatically on first launch for NVIDIA GPU users.
+  - Re-configurable anytime via Preferences > DLSS SR Preset Override.
+  - Feature only visible to NVIDIA GPU users (hidden for AMD/Intel).
+  - Note: Multi-GPU configurations not supported (uses primary GPU).
+
+### Security
+  - Updated aiohttp to latest version.
+Dependencies:
+  - Added nvidia-ml-py for GPU architecture detection.
+External:
+  - Bug fix associated with the Discord banner not closing on Linux.
+
+
+## [3.3.1] - Legacy (DLSS Updater)
+Linux Improvements - Removed sudo requirement for user-space games:
+  - Removed forced sudo/root elevation requirement on Linux.
+  - Application now boots and runs without elevated privileges by default.
+  - System-level Wine/Proton paths (/usr/share/, /opt/) are detected and skipped.
+  - Informational banner displays when running without elevation.
+  - Most Steam Proton and Lutris games work without sudo (installed in ~/.steam, ~/Games).
+  - Optional: Run with sudo only if you need to update system-installed Wine/Proton.
+  - Updated documentation and build scripts to reflect new behavior.
+
+
+## [3.3.0] - Legacy (DLSS Updater)
+Linux Support - Cross-platform compatibility for Wine/Proton games:
+  - Full support for updating DLLs in games running through Steam Proton.
+  - Wine prefix scanning for games installed via Lutris or standalone Wine.
+  - Automatic Steam path detection on Linux (~/.steam/steam/).
+  - Proton prefix scanning (~/.steam/steam/steamapps/compatdata/).
+  - Platform-aware admin elevation using pkexec/sudo on Linux.
+  - uvloop event loop optimization for Linux (similar to winloop on Windows).
+  - Windows-only features (DLSS Overlay, DirectStorage) gracefully disabled with tooltips.
+  - Single executable distribution via PyInstaller for Linux.
+  - All Windows functionality remains unchanged.
+
+
+## [3.2.0] - Legacy (DLSS Updater)
+Condensed DLL Badges - Replaced individual DLL badges with compact popout:
+  - Single "+N DLLs" badge shows count of detected DLLs per game card.
+  - Click badge to open popout with all DLL details (type, version, update status).
+  - Orange badge with arrow icon when updates are available.
+  - Teal badge with extension icon when all DLLs are up-to-date.
+  - Color-coded dots in popout match DLL technology (DLSS green, FSR red, XeSS blue).
+  - Removed responsive badge breakpoint logic for cleaner, consistent UI.
+
+Launcher Card Config Menu - Replaced redundant Browse button with utility menu:
+  - Copy Path(s): Copy all configured paths to clipboard.
+  - Open in Explorer: Open first configured path in Windows Explorer.
+  - Auto-Detect: Automatically find launcher install path from Windows registry.
+  - Clear All: Clear all configured paths (same as Reset).
+
+Path Health Indicator - Visual validation for configured paths:
+  - Green checkmark icon when all paths are valid and accessible.
+  - Yellow warning icon when one or more paths are inaccessible.
+  - Hidden when no paths configured.
+
+Auto-Detect Launcher Paths - Registry-based path detection for all major launchers:
+  - Steam: Detects from HKLM registry + steamapps\common subfolder.
+  - EA App: Detects from HKLM registry.
+  - Epic Games: Detects from HKCR DefaultIcon registry (parses launcher exe path).
+  - Ubisoft: Detects from HKLM registry + games subfolder.
+  - GOG Galaxy: Detects from HKLM registry + Games subfolder.
+  - Battle.net: Detects from HKLM registry.
+  - Xbox/Custom: Manual configuration only (no registry detection).
+
+Memory Optimization - ~40-55 MB reduction in RAM usage:
+
+Database Pool Lifecycle Management:
+  - Database connection pool now uses lazy initialization (ensure_pool on-demand).
+  - Pool is closed when leaving Games/Backups views to free ~5-10 MB.
+  - Graceful shutdown releases all database connections on app close.
+
+Search Index Lifecycle:
+  - Search index cleared when leaving Games view.
+  - Rebuilt on-demand when re-entering Games view.
+  - Saves ~5-15 MB depending on game count.
+
+Database-backed Steam app search - SQLite FTS5 for memory efficiency:
+  - Steam apps now stored in SQLite database with FTS5 full-text search index.
+  - Eliminates ~20-30 MB in-memory index (207K+ Steam app entries).
+  - O(log n) exact match lookups via B-tree index on normalized names.
+  - FTS5 prefix matching for fuzzy/partial game name searches.
+
+Unified Cache Manager:
+  - New centralized cache management system with configurable policies.
+  - LRU eviction based on access times and size limits.
+
+High-Performance Mode:
+  - High-performance update mode is now always enabled (no toggle).
+  - Removed UI toggle and config option for high-performance mode.
+  - DLLs are memory-mapped during update operations for optimal performance.
+
+View Lifecycle Hooks:
+  - Views now properly clean up resources when hidden.
+  - Navigation between views triggers appropriate cleanup callbacks.
+  - Shutdown handler ensures graceful cleanup on app close.
+
+Top Navigation Tabs - Replaced sidebar drawer with Material Design 3 top tabs:
+  - Tabs positioned below app header with icons and labels (Launchers, Games, Backups).
+  - Smooth 350ms tab switch animations with MD3 indicator styling.
+  - Removed hamburger menu - cleaner, more accessible navigation.
+  - Tab content preserves state when switching (scroll position, loaded images).
+
+Per-Tab Color Theming - Distinct colors for each navigation tab:
+  - Launchers: Teal (#2D6E88) - matches app brand.
+  - Games: NVIDIA Green (#76B900) - gaming/DLSS focus.
+  - Backups: Orange (#FFB74D) - safety/restore theme.
+  - Active tab: colored background (20% opacity), colored icon/text, colored indicator.
+  - Hover effects: subtle 10% opacity tint on inactive tabs.
+  - Extensible color system for future tabs with fallback palette.
+
+Smooth Scrolling - User-configurable smooth scroll animations:
+  - New setting in Preferences > UI Preferences to toggle smooth scrolling.
+  - Enabled by default with 300ms EASE_OUT_CUBIC animation curve.
+  - Persisted to config file for cross-session consistency.
+  - Applied to all scrollable views (Launchers, Games, Backups).
+
+
+## [3.1.0] - Legacy (DLSS Updater)
+Game search - real-time search bar with instant filtering:
+  - Search bar in Games tab header with 150ms debouncing.
+  - Real-time card visibility filtering (sub-millisecond).
+  - Search history dropdown shows recent searches on focus.
+  - Tab switching reapplies current search filter.
+  - Clear button to reset search and show all games.
+  - MD3 dark theme styling for search components.
+Game search infrastructure - high-performance search backend:
+  - In-memory search index with trie and hash map for sub-millisecond lookups.
+  - LRU query cache (100 entries, 60s TTL) for repeated searches.
+  - Database-level search with case-insensitive LIKE and relevance ordering.
+  - Search history persistence with auto-deduplication (max 50 entries).
+  - Optimized indexes on games table for fast name lookups.
+UI polish improvements:
+  - Fixed game card button alignment - buttons now consistently align to bottom.
+  - Styled backups filter dropdown to match MD3 dark theme.
+Backend database improvements:
+  - Added the ability to search games via DB lookup.
+  - Added the ability to get total game statistics.
+Per-game backup restore - restore DLL backups directly from game cards:
+  - Restore dropdown on game cards - similar to Update dropdown, with per-DLL-group options (DLSS, FSR, XeSS, etc.).
+  - "Restore All" option to restore all backed-up DLLs for a game at once.
+  - Smart button state - Restore button disabled (grayed) when no backups exist for that game.
+  - Color-coded menu items matching technology brand colors (DLSS green, FSR red, XeSS blue).
+  - Confirmation, progress, and results dialogs with detailed per-DLL restore status.
+  - Parallel loading of backup groups with game data for responsive UI.
+Backups page game filter:
+  - Filter dropdown to view backups for a specific game.
+  - Shows game name with backup count: "Game Name (3)".
+  - Dynamically updates when backups change.
+Optimized image caching - game cover images now stored as WebP thumbnails.
+  - 80% smaller cache size (~3MB vs ~20MB for 200 games).
+  - 4x less memory usage when displaying game cards.
+  - 4-5x faster image decoding and display.
+Fixes to a minor race condition relating to UI states.
+Fixed Discord banner dismissal not persisting across application upgrades.
+Games tab UI improvements for better visual consistency:
+  - Fixed card heights - all game cards now display at uniform 180px height.
+  - Dynamic file path display - paths now use native ellipsis overflow instead of hard 40-char truncation.
+  - Responsive DLL badges - badge count dynamically adjusts based on window size (2-4 badges).
+  - "+N more" popover - overflow DLLs accessible via popover menu.
+  - Bottom-aligned buttons - Update/Backups buttons now properly align to card bottom.
+  - Enhanced hover effects - subtle border glow and refined scale animation (1.015x).
+
+
+## [3.0.1] - Legacy (DLSS Updater)
+Fixes to a overflow percent calculation bug with high performance mode with the callback emitters.
+
+
+## [3.0.0] - Legacy (DLSS Updater)
+Migration to Python 3.14 free threading for the GIL to be unlocked.
+Upgrades to uv for backend infrastructure development.
+Multi threading included for scanning directories.
+Mutex thread binders included for synchronisation fixes with the GIL being unlocked.
+Fixes for minor DB transactions performance issues.
+Multi threading support for backups.
+Bug fix for the "Clear All Backups" and "Delete Database" buttons to be disabled if no database exists.
+Inclusion of a Discord invite to the server.
+High Performance Mode - New optional feature for faster DLL updates:
+  - Memory-maps source DLLs to RAM, reducing redundant disk reads.
+  - Creates all backups atomically before any updates begin.
+  - Parallel writes using true multi-threading (GIL-free).
+  - Adaptive memory management with automatic fallback if RAM pressure is high.
+  - Accessible via Preferences > High Performance Mode.
+
+
+## [2.9.3] - Legacy (DLSS Updater)
+Full file path display in Games and Backups sections with hover tooltips.
+Copy-to-clipboard button for game and backup paths.
+
+
+## [2.9.2] - Legacy (DLSS Updater)
+Selective DLL updates - choose to update specific DLL types (DLSS, XeSS, FSR, DirectStorage, Streamline) per game via dropdown menu.
+6-70x faster directory scanning on Windows.
+2x faster async operations with winloop.
+Non-blocking startup - UI appears immediately while updates check in background.
+Added LRU caching for version parsing and game name matching.
+SQLite WAL mode for improved database performance.
+
+
+## [2.9.1] - Legacy (DLSS Updater)
+70-80% faster game scanning.
+90% fewer database roundtrips.
+30-50% faster DLL version extraction.
+Fixed backup not removed from Backups page after restore.
+
+
+## [2.9.0] - Legacy (DLSS Updater)
+UI update overhaul of the application.
+Support for scanning games, this will now report back all the games found on the system, including what specific DLL's are found there.
+Restorative backups of individual games (called self healing) that have had their DLL's updated.
+Significant performance upgrades to backend initiations.
+Added a pre loading phase spinner.
+Header section overhaul, animations, a Games section etc.
+
+[Unreleased]: https://github.com/gOOvER/DLSS-Manager/compare/v1.0.0-beta.1...HEAD
+[1.0.0-beta.1]: https://github.com/gOOvER/DLSS-Manager/releases/tag/v1.0.0-beta.1

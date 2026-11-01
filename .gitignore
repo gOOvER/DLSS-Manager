@@ -1,39 +1,24 @@
-*.pyc
-*.zip
-*venv
-*build
-\.idea
-*.log
-*.claude
-*CLAUDE.md
-*.log
-*.MD
-.codspeed/
-.pytest_cache/
-*dlss_updater.log
-*.AppDir/
-libmpv.so.1
-flet_client/
-flet-linux.tar.gz
-appimagetool-x86_64.AppImage
-*.dist/
+# Rust & Tauri Build Artifacts
+target/
 dist/
+src-tauri/target/
+src-tauri/gen/
+src-tauri/WixTools/
+
+# Logs & Temporary Files
+*.log
+*.key
+
+# IDE & Editor Configs
+.idea/
+.claude/
+*CLAUDE.md
 .mcp.json
 
-# Flatpak build artifacts
+# Linux / Flatpak Build Artifacts
 .flatpak-builder/
 build-dir/
 repo/
 *.flatpak
-
-nudge_releases.ps1
-
-# Flatpak repository signing: local key id and exported public key.
-# The private key lives in ~/.gnupg and must never be committed.
 .flatpak_gpg_key
 repo-key.gpg
-
-# Build-time cache for the bundled Flet desktop client (~40MB archive).
-# Deliberately outside build/ so the clean step doesn't refetch it; must stay
-# untracked because the release commit stages the whole working tree.
-.build_cache/

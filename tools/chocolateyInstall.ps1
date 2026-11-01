@@ -15,13 +15,13 @@ if (Test-Path $oldExe) {
     }
 }
 
-$url = "https://github.com/Recol/DLSS-Updater/releases/download/V$version/DLSS.Updater.$version.msi"
+$url = "https://github.com/gOOvER/DLSS-Manager/releases/download/V$version/DLSS.Manager.$version.msi"
 
 $packageArgs = @{
     packageName    = $env:ChocolateyPackageName
     fileType       = 'msi'
     url64bit       = $url
-    softwareName   = 'DLSS Updater*'
+    softwareName   = 'DLSS Manager*'
     silentArgs     = "/qn /norestart /l*v `"$($env:TEMP)\$($env:ChocolateyPackageName).$($env:chocolateyPackageVersion).MsiInstall.log`""
     validExitCodes = @(0, 3010, 1641)
     checksum64     = (Get-Content "$toolsDir\CHECKSUM" -ErrorAction SilentlyContinue)

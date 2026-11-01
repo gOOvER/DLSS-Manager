@@ -17,14 +17,19 @@ jobs:
 
     - name: Get latest release version and MSI hash
       id: get_version
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GH_REPO: ${{ github.repository }}
       run: |
-        $latest_release = Invoke-RestMethod -Uri "https://api.github.com/repos/${{ github.repository }}/releases/latest" -Headers @{ "Authorization" = "Bearer ${{ secrets.GITHUB_TOKEN }}" }
-        $version = $latest_release.tag_name -replace '^[vV]', ''
+        $latest_release = Invoke-RestMethod -Uri "https://api.github.com/repos/$env:GH_REPO/releases/latest" -Headers @{ "Authorization" = "Bearer $env:GH_TOKEN" }
+        $tagName = $latest_release.tag_name
+        $version = $tagName -replace '^[vV]', ''
         echo "VERSION=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+        echo "TAG_NAME=$tagName" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
         # Download MSI only to compute hash
-        $msiUrl = "https://github.com/${{ github.repository }}/releases/download/$($latest_release.tag_name)/DLSS.Updater.$version.msi"
-        $tempMsi = Join-Path $env:TEMP "DLSS.Updater.msi"
+        $msiUrl = "https://github.com/$env:GH_REPO/releases/download/$tagName/DLSS.Manager.$version.msi"
+        $tempMsi = Join-Path $env:TEMP "DLSS.Manager.msi"
         Invoke-WebRequest -Uri $msiUrl -OutFile $tempMsi
         $hash = (Get-FileHash $tempMsi -Algorithm SHA256).Hash
         echo "FILE_HASH=$hash" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
@@ -32,29 +37,41 @@ jobs:
       shell: pwsh
 
     - name: Write CHECKSUM file
+      env:
+        FILE_HASH: ${{ steps.get_version.outputs.FILE_HASH }}
       run: |
-        Set-Content -Path "tools\CHECKSUM" -Value "${{ steps.get_version.outputs.FILE_HASH }}" -NoNewline
+        Set-Content -Path "tools\CHECKSUM" -Value $env:FILE_HASH -NoNewline
       shell: pwsh
 
     - name: Update VERIFICATION.txt
+      env:
+        VERSION: ${{ steps.get_version.outputs.VERSION }}
+        TAG_NAME: ${{ steps.get_version.outputs.TAG_NAME }}
+        FILE_HASH: ${{ steps.get_version.outputs.FILE_HASH }}
+        GH_REPO: ${{ github.repository }}
       run: |
-        $version = "${{ steps.get_version.outputs.VERSION }}"
+        $version = $env:VERSION
+        $tagName = $env:TAG_NAME
+        $fileHash = $env:FILE_HASH
         $content = Get-Content -Path VERIFICATION.txt -Raw
-        $content = $content -replace 'path\\to\\DLSS_Updater\.msi', 'DLSS_Updater.msi'
-        $content += "`n`nChecksum (SHA256) for DLSS.Updater.$version.msi: ${{ steps.get_version.outputs.FILE_HASH }}"
-        $content += "`nDownload URL: https://github.com/${{ github.repository }}/releases/download/V$version/DLSS.Updater.$version.msi"
+        $content = $content -replace 'path\\to\\DLSS_Manager\.msi', 'DLSS_Manager.msi'
+        $content += "`n`nChecksum (SHA256) for DLSS.Manager.$version.msi: $fileHash"
+        $content += "`nDownload URL: https://github.com/$env:GH_REPO/releases/download/$tagName/DLSS.Manager.$version.msi"
         $content | Set-Content -Path VERIFICATION.txt
       shell: pwsh
 
     - name: Create Chocolatey package
+      env:
+        VERSION: ${{ steps.get_version.outputs.VERSION }}
       run: |
-        choco pack DLSS-Updater.nuspec --version=${{ steps.get_version.outputs.VERSION }}
+        choco pack DLSS-Manager.nuspec --version=$env:VERSION
       shell: pwsh
 
     - name: Push to Chocolatey
       env:
         CHOCO_API_KEY: ${{ secrets.CHOCO_API_KEY }}
+        VERSION: ${{ steps.get_version.outputs.VERSION }}
       run: |
         choco apikey --key $env:CHOCO_API_KEY --source https://push.chocolatey.org/
-        choco push dlss-updater.${{ steps.get_version.outputs.VERSION }}.nupkg --source https://push.chocolatey.org/ --force
+        choco push "dlss-manager.$($env:VERSION).nupkg" --source https://push.chocolatey.org/ --force
       shell: pwsh

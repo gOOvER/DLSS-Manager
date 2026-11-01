@@ -20,17 +20,21 @@ jobs:
 
       - name: Get version
         id: version
+        env:
+          INPUT_VERSION: ${{ github.event.inputs.version }}
+          EVENT_NAME: ${{ github.event_name }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: |
-          if [ -n "${{ github.event.inputs.version }}" ]; then
-            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
-          elif [ "${{ github.event_name }}" = "release" ]; then
-            VERSION="${{ github.event.release.tag_name }}"
+          if [ -n "$INPUT_VERSION" ]; then
+            echo "version=$INPUT_VERSION" >> "$GITHUB_OUTPUT"
+          elif [ "$EVENT_NAME" = "release" ]; then
+            VERSION="$RELEASE_TAG"
             VERSION="${VERSION#v}"
             VERSION="${VERSION#V}"
-            echo "version=${VERSION}" >> $GITHUB_OUTPUT
+            echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           else
-            VERSION=$(grep -oP '__version__\s*=\s*"\K[^"]+' dlss_updater/version.py)
-            echo "version=${VERSION}" >> $GITHUB_OUTPUT
+            VERSION=$(grep -oP '__version__\s*=\s*"\K[^"]+' dlss_manager/version.py)
+            echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Install system dependencies
@@ -56,41 +60,45 @@ jobs:
         with:
           version: "latest"
 
-      - name: Set up Python 3.14.7 (free-threaded)
+      - name: Set up Python 3.15 (free-threaded)
         run: |
-          uv python install 3.14.7+freethreaded
-          uv python pin 3.14.7+freethreaded
+          uv python install 3.15+freethreaded
+          uv python pin 3.15+freethreaded
 
       - name: Install Python dependencies
         run: uv sync
 
       - name: Build with Flet
+        env:
+          BUILD_VERSION: ${{ steps.version.outputs.version }}
         run: |
           # Use flet build linux - the recommended way to build Linux apps
           uv run flet build linux \
-            --project "DLSS_Updater" \
-            --product "DLSS Updater" \
-            --org "io.github.recol" \
+            --project "DLSS_Manager" \
+            --product "DLSS Manager" \
+            --org "io.github.goover" \
             --description "Update DLSS/XeSS/FSR DLLs for games" \
-            --build-version "${{ steps.version.outputs.version }}"
+            --build-version "$BUILD_VERSION"
 
           # Move build output to expected location for Flatpak
           mkdir -p dist
           cp -r build/linux/* dist/
           ls -la dist/
           # Verify binary was created
-          test -f dist/dlss_updater || { echo "Flet build failed"; exit 1; }
+          test -f dist/dlss_manager || { echo "Flet build failed"; exit 1; }
 
       - name: Build Flatpak
+        env:
+          BUILD_VERSION: ${{ steps.version.outputs.version }}
         run: |
-          flatpak-builder --user --force-clean --repo=repo build-dir io.github.recol.dlss-updater.yml
-          flatpak build-bundle repo "DLSS_Updater-${{ steps.version.outputs.version }}.flatpak" io.github.recol.dlss-updater
+          flatpak-builder --user --force-clean --repo=repo build-dir io.github.goover.dlss_manager.yml
+          flatpak build-bundle repo "DLSS_Manager-${BUILD_VERSION}.flatpak" io.github.goover.dlss-manager
           ls -lh *.flatpak
 
       - name: Upload Flatpak artifact
         uses: actions/upload-artifact@v7
         with:
-          name: DLSS_Updater-Linux-Flatpak
+          name: DLSS_Manager-Linux-Flatpak
           path: "*.flatpak"
           retention-days: 30
 

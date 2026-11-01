@@ -1,29 +1,29 @@
 <div align="center">
 
-# DLSS Updater
+# DLSS Manager
 
 **Update every DLSS / XeSS / FSR DLL across all the games on your system — from one place.**
 
-[![CodeQL](https://github.com/Recol/DLSS-Updater/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/Recol/DLSS-Updater/actions?query=workflow%3ACodeQL)
-[![CodSpeed](https://img.shields.io/endpoint?url=https://codspeed.io/badge.json)](https://codspeed.io/Recol/DLSS-Updater?utm_source=badge)
+[![CodeQL](https://github.com/gOOvER/DLSS-Manager/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/gOOvER/DLSS-Manager/actions?query=workflow%3ACodeQL)
+[![CodSpeed](https://img.shields.io/endpoint?url=https://codspeed.io/badge.json)](https://codspeed.io/gOOvER/DLSS-Manager?utm_source=badge)
 ![Version](./version.svg)
-![Downloads](https://img.shields.io/github/downloads/Recol/DLSS-Updater/total?color=blue&label=Downloads)
-[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-donate-yellow.svg)](https://buymeacoffee.com/decouk)
+![Downloads](https://img.shields.io/github/downloads/gOOvER/DLSS-Manager/total?color=blue&label=Downloads)
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-donate-yellow.svg)](https://buymeacoffee.com/goover)
 
 ![Python](https://img.shields.io/badge/Python-3.14_free--threaded-3776AB?logo=python&logoColor=white)
 ![Flet](https://img.shields.io/badge/UI-Flet-00C4B3)
 ![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux-555?logo=windows&logoColor=white)
 [![License](https://img.shields.io/badge/License-AGPL_v3-orange.svg)](LICENSE)
 
-<a href="https://trendshift.io/repositories/11650?utm_source=repository-badge&utm_medium=badge&utm_campaign=badge-repository-11650" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/repositories/11650" alt="Recol%2FDLSS-Updater | Trendshift" width="250" height="55"/></a>&nbsp;<a href="https://trendshift.io/repositories/11650?utm_source=trendshift-badge&utm_medium=badge&utm_campaign=badge-trendshift-11650" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/trendshift/repositories/11650/daily?language=Python" alt="Recol%2FDLSS-Updater | Trendshift" width="250" height="55"/></a>
 
-![dlss_updater](https://github.com/user-attachments/assets/b7d7fb4d-e204-412d-8e92-61a7173abfaf)
+
+![dlss_manager](https://github.com/user-attachments/assets/b7d7fb4d-e204-412d-8e92-61a7173abfaf)
 
 
 </div>
 
 > [!TIP]
-> **Quick start (Windows):** `winget install "DLSS Updater"` — then launch and hit scan.
+> **Quick start (Windows):** `winget install "DLSS Manager"` — then launch and hit scan.
 > Prefer Linux? Grab the [Flatpak](#linux). Full options are in [Installation](#installation).
 
 ---
@@ -47,12 +47,12 @@
 
 ## Overview
 
-DLSS Updater scans the games installed on your system, detects the upscaling and
+DLSS Manager scans the games installed on your system, detects the upscaling and
 frame-generation DLLs they ship with, and replaces them with newer versions — with automatic backups so you can always roll back. It runs on **Windows and Linux** and
 understands games from every major launcher.
 
 <div align="center">
-<img width="1084" alt="DLSS Updater - Homepage" src="https://github.com/user-attachments/assets/489cefc9-cb4a-474c-9a36-15a45deb10c4" />
+<img width="1084" alt="DLSS Manager - Homepage" src="https://github.com/user-attachments/assets/489cefc9-cb4a-474c-9a36-15a45deb10c4" />
 
 </div>
 
@@ -141,7 +141,7 @@ Cross-platform on **Windows and Linux**, with detection for the launchers below:
 - **DLSS** Super Resolution, plus **Ray Reconstruction**, **Frame Generation** and **Streamline** (Reflex Low Latency, DirectSR, NIS, etc.)
 - **DLSS 5 Neural Rendering** — runs alongside Super Resolution rather than replacing it (RTX 50 series only; the DLL is ~158&nbsp;MB, so expect a longer first download)
 - **XeSS / XeSS Frame Generation / XeLL**
-- **FSR** — Upscaling, Frame Generation, Ray Regeneration, plus an **FSR 4 upgrade** for games that ship only FSR 3.1 (RDNA 3 / RDNA 4 only; skipped on other GPUs, where FSR 4 cannot run)
+- **FSR** — Upscaling, Frame Generation, Ray Regeneration, plus an **FSR 4 upgrade** for DirectX 12 and Vulkan games that ship only FSR 3.1 (Radeon RX 6000 / RDNA 2 and newer; skipped on other GPUs, where FSR 4 cannot run)
 - **DirectStorage** (Windows only)
 - Update everything at once, or update individual binaries for a specific game
 - **Choose what "update everything" means** — the caret beside *Start Update* (and beside the Hub's *Update all*) opens a menu of technologies. Untick the ones you want left alone and the run skips them; the caret shows a count whenever the run is narrower than everything. The choice applies to **that run only** and then reverts to your saved preferences, so a one-off "only DLSS this time" never quietly becomes permanent — use *Make this my default* to write it to **Update Preferences** instead. Both menus share one scope, so narrowing on the Hub shows up on the Launchers bar and vice versa
@@ -197,18 +197,20 @@ Cross-platform on **Windows and Linux**, with detection for the launchers below:
 
 | Technology | Included version |
 |---|---|
-| DLSS Super Resolution | 4.5 (`310.7.128.0`) |
-| DLSS FG / RR | 4.5 (`310.7.128.0`) |
-| Streamline (Reflex, DLSS SR/FG/RR, DirectSR, NIS) | `2.12.128.0` (NIS & DirectSR `2.12.0.0`) |
-| FSR Upscaling | 4.1.1 (`4.1.1.2740`) |
-| FSR Frame Generation | 4.0.1 (`4.0.1.2740`) |
-| FSR Ray Regeneration | 1.2.0 (`1.2.0.2740`) |
-| FSR Loader | `2.3.0.2740` |
-| FSR Radiance Caching *(preview, opt-in)* | 0.9.0 (`0.9.0.2740`) |
+| DLSS Super Resolution | 4.5 (`310.9.16.0`) |
+| DLSS FG / RR | 4.5 (`310.9.16.0`) |
+| DLSS 5 Neural Rendering *(RTX 50 series)* | `310.8.0.0` |
+| Streamline (Reflex, DLSS SR/FG/RR, DirectSR, NIS) | `2.14.16.0` |
+| FSR Upscaling (DX12 / Vulkan) | 4.1.2 (`4.1.2.4555`) |
+| FSR Frame Generation (DX12 / Vulkan) | 4.0.2 (`4.0.2.4555`) |
+| FSR Ray Regeneration | 1.2.1 (`1.2.1.4555`) |
+| FSR Loader | DX12 `2.3.0.4555`, Vulkan `1.0.2.4555` |
+| FSR Radiance Caching *(preview, opt-in)* | 0.9.0 (`0.9.0.4555`) |
 | FSR (DX12 / Vulkan, SDK 1.1.4) | `1.0.1.41314` |
-| XeSS | 2.0.2 |
-| XeSS Frame Generation | 1.3.1 |
-| XeLL | 1.3.2.10 |
+| XeSS (DX12 / DX11) | 2.0.2 (`2.0.2.68`) |
+| XeSS Frame Generation | 1.3.1 (`1.3.1.78`) |
+| XeLL | `1.3.2.10` |
+| DirectStorage *(Windows)* | 1.3 (`1.3.2506.2501`) |
 
 > See the [Intel XeSS releases](https://github.com/intel/xess/releases) for per-game XeSS support details.
 
@@ -223,10 +225,10 @@ Program Files with a proper Add/Remove Programs entry.
 
 **Winget** (recommended)
 ```sh
-winget install "DLSS Updater"
+winget install "DLSS Manager"
 ```
 
-**Chocolatey** — install from the [Chocolatey package page](https://community.chocolatey.org/packages/dlss-updater/).
+**Chocolatey** — install from the [Chocolatey package page](https://community.chocolatey.org/packages/dlss-manager/).
 
 **Scoop** — via the [scoop-games](https://github.com/Calinou/scoop-games) bucket (manifest update [pending merge](https://github.com/Calinou/scoop-games/pull/1770)). Scoop extracts the MSI into a portable install, so nothing touches Program Files:
 ```sh
@@ -234,7 +236,7 @@ scoop bucket add games
 scoop install dlss-updater
 ```
 
-**Direct download** — grab `DLSS.Updater.X.Y.Z.msi` from the [Releases](https://github.com/Recol/DLSS-Updater/releases) page and run it.
+**Direct download** — grab `DLSS.Manager.X.Y.Z.msi` from the [Releases](https://github.com/gOOvER/DLSS-Manager/releases) page and run it.
 
 **Updating**
 
@@ -244,7 +246,7 @@ against the SHA-256 digest GitHub publishes, installs it and restarts. Both the 
 and automatic downloading are configurable under **UI Preferences → Application Updates**.
 
 If you installed through a package manager you can keep using it instead — `winget upgrade`
-or `choco upgrade dlss-updater`. One exception: **Scoop** installs are portable, so let Scoop
+or `choco upgrade dlss-manager`. One exception: **Scoop** installs are portable, so let Scoop
 update them (`scoop update dlss-updater`). The in-app updater runs the MSI, which installs to
 Program Files and would leave you with two copies.
 
@@ -268,11 +270,11 @@ flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.f
 ```
 </details>
 
-**Install DLSS Updater**
+**Install DLSS Manager**
 ```sh
-# Download DLSS_Updater-X.Y.Z.flatpak from the Releases page, then:
-flatpak install --user DLSS_Updater-X.Y.Z.flatpak
-flatpak run io.github.recol.dlss-updater
+# Download DLSS_Manager-X.Y.Z.flatpak from the Releases page, then:
+flatpak install --user DLSS_Manager-X.Y.Z.flatpak
+flatpak run io.github.goover.dlss-manager
 ```
 
 **Updating**
@@ -280,13 +282,13 @@ flatpak run io.github.recol.dlss-updater
 Bundles from 4.6.0 onwards register an update remote when you install them, so
 later releases arrive through your software centre or:
 ```sh
-flatpak update --user io.github.recol.dlss-updater
+flatpak update --user io.github.goover.dlss-manager
 ```
 
 If you installed an earlier bundle, add the remote once to get updates from then on:
 ```sh
 flatpak remote-add --user --if-not-exists \
-    dlss-updater https://recol.github.io/dlss-updater-flatpak/dlss-updater.flatpakrepo
+    dlss-updater https://goover.github.io/dlss-manager-flatpak/dlss-manager.flatpakrepo
 ```
 
 The repository is GPG signed, and both routes above set up verification for you — updates
@@ -299,7 +301,7 @@ inside the bundle and in the `.flatpakrepo`. To check it yourself:
 
 **Uninstall**
 ```sh
-flatpak uninstall io.github.recol.dlss-updater
+flatpak uninstall io.github.goover.dlss-manager
 ```
 
 <details>
@@ -310,7 +312,7 @@ The Flatpak has read-only access to common game locations by default: `~/`, `/mn
 
 To grant access to additional directories:
 ```sh
-flatpak override --user --filesystem=/path/to/games io.github.recol.dlss-updater
+flatpak override --user --filesystem=/path/to/games io.github.goover.dlss-manager
 ```
 
 Or use [Flatseal](https://flathub.org/apps/com.github.tchx84.Flatseal) for a graphical
@@ -325,7 +327,7 @@ permissions manager.
 - **Custom paths:** use `flatpak override` or the in-app dialog to grant access outside the sandbox.
 - **Windows-only features:** DLSS Debug Overlay and DirectStorage updates are disabled on Linux (grayed out with tooltips).
 - **Logs:** stored at `~/.local/share/dlss-updater/dlss_updater.log`.
-- **libmpv issue:** if you hit a libmpv error, your distro likely doesn't bundle the library — see [issue #125](https://github.com/Recol/DLSS-Updater/issues/125) for guidance.
+- **libmpv issue:** if you hit a libmpv error, your distro likely doesn't bundle the library — see [issue #125](https://github.com/gOOvER/DLSS-Manager/issues/125) for guidance.
 </details>
 
 ### Building from Source
@@ -340,33 +342,33 @@ permissions manager.
 
 **Windows**
 ```sh
-git clone https://github.com/Recol/DLSS-Updater.git
-cd DLSS-Updater
+git clone https://github.com/gOOvER/DLSS-Manager.git
+cd DLSS-Manager
 uv sync --frozen
 
 # Build the executable
-uv run pyinstaller DLSS_Updater.spec
+uv run pyinstaller DLSS_Manager.spec
 
 # …or build the MSI installer
 pwsh build_msi.ps1
 
 # Run it
-.\dist\DLSS_Updater.exe
+.\dist\DLSS_Manager.exe
 ```
 
 **Linux**
 ```sh
-git clone https://github.com/Recol/DLSS-Updater.git
-cd DLSS-Updater
+git clone https://github.com/gOOvER/DLSS-Manager.git
+cd DLSS-Manager
 uv sync --frozen
 
 # Build the executable…
-uv run pyinstaller DLSS_Updater_Linux.spec
+uv run pyinstaller DLSS_Manager_Linux.spec
 # …or build the Flatpak
 ./build_flatpak.sh
 
 # Run it
-./dist/DLSS_Updater
+./dist/DLSS_Manager
 ```
 </details>
 
@@ -400,24 +402,27 @@ Individual titles will be blacklisted as they're reported not to function.
 
 ## Troubleshooting
 
-Check the [Issues](https://github.com/Recol/DLSS-Updater/issues) section to see if your
+Check the [Issues](https://github.com/gOOvER/DLSS-Manager/issues) section to see if your
 problem has already been reported. If not, open a new issue with as much detail as
 possible. Each release also ships detailed notes in `release_notes.txt` and on the
-[Releases](https://github.com/Recol/DLSS-Updater/releases) page.
+[Releases](https://github.com/gOOvER/DLSS-Manager/releases) page.
 
 ---
 
 ## Roadmap
 
-- Publishing on [Flathub](https://flathub.org) so Linux users can install straight from their software center ([#234](https://github.com/Recol/DLSS-Updater/issues/234)) — groundwork shipped in 4.3.1
+- Publishing on [Flathub](https://flathub.org) so Linux users can install straight from their software center ([#234](https://github.com/gOOvER/DLSS-Manager/issues/234)) — groundwork shipped in 4.3.1
 - Automation support with external software
-- Community-requested features — [open an issue](https://github.com/Recol/DLSS-Updater/issues) to suggest one
+- Community-requested features — [open an issue](https://github.com/gOOvER/DLSS-Manager/issues) to suggest one
 
 ---
 
 ## License & Credits
 
-Licensed under the **GNU Affero General Public License**. See the [LICENSE](LICENSE) file
+Licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)**. See the [LICENSE](LICENSE) file
+for details.
+
+**Original Author & Upstream Project:** [Recol (Deco) — DLSS Updater](https://github.com/Recol/DLSS-Updater)
 for details.
 
 This project uses NVIDIA's **DLSS** (Deep Learning Super Sampling) — see NVIDIA's

@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DLSS Manager</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <!-- Sidebar Navigation -->
+      <aside class="sidebar">
+        <div class="brand">
+          <img src="assets/logo.png" alt="DLSS Manager" class="brand-logo" />
+          <div class="brand-text">
+            <h1>DLSS Manager</h1>
+            <span class="badge-version" id="app-version-badge">v1.0.0-beta.1</span>
+          </div>
+        </div>
+
+        <nav class="nav-menu">
+          <button class="nav-item active" data-view="hub">
+            <span class="nav-icon">⚡</span>
+            <span>Hub</span>
+          </button>
+          <button class="nav-item" data-view="games">
+            <span class="nav-icon">🎮</span>
+            <span>Games</span>
+            <span class="nav-count" id="nav-games-count">0</span>
+          </button>
+          <button class="nav-item" data-view="backups">
+            <span class="nav-icon">🛡️</span>
+            <span>Backups</span>
+            <span class="nav-count" id="nav-backups-count">0</span>
+          </button>
+          <button class="nav-item" data-view="settings">
+            <span class="nav-icon">⚙️</span>
+            <span>Settings</span>
+          </button>
+          <button class="nav-item" data-view="info">
+            <span class="nav-icon">ℹ️</span>
+            <span>Info</span>
+          </button>
+        </nav>
+
+        <!-- Detected GPU Card -->
+        <div class="gpu-card" id="gpu-card">
+          <div class="gpu-card-header">
+            <span class="gpu-vendor-badge" id="gpu-vendor-badge">DETECTING GPU</span>
+          </div>
+          <div class="gpu-name" id="gpu-name">Scanning Hardware...</div>
+          <div class="gpu-arch" id="gpu-arch">—</div>
+          <div class="gpu-caps" id="gpu-caps"></div>
+        </div>
+
+        <button class="btn btn-primary btn-scan" id="btn-scan-now">
+          <span>🔍 Scan Games</span>
+        </button>
+      </aside>
+
+      <!-- Main Content Area -->
+      <main class="main-area">
+        <!-- Top Bar -->
+        <header class="topbar">
+          <div class="search-box">
+            <span class="search-icon">🔎</span>
+            <input
+              type="text"
+              id="global-search"
+              placeholder="Search games..."
+            />
+          </div>
+
+          <div class="topbar-actions">
+            <button
+              class="btn btn-accent"
+              id="app-update-pill"
+              style="display:none;padding:6px 11px;font-size:0.76rem"
+              title="A newer release of DLSS Manager is available on GitHub"
+            >
+              <span>⬆️ Update Available</span>
+            </button>
+
+            <label class="toggle-pill" id="dlss-overlay-pill" title="Toggle NVIDIA DLSS On-Screen Indicator (Registry)">
+              <span>DLSS Overlay</span>
+              <input type="checkbox" id="toggle-dlss-overlay" />
+            </label>
+
+            <button class="btn btn-secondary" id="btn-open-logs" title="View Application Logs" style="padding:7px 10px">
+              <span>📋 Logs</span>
+            </button>
+
+            <button class="btn btn-secondary" id="btn-theme-toggle" title="Toggle Dark / Light Theme" style="padding:7px 10px">
+              <span id="theme-toggle-icon">☀️</span>
+            </button>
+
+            <button class="btn btn-accent" id="btn-bulk-update" title="Update all outdated games (choose technologies)">
+              <span>🚀 Update All (<span id="bulk-update-count">0</span>)</span>
+            </button>
+          </div>
+        </header>
+
+        <!-- VIEW: HUB -->
+        <section class="view-section active" id="view-hub">
+          <div class="stats-grid">
+            <div class="stat-card clickable" onclick="openGamesWithFilter('all')">
+              <div class="stat-label">Installed Games</div>
+              <div class="stat-value" id="stat-total-games">0</div>
+              <div class="stat-sub">With compatible upscaler DLLs</div>
+            </div>
+            <div class="stat-card accent clickable" onclick="openGamesWithFilter('needs_update')">
+              <div class="stat-label">Needs Update</div>
+              <div class="stat-value" id="stat-updates">0</div>
+              <div class="stat-sub">Games with newer DLLs ready</div>
+            </div>
+            <div class="stat-card clickable" onclick="openGamesWithFilter('up_to_date')">
+              <div class="stat-label">Up to Date</div>
+              <div class="stat-value" id="stat-dll-games">0</div>
+              <div class="stat-sub">Running latest upscaler versions</div>
+            </div>
+            <div class="stat-card clickable" onclick="switchView('backups')">
+              <div class="stat-label">Protected Games</div>
+              <div class="stat-value" id="stat-backups">0</div>
+              <div class="stat-sub">Ready for 1-click rollback</div>
+            </div>
+          </div>
+
+          <div class="hub-panels">
+            <!-- Collapsible Steam Web API Integration Card -->
+            <details class="panel steam-api-panel" id="steam-api-details">
+              <summary class="steam-api-summary">
+                <div style="display:flex;align-items:center;gap:10px">
+                  <img src="assets/icons/Steam.png" alt="Steam" style="width:20px;height:20px" />
+                  <div>
+                    <strong>Steam Web API Integration</strong>
+                    <span class="muted" style="margin-left:8px;font-size:0.78rem">Resolves official cover artwork &amp; App IDs across all launchers</span>
+                  </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px">
+                  <span class="steam-status-pill" id="steam-api-status-pill">○ Not configured</span>
+                  <span class="muted" style="font-size:0.78rem">▾</span>
+                </div>
+              </summary>
+              <div class="steam-api-body">
+                <div class="preset-select-grid">
+                  <div class="preset-field">
+                    <label>Steam Web API Key (<a href="#" onclick="event.preventDefault(); openExternalUrl('https://steamcommunity.com/dev/apikey')" style="color:var(--accent)">Get key from Steam ↗</a>)</label>
+                    <div style="display:flex;gap:6px">
+                      <input
+                        type="password"
+                        id="input-steam-api-key"
+                        class="toolbar-select"
+                        style="flex:1"
+                        placeholder="Paste 32-character Steam Web API key..."
+                      />
+                      <button class="btn btn-secondary" onclick="toggleRevealSteamApiKey()" title="Show / Hide API Key" style="padding:6px 10px">👁️</button>
+                    </div>
+                  </div>
+                  <div class="preset-field">
+                    <label>Steam64 ID (Auto-detected from local Steam installation if left empty)</label>
+                    <input
+                      type="text"
+                      id="input-steam-id"
+                      class="toolbar-select"
+                      placeholder="e.g. 76561198000000000 (auto-detected)"
+                    />
+                  </div>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-top:10px">
+                  <div class="muted" id="steam-api-feedback" style="font-size:0.78rem">
+                    Matches owned Steam games (`IPlayerService/GetOwnedGames`) + Steam Store search for non-Steam launchers.
+                  </div>
+                  <div style="display:flex;gap:8px">
+                    <button class="btn btn-secondary" onclick="reresolveGamesViaSteamNow()">🔄 Re-resolve Game Covers</button>
+                    <button class="btn btn-primary" onclick="validateAndSaveSteamApiNow()">✓ Validate &amp; Save Key</button>
+                  </div>
+                </div>
+              </div>
+            </details>
+
+            <!-- Compact Latest Upscaler Versions Strip -->
+            <div class="panel">
+              <div class="panel-header">
+                <h3>Latest Available Upscaler Versions</h3>
+                <button class="btn btn-secondary" id="btn-refresh-manifest" style="padding:5px 10px;font-size:0.76rem">
+                  🔄 Check for Newer DLLs
+                </button>
+              </div>
+              <div class="tech-strip-grid" id="hub-tech-strip"></div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-header">
+                <h3>Detected Launchers</h3>
+                <span class="muted" style="font-size:0.76rem">Click a launcher to filter · Click 📂 to inspect paths</span>
+              </div>
+              <div class="launcher-summary-grid" id="hub-launcher-grid"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW: GAMES LIBRARY -->
+        <section class="view-section" id="view-games">
+          <div class="games-toolbar">
+            <div class="status-chips" id="status-filter-chips"></div>
+
+            <div class="toolbar-controls">
+              <button class="btn btn-secondary" id="btn-toggle-select-mode" style="padding:6px 10px;font-size:0.78rem" title="Select multiple games for batch update">
+                ☑ Select
+              </button>
+
+              <select id="select-launcher-filter" class="toolbar-select" title="Filter by Launcher">
+                <option value="all">All Launchers</option>
+              </select>
+
+              <select id="select-sort-mode" class="toolbar-select" title="Sort Games">
+                <option value="name_asc">Name (A → Z)</option>
+                <option value="outdated_first">Outdated First</option>
+                <option value="name_desc">Name (Z → A)</option>
+                <option value="dll_count">Most Technologies</option>
+              </select>
+
+              <div class="density-group" title="Card Size">
+                <button class="density-btn" data-density="compact">S</button>
+                <button class="density-btn active" data-density="comfortable">M</button>
+                <button class="density-btn" data-density="large">L</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Multi-Select Action Bar (shown when in Select Mode) -->
+          <div class="batch-selection-bar" id="batch-selection-bar" style="display:none">
+            <div style="display:flex;align-items:center;gap:10px">
+              <strong id="batch-selected-label">0 games selected</strong>
+              <button class="btn btn-secondary btn-card-action" onclick="selectOutdatedVisibleGames()">Select Outdated</button>
+              <button class="btn btn-secondary btn-card-action" onclick="selectAllVisibleGames()">Select All Visible</button>
+              <button class="btn btn-secondary btn-card-action" onclick="clearSelectedGames()">Clear</button>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <button class="btn btn-accent btn-card-action" id="btn-update-selected" onclick="updateSelectedGamesNow()">
+                ⚡ Update Selected (<span id="btn-update-selected-count">0</span>)
+              </button>
+            </div>
+          </div>
+
+          <div class="games-hero-grid density-comfortable" id="games-grid"></div>
+        </section>
+
+        <!-- VIEW: BACKUPS & RESTORE -->
+        <section class="view-section" id="view-backups">
+          <div class="section-toolbar">
+            <div>
+              <h2>Automatic Backups &amp; Rollback</h2>
+              <p class="muted">
+                Original game DLLs are backed up automatically before any update. Restore an entire game or individual technologies with one click.
+              </p>
+            </div>
+          </div>
+          <div class="backups-list" id="backups-list"></div>
+        </section>
+
+        <!-- VIEW: SETTINGS -->
+        <section class="view-section" id="view-settings">
+          <div class="settings-grid">
+            <div class="settings-card">
+              <h3>Update &amp; Safety Preferences</h3>
+              <label class="setting-row">
+                <div>
+                  <strong>Automatic Backup Before Replace</strong>
+                  <p class="muted">Always keep original game DLLs in the local backup vault before updating</p>
+                </div>
+                <input type="checkbox" id="cfg-auto-backup" checked />
+              </label>
+
+              <label class="setting-row">
+                <div>
+                  <strong>Skip Anti-Cheat Protected Games in Bulk Updates</strong>
+                  <p class="muted">Exclude EasyAntiCheat, BattlEye, Vanguard &amp; Ricochet titles from "Update All"</p>
+                </div>
+                <input type="checkbox" id="cfg-skip-anticheat" checked />
+              </label>
+
+              <label class="setting-row">
+                <div>
+                  <strong>Allow Experimental / Preview DLLs</strong>
+                  <p class="muted">Include pre-release DLSS / FSR / XeSS builds when checking for updates</p>
+                </div>
+                <input type="checkbox" id="cfg-allow-preview" />
+              </label>
+
+              <label class="setting-row">
+                <div>
+                  <strong>Hide Ignored Games from Library</strong>
+                  <p class="muted">Hide games marked as Ignored unless "Show Ignored" is active</p>
+                </div>
+                <input type="checkbox" id="cfg-hide-ignored" />
+              </label>
+            </div>
+
+            <!-- Steam Web API Settings Card -->
+            <div class="settings-card">
+              <h3>Steam Web API &amp; Cover Resolution</h3>
+              <p class="muted">
+                Configure your Steam Web API key to automatically match Steam App IDs and high-resolution cover art for all games.
+              </p>
+              <div class="preset-select-grid" style="margin-top:10px">
+                <div class="preset-field">
+                  <label>Steam Web API Key (<a href="#" onclick="event.preventDefault(); openExternalUrl('https://steamcommunity.com/dev/apikey')" style="color:var(--accent)">Get Key ↗</a>)</label>
+                  <input type="password" id="settings-steam-api-key" class="toolbar-select" placeholder="32-char Steam API Key" />
+                </div>
+                <div class="preset-field">
+                  <label>Steam64 ID (Optional — auto-detected from Steam VDF)</label>
+                  <input type="text" id="settings-steam-id" class="toolbar-select" placeholder="Auto-detected" />
+                </div>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;gap:8px;flex-wrap:wrap">
+                <span class="steam-status-pill" id="settings-steam-status-pill">○ Not configured</span>
+                <div style="display:flex;gap:8px">
+                  <button class="btn btn-secondary" onclick="reresolveGamesViaSteamNow()">🔄 Re-resolve All Games</button>
+                  <button class="btn btn-primary" onclick="validateAndSaveSteamApiFromSettings()">💾 Save Steam API</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Cloudflare Pages Game Compatibility & Settings Database Card -->
+            <div class="settings-card">
+              <h3>☁️ Game Compatibility &amp; Settings Database (<code>dlssdb.goover.dev</code>)</h3>
+              <p class="muted">
+                Online database for per-game upscaler support warnings, Anti-Cheat policies, and recommended DLSS presets. Create your personal API Key on <a href="#" onclick="event.preventDefault(); openExternalUrl('https://dlssdb.goover.dev')" style="color:var(--accent)">dlssdb.goover.dev ↗</a>.
+              </p>
+              <div class="preset-select-grid" style="margin-top:10px">
+                <div class="preset-field">
+                  <label>Personal DLSS-DB API Key (<a href="#" onclick="event.preventDefault(); openExternalUrl('https://dlssdb.goover.dev')" style="color:var(--accent)">Create API Key ↗</a>)</label>
+                  <div style="display:flex;gap:6px">
+                    <input
+                      type="password"
+                      id="settings-game-db-api-key"
+                      class="toolbar-select"
+                      style="flex:1"
+                      placeholder="dlss_live_..."
+                    />
+                    <button class="btn btn-secondary" onclick="toggleRevealGameDbKey()" title="Show / Hide API Key" style="padding:6px 10px">👁️</button>
+                  </div>
+                </div>
+                <div class="preset-field">
+                  <label>Database Endpoint URL (<code>games.json</code>)</label>
+                  <input
+                    type="text"
+                    id="settings-game-db-url"
+                    class="toolbar-select"
+                    placeholder="https://dlssdb.goover.dev/api/v1/games.json"
+                  />
+                </div>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;gap:8px;flex-wrap:wrap">
+                <span class="steam-status-pill connected" id="settings-game-db-status-pill">● Loaded</span>
+                <div style="display:flex;gap:8px">
+                  <button class="btn btn-secondary" onclick="openExternalUrl('https://dlssdb.goover.dev')">🌐 Open Web Portal</button>
+                  <button class="btn btn-primary" onclick="syncGameDatabaseNow()">🔄 Save Key &amp; Sync Database</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Global NVIDIA DLSS Presets -->
+            <div class="settings-card" id="settings-nvidia-presets-card">
+              <h3>Global Default NVIDIA DLSS Presets (Driver DRS)</h3>
+              <p class="muted">
+                Default driver-level DLSS 4 / 4.5 presets (`nvapi64.dll`). You can also override presets per-game via the card menu (<code>⋮</code>).
+              </p>
+              <div class="preset-select-grid" style="margin-top:10px">
+                <div class="preset-field">
+                  <label>DLSS Super Resolution</label>
+                  <select id="cfg-global-sr-preset" class="toolbar-select">
+                    <option value="Default">Default (Game Controlled)</option>
+                    <option value="Latest">Latest (Driver Recommended)</option>
+                    <option value="Preset J">Preset J (Transformer Gen 1)</option>
+                    <option value="Preset K">Preset K (Transformer Gen 2 · RTX 20/30)</option>
+                    <option value="Preset L">Preset L (DLSS 4.5 · RTX 40/50)</option>
+                    <option value="Preset M">Preset M (DLSS 4.5 Max Quality)</option>
+                  </select>
+                </div>
+                <div class="preset-field">
+                  <label>DLSS Ray Reconstruction</label>
+                  <select id="cfg-global-rr-preset" class="toolbar-select">
+                    <option value="Default">Default</option>
+                    <option value="Latest">Latest</option>
+                    <option value="Preset D">Preset D</option>
+                    <option value="Preset F">Preset F (Transformer)</option>
+                  </select>
+                </div>
+                <div class="preset-field">
+                  <label>DLSS Frame Generation</label>
+                  <select id="cfg-global-fg-preset" class="toolbar-select">
+                    <option value="Default">Default</option>
+                    <option value="Latest">Latest</option>
+                    <option value="Preset A">Preset A</option>
+                    <option value="Preset B">Preset B</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Enabled Technology Scope -->
+            <div class="settings-card">
+              <h3>Enabled Upscaler Technologies</h3>
+              <p class="muted">
+                Choose which technology groups should be flagged for updates and included in batch updates.
+              </p>
+              <div class="tech-scope-grid" id="settings-tech-scope-grid" style="margin-top:10px"></div>
+            </div>
+
+            <div class="settings-card">
+              <h3>Custom Game Library Folders</h3>
+              <p class="muted">
+                Add custom directories if you store standalone games outside standard launchers.
+              </p>
+              <div class="custom-folder-input">
+                <input
+                  type="text"
+                  id="input-custom-folder"
+                  placeholder="e.g. D:\Games or E:\Standalone"
+                />
+                <button class="btn btn-secondary" id="btn-browse-folder" title="Browse folder...">📂 Browse</button>
+                <button class="btn btn-primary" id="btn-add-folder">Add Path</button>
+              </div>
+              <div id="custom-folders-list" class="custom-folders-list"></div>
+            </div>
+
+            <!-- Ignored & Blacklisted Games Manager -->
+            <div class="settings-card">
+              <h3>Ignored &amp; Blacklisted Games</h3>
+              <p class="muted">
+                Manage games excluded from updates or add custom title patterns to the blacklist.
+              </p>
+              <div class="custom-folder-input" style="margin-top:10px">
+                <input
+                  type="text"
+                  id="input-blacklist-game"
+                  placeholder="Enter game title to blacklist (e.g. Valorant)"
+                />
+                <button class="btn btn-secondary" id="btn-add-blacklist">Add to Blacklist</button>
+              </div>
+              <div id="ignored-games-settings-list" class="custom-folders-list"></div>
+              <div id="blacklisted-games-settings-list" class="custom-folders-list"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW: INFO & ABOUT -->
+        <section class="view-section" id="view-info">
+          <div class="settings-grid">
+            <div class="settings-card info-hero-card">
+              <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px">
+                <div style="display:flex;align-items:center;gap:16px">
+                  <img src="assets/logo.png" alt="DLSS Manager" style="width:58px;height:58px;border-radius:14px" />
+                  <div>
+                    <div style="display:flex;align-items:center;gap:10px">
+                      <h2 style="font-size:1.35rem">DLSS Manager</h2>
+                      <span class="badge-version" id="info-version-badge">v1.0.0-beta.1</span>
+                    </div>
+                    <p class="muted" style="margin-top:4px">
+                      Universal Upscaler &amp; Frame Generation Manager for NVIDIA DLSS 4.5 / 5, AMD FSR 3.1 / 4, Intel XeSS 2, Streamline &amp; DirectStorage.
+                    </p>
+                  </div>
+                </div>
+                <div style="display:flex;gap:10px;flex-wrap:wrap">
+                  <button class="btn btn-secondary" data-url="https://github.com/gOOvER/DLSS-Manager">
+                    ⭐ GitHub Repository
+                  </button>
+                  <button class="btn btn-secondary" data-url="https://github.com/gOOvER/DLSS-Manager/releases">
+                    📦 Releases &amp; Changelog
+                  </button>
+                  <button class="btn btn-secondary" data-url="https://github.com/gOOvER/DLSS-Manager/issues">
+                    🐞 Report Issue
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- System & Storage Diagnostics -->
+            <div class="settings-card">
+              <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+                <h3>System &amp; Storage Diagnostics</h3>
+                <div style="display:flex;gap:8px">
+                  <button class="btn btn-secondary btn-card-action" onclick="openAppDataDir('root')">📂 Open AppData Folder</button>
+                  <button class="btn btn-secondary btn-card-action" onclick="openAppDataDir('cache')">📂 Open DLL Cache</button>
+                  <button class="btn btn-secondary btn-card-action" onclick="openAppDataDir('backups')">📂 Open Backups Vault</button>
+                  <button class="btn btn-secondary btn-card-action" onclick="manualCheckAppUpdate()">🔄 Check App Update</button>
+                </div>
+              </div>
+              <div class="info-kv-grid" id="info-diagnostics-grid" style="margin-top:12px"></div>
+            </div>
+
+            <!-- Supported Upscaler Technologies & Presets -->
+            <div class="settings-card">
+              <h3>Supported Upscaler Technologies &amp; Catalog</h3>
+              <p class="muted" style="margin-bottom:10px">
+                Active manifest versions compatible with your detected GPU hardware:
+              </p>
+              <div class="info-catalog-table" id="info-catalog-table"></div>
+            </div>
+
+            <!-- Supported Launchers & Anti-Cheat Protection -->
+            <div class="settings-card">
+              <h3>Supported Launchers &amp; Safety Architecture</h3>
+              <div class="info-two-col">
+                <div>
+                  <h4 style="margin-bottom:6px;font-size:0.9rem">9 Auto-Detected Game Launchers</h4>
+                  <p class="muted" style="line-height:1.5">
+                    • <strong>Steam</strong> (Registry + <code>libraryfolders.vdf</code> + <code>appmanifest_*.acf</code> + <code>loginusers.vdf</code>)<br />
+                    • <strong>Star Citizen</strong> (<code>%APPDATA%\rsilauncher\logs\log.log</code> + <code>LIVE</code>, <code>PTU</code>, <code>EPTU</code>, <code>TECH-PREVIEW</code>, <code>HOTFIX</code>)<br />
+                    • <strong>Battle.net</strong> (<code>product.db</code> Protobuf + Windows Uninstall Registry)<br />
+                    • <strong>Epic Games</strong> (<code>ProgramData\Epic\...\Manifests\*.item</code>)<br />
+                    • <strong>GOG Galaxy</strong>, <strong>EA App / Origin</strong>, <strong>Ubisoft Connect</strong>, <strong>Xbox / Game Pass</strong> &amp; Custom Folders
+                  </p>
+                </div>
+                <div>
+                  <h4 style="margin-bottom:6px;font-size:0.9rem">Integrity &amp; Anti-Cheat Protection</h4>
+                  <p class="muted" style="line-height:1.5">
+                    • <strong>PE Binary Verification</strong>: Every downloaded DLL is validated for <code>MZ</code> headers and Win32 <code>VS_FIXEDFILEINFO</code> version resources before touching a game directory.<br />
+                    • <strong>Watermark Protection</strong>: Automatically detects and warns about faulty DLSS <code>310.7.0</code> builds.<br />
+                    • <strong>Anti-Cheat Detection</strong>: Automatically flags EasyAntiCheat, BattlEye, Vanguard &amp; Ricochet games.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <!-- Modal: Game DLL Details -->
+    <div id="dll-modal-backdrop" class="modal-backdrop" style="display:none">
+      <div class="modal-dialog" id="dll-modal-content"></div>
+    </div>
+
+    <!-- Modal: Secondary Dialog (Edit Display / DLSS Presets / Bulk Scope / Logs / Launcher Paths) -->
+    <div id="secondary-modal-backdrop" class="modal-backdrop" style="display:none">
+      <div class="modal-dialog" id="secondary-modal-content"></div>
+    </div>
+
+    <!-- Context Menu (`⋮` / Right-Click on Game Card) -->
+    <div id="card-context-menu" class="card-context-menu" style="display:none"></div>
+
+    <!-- Toast Notifications -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
