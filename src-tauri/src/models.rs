@@ -256,6 +256,10 @@ pub fn default_game_db_url() -> String {
     "https://dlssdb.goover.dev/api/v1/games.json".to_string()
 }
 
+pub fn default_language() -> String {
+    "de".to_string()
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Game {
     pub id: String,
@@ -389,6 +393,8 @@ pub struct AppConfig {
     pub game_db_api_key: String,
     #[serde(default = "default_true")]
     pub auto_report_games_to_db: bool,
+    #[serde(default = "default_language")]
+    pub language: String,
 }
 
 impl Default for AppConfig {
@@ -414,6 +420,7 @@ impl Default for AppConfig {
             game_db_url: default_game_db_url(),
             game_db_api_key: String::new(),
             auto_report_games_to_db: true,
+            language: default_language(),
         }
     }
 }

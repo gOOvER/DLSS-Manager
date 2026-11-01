@@ -12,8 +12,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Full German (`🇩🇪 DE`) & English (`🇬🇧 EN`) Localization (`src-tauri/src/models.rs`, `ui/index.html`, `ui/app.js`):**
+  - Added complete, consistent German and English translations across the entire application (Sidebar, Topbar, Hub, Games Library, Status Filters, Batch Selection Bar, Game Hero Cards, Card Context Menu, Game Details Modal, Report Game Modal, Edit Display & Artwork Modal, NVIDIA DLSS Presets Modal, Batch Update Scope Modal, Activity Logs Modal, Backups, Settings, Info page, and Toast notifications) with zero language mixing.
+  - Added a one-click language switcher button (`🇩🇪 DE` / `🇬🇧 EN`) in the Topbar as well as a persisted language selector in **Settings -> Update- & Sicherheitseinstellungen (`AppConfig.language`)**.
+  - Added a matching `🇩🇪 DE` / `🇬🇧 EN` language switcher to the `dlssdb.goover.dev` Online Database web portal.
 - **Custom `DM` (DLSS Manager) Application Icon & Branding (`src-tauri/icons/`, `ui/index.html`, `ui/assets/logo.png`):**
   - Replaced the legacy `DU` icon with a custom high-contrast **DM** monogram icon across the Windows executable resource table (`icon.ico`, `dlss_manager.ico`), taskbar/window icon (`32x32.png`, `128x128.png`, `128x128@2x.png`, `icon.png`), in-app sidebar & Info page (embedded directly as an inline Base64 PNG in `ui/index.html` plus `ui/assets/logo.png`), and the `dlssdb.goover.dev` web portal (`favicon.png`).
+  - Encoded `16x16`, `24x24`, `32x32`, `48x48`, `64x64`, and `128x128` icon frames as uncompressed 32-bit BGRA `BITMAPINFOHEADER` DIBs with 1-bit AND masks alongside the `256x256` PNG frame so Windows Explorer Details/Small-Icon views always render the new `DM` icon cleanly.
 - **Online Database Personal API Key & Community Game Reporting (`src-tauri/src/game_db.rs`, `ui/app.js`):**
   - Added personal API key authentication (`dlss_live_...` via `X-API-Key` / `Bearer`) for syncing with `https://dlssdb.goover.dev/api/v1/games.json`.
   - Added interactive **📤 Spiel an Online-DB melden** modal on game cards and in the Game Details view with a mandatory **Status toggle (`✅ Geht (Funktioniert)` / `❌ Geht nicht (Probleme / Blockiert)`)** and optional fields for recommended in-game settings, DLSS presets, and notes.

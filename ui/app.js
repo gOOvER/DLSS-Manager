@@ -60,6 +60,256 @@ let appState = {
   appUpdateInfo: null,
 };
 
+const I18N = {
+  de: {
+    nav_hub: "Hub",
+    nav_games: "Spiele",
+    nav_backups: "Backups",
+    nav_settings: "Einstellungen",
+    nav_info: "Info",
+    gpu_detecting: "ERKENNE GPU",
+    gpu_scanning: "Scanne Hardware...",
+    btn_scan_games: "🔍 Spiele scannen",
+    btn_scanning: "⏳ Scanne...",
+    search_placeholder: "Spiele durchsuchen...",
+    update_available: "⬆️ Update verfügbar",
+    dlss_overlay: "DLSS-Overlay",
+    btn_logs: "📋 Logs",
+    btn_update_all: "Alle aktualisieren",
+    stat_installed_title: "Installierte Spiele",
+    stat_installed_sub: "Mit kompatiblen Upscaler-DLLs",
+    stat_needs_update_title: "Update verfügbar",
+    stat_needs_update_sub: "Spiele mit neueren DLL-Versionen",
+    stat_uptodate_title: "Aktuell",
+    stat_uptodate_sub: "Auf neuester Upscaler-Version",
+    stat_backups_title: "Gesicherte Spiele",
+    stat_backups_sub: "Bereit für 1-Klick-Wiederherstellung",
+    steam_api_hub_title: "Steam Web API Integration",
+    steam_api_hub_sub: "Lädt offizielle Cover-Bilder & App-IDs für alle Launcher nach",
+    steam_api_key_label: "Steam Web API Key",
+    steam_get_key_link: "Key bei Steam erstellen ↗",
+    steam_key_placeholder: "32-stelligen Steam Web API Key einfügen...",
+    steam_id_label: "Steam64 ID (Wird automatisch aus lokaler Steam-Installation erkannt)",
+    steam_id_placeholder: "z.B. 76561198000000000 (automatisch erkannt)",
+    steam_api_feedback_default: "Gleicht eigene Steam-Spiele (`IPlayerService/GetOwnedGames`) + Steam-Store-Suche für alle Launcher ab.",
+    btn_reresolve_covers: "🔄 Cover & App-IDs neu abgleichen",
+    btn_validate_save_key: "✓ Prüfen & Speichern",
+    hub_latest_versions: "Aktuell verfügbare Upscaler-Versionen",
+    btn_check_newer_dlls: "🔄 Auf neue DLLs prüfen",
+    hub_detected_launchers: "Erkannte Launcher",
+    hub_detected_launchers_sub: "Klicke auf einen Launcher zum Filtern · Klicke auf 📂 für Pfade",
+    sort_name_asc: "Name (A → Z)",
+    sort_outdated_first: "Updates zuerst",
+    sort_name_desc: "Name (Z → A)",
+    sort_dll_count: "Meiste Technologien",
+    btn_select_outdated: "Veraltete auswählen",
+    btn_select_all_visible: "Alle sichtbaren auswählen",
+    btn_clear_selection: "Auswahl aufheben",
+    btn_update_selected: "Ausgewählte aktualisieren",
+    backups_title: "Automatische Backups & Wiederherstellung",
+    backups_sub: "Originale Spiel-DLLs werden vor jedem Update automatisch gesichert. Stelle ein komplettes Spiel oder einzelne Technologien mit einem Klick wieder her.",
+    settings_safety_title: "Update- & Sicherheitseinstellungen",
+    settings_lang_label: "Sprache / Language",
+    settings_lang_sub: "Sprache der Benutzeroberfläche (Deutsch / English)",
+    settings_autobackup_title: "Automatisches Backup vor dem Ersetzen",
+    settings_autobackup_sub: "Originale Spiel-DLLs vor jedem Update im lokalen Backup-Tresor sichern",
+    settings_skip_ac_title: "Anti-Cheat-geschützte Spiele bei Massen-Updates überspringen",
+    settings_skip_ac_sub: "EasyAntiCheat-, BattlEye-, Vanguard- & Ricochet-Titel bei „Alle aktualisieren“ auslassen",
+    settings_preview_title: "Experimentelle / Preview-DLLs erlauben",
+    settings_preview_sub: "Vorabversionen von DLSS / FSR / XeSS bei der Update-Prüfung berücksichtigen",
+    settings_hide_ignored_title: "Ignorierte Spiele in der Bibliothek ausblenden",
+    settings_hide_ignored_sub: "Als ignoriert markierte Spiele komplett verstecken, sofern der Filter nicht aktiv ist",
+    settings_steam_title: "Steam Web API & Cover-Auflösung",
+    settings_steam_sub: "Hinterlege deinen Steam Web API Key, um Steam-App-IDs und hochauflösende Cover-Bilder automatisch zuzuordnen.",
+    btn_save_steam_api: "💾 Steam API speichern",
+    settings_db_title: "☁️ Spiele-Kompatibilitäts- & Einstellungs-Datenbank (dlssdb.goover.dev)",
+    settings_db_sub: "Online-Datenbank für Upscaler-Kompatibilität, Anti-Cheat-Hinweise und empfohlene DLSS-Presets.",
+    settings_db_key_label: "Persönlicher DLSS-DB API-Key",
+    settings_db_create_key: "API-Key erstellen ↗",
+    settings_db_url_label: "Datenbank-Endpunkt-URL (games.json)",
+    settings_db_auto_report: "Gescannte Spiele & erkannte Technologien automatisch an dlssdb.goover.dev senden, sobald ein API-Key hinterlegt ist",
+    btn_open_web_portal: "🌐 Web-Portal öffnen",
+    btn_send_scanned_games: "📤 Gescannte Spiele an DB senden",
+    btn_save_sync_db: "🔄 Key speichern & DB synchronisieren",
+    settings_nv_presets_title: "Globale NVIDIA DLSS-Presets (Treiber-DRS)",
+    settings_nv_presets_sub: "Globale DLSS 4 / 4.5 Treiber-Presets (nvapi64.dll). Über das Kartenmenü (⋮) können Presets auch pro Spiel überschrieben werden.",
+    settings_tech_scope_title: "Aktivierte Upscaler-Technologien",
+    settings_tech_scope_sub: "Wähle aus, welche Technologiegruppen auf Updates geprüft und bei Massen-Updates berücksichtigt werden sollen.",
+    settings_custom_folders_title: "Eigene Spieleordner",
+    settings_custom_folders_sub: "Füge eigene Verzeichnisse hinzu, wenn du Standalone-Spiele außerhalb der Standard-Launcher speicherst.",
+    custom_folder_placeholder: "z.B. D:\\Games oder E:\\Standalone",
+    btn_browse_folder: "📂 Durchsuchen",
+    btn_add_path: "Pfad hinzufügen",
+    settings_ignored_title: "Ignorierte & Blacklist-Spiele",
+    settings_ignored_sub: "Verwalte vom Update ausgeschlossene Spiele oder füge Ordnernamen zur Blacklist hinzu.",
+    blacklist_placeholder: "Spielname für Blacklist eingeben (z.B. Valorant)",
+    btn_add_blacklist: "Zur Blacklist hinzufügen",
+    "info.subtitle": "Universeller Upscaler- & Frame-Generation-Manager für NVIDIA DLSS 4.5 / 5, AMD FSR 3.1 / 4, Intel XeSS 2, Streamline & DirectStorage.",
+    "info.github_repo": "⭐ GitHub Repository",
+    "info.releases": "📦 Releases & Changelog",
+    "info.report_issue": "🐞 Fehler melden",
+    "info.diag_title": "System- & Speicher-Diagnose",
+    "info.open_appdata": "📂 AppData-Ordner öffnen",
+    "info.open_cache": "📂 DLL-Cache öffnen",
+    "info.open_backups": "📂 Backup-Tresor öffnen",
+    "info.check_update": "🔄 Nach App-Update suchen",
+    "info.catalog_title": "Unterstützte Upscaler-Technologien & Katalog",
+    "info.catalog_desc": "Aktive Manifest-Versionen kompatibel mit deiner erkannten GPU-Hardware:",
+    "info.launchers_safety_title": "Unterstützte Launcher & Sicherheitsarchitektur",
+    "info.launchers_sub": "9 Automatisch erkannte Spiele-Launcher",
+    "info.launchers_list": "• <strong>Steam</strong> (Registry + <code>libraryfolders.vdf</code> + <code>appmanifest_*.acf</code> + <code>loginusers.vdf</code>)<br />• <strong>Star Citizen</strong> (<code>%APPDATA%\\rsilauncher\\logs\\log.log</code> + <code>LIVE</code>, <code>PTU</code>, <code>EPTU</code>, <code>TECH-PREVIEW</code>, <code>HOTFIX</code>)<br />• <strong>Battle.net</strong> (<code>product.db</code> Protobuf + Windows Uninstall Registry)<br />• <strong>Epic Games</strong> (<code>ProgramData\\Epic\\...\\Manifests\\*.item</code>)<br />• <strong>GOG Galaxy</strong>, <strong>EA App / Origin</strong>, <strong>Ubisoft Connect</strong>, <strong>Xbox / Game Pass</strong> &amp; Eigene Ordner",
+    "info.safety_sub": "Integritäts- & Anti-Cheat-Schutz",
+    "info.safety_list": "• <strong>PE-Binärprüfung</strong>: Jede heruntergeladene DLL wird vor dem Kopieren auf gültige <code>MZ</code>-Header und Win32 <code>VS_FIXEDFILEINFO</code>-Versionsressourcen geprüft.<br />• <strong>Wasserzeichen-Schutz</strong>: Erkennt und warnt automatisch vor fehlerhaften DLSS <code>310.7.0</code>-Builds.<br />• <strong>Anti-Cheat-Erkennung</strong>: Markiert automatisch Spiele mit EasyAntiCheat, BattlEye, Vanguard &amp; Ricochet.",
+  },
+  en: {
+    nav_hub: "Hub",
+    nav_games: "Games",
+    nav_backups: "Backups",
+    nav_settings: "Settings",
+    nav_info: "Info",
+    gpu_detecting: "DETECTING GPU",
+    gpu_scanning: "Scanning hardware...",
+    btn_scan_games: "🔍 Scan Games",
+    btn_scanning: "⏳ Scanning...",
+    search_placeholder: "Search games by title, launcher, or DLL...",
+    update_available: "⬆️ Update Available",
+    dlss_overlay: "DLSS Overlay",
+    btn_logs: "📋 Logs",
+    btn_update_all: "Update All",
+    stat_installed_title: "Installed Games",
+    stat_installed_sub: "With compatible upscaler DLLs",
+    stat_needs_update_title: "Needs Update",
+    stat_needs_update_sub: "Games with newer DLL versions",
+    stat_uptodate_title: "Up to Date",
+    stat_uptodate_sub: "Running latest upscaler builds",
+    stat_backups_title: "Protected Games",
+    stat_backups_sub: "Ready for 1-click restore",
+    steam_api_hub_title: "Steam Web API Integration",
+    steam_api_hub_sub: "Auto-resolves official cover artwork & App IDs across all launchers",
+    steam_api_key_label: "Steam Web API Key",
+    steam_get_key_link: "Get key from Steam ↗",
+    steam_key_placeholder: "Paste 32-character Steam Web API Key...",
+    steam_id_label: "Steam64 ID (Auto-detected from local Steam installation)",
+    steam_id_placeholder: "e.g. 76561198000000000 (auto-detected)",
+    steam_api_feedback_default: "Matches owned Steam games (`IPlayerService/GetOwnedGames`) + Steam Store search for all launchers.",
+    btn_reresolve_covers: "🔄 Re-Resolve Covers & App IDs",
+    btn_validate_save_key: "✓ Validate & Save Key",
+    hub_latest_versions: "Latest Available Upscaler Versions",
+    btn_check_newer_dlls: "🔄 Check for Newer DLLs",
+    hub_detected_launchers: "Detected Launchers",
+    hub_detected_launchers_sub: "Click a launcher to filter · Click 📂 to inspect paths",
+    sort_name_asc: "Name (A → Z)",
+    sort_outdated_first: "Needs Update First",
+    sort_name_desc: "Name (Z → A)",
+    sort_dll_count: "Most Technologies",
+    btn_select_outdated: "Select Outdated",
+    btn_select_all_visible: "Select All Visible",
+    btn_clear_selection: "Clear Selection",
+    btn_update_selected: "Update Selected",
+    backups_title: "Automatic Backups & Restore",
+    backups_sub: "Original game DLLs are backed up before every update. Restore an entire game or individual technologies with one click.",
+    settings_safety_title: "Update & Safety Preferences",
+    settings_lang_label: "Language / Sprache",
+    settings_lang_sub: "User interface language (Deutsch / English)",
+    settings_autobackup_title: "Automatic Backup Before Replace",
+    settings_autobackup_sub: "Save original game DLLs to local vault before applying updates",
+    settings_skip_ac_title: "Skip Anti-Cheat Protected Games in Bulk Updates",
+    settings_skip_ac_sub: "Exclude EasyAntiCheat, BattlEye, Vanguard & Ricochet titles from Update All",
+    settings_preview_title: "Allow Experimental / Preview DLLs",
+    settings_preview_sub: "Include pre-release DLSS / FSR / XeSS builds when checking for updates",
+    settings_hide_ignored_title: "Hide Ignored Games from Library",
+    settings_hide_ignored_sub: "Completely hide games marked as Ignored unless filter is toggled",
+    settings_steam_title: "Steam Web API & Artwork Resolution",
+    settings_steam_sub: "Configure your Steam Web API key to automatically match Steam App IDs and high-res cover art.",
+    btn_save_steam_api: "💾 Save Steam API",
+    settings_db_title: "☁️ Game Compatibility & Settings Database (dlssdb.goover.dev)",
+    settings_db_sub: "Cloud-synced compatibility database for upscaler support, anti-cheat rules, and optimal DLSS presets.",
+    settings_db_key_label: "Personal DLSS-DB API Key",
+    settings_db_create_key: "Create API Key ↗",
+    settings_db_url_label: "Database Endpoint URL (games.json)",
+    settings_db_auto_report: "Automatically report scanned games & detected technologies to dlssdb.goover.dev when API Key is set",
+    btn_open_web_portal: "🌐 Open Web Portal",
+    btn_send_scanned_games: "📤 Send Scanned Games to DB",
+    btn_save_sync_db: "🔄 Save Key & Sync DB",
+    settings_nv_presets_title: "Global NVIDIA DLSS Presets (Driver DRS)",
+    settings_nv_presets_sub: "Global DLSS 4 / 4.5 driver overrides (nvapi64.dll). You can also override presets per game from any game card menu (⋮).",
+    settings_tech_scope_title: "Enabled Upscaler Technologies",
+    settings_tech_scope_sub: "Choose which technology groups should be checked for updates and included in batch updates.",
+    settings_custom_folders_title: "Custom Game Folders",
+    settings_custom_folders_sub: "Add custom directories if you keep standalone games outside standard launchers.",
+    custom_folder_placeholder: "e.g. D:\\Games or E:\\Standalone",
+    btn_browse_folder: "📂 Browse",
+    btn_add_path: "Add Path",
+    settings_ignored_title: "Ignored & Blacklisted Games",
+    settings_ignored_sub: "Manage games excluded from updates or add custom folder/title patterns to the blacklist.",
+    blacklist_placeholder: "Enter game title to blacklist (e.g. Valorant)",
+    btn_add_blacklist: "Add to Blacklist",
+    "info.subtitle": "Universal Upscaler & Frame Generation Manager for NVIDIA DLSS 4.5 / 5, AMD FSR 3.1 / 4, Intel XeSS 2, Streamline & DirectStorage.",
+    "info.github_repo": "⭐ GitHub Repository",
+    "info.releases": "📦 Releases & Changelog",
+    "info.report_issue": "🐞 Report Issue",
+    "info.diag_title": "System & Storage Diagnostics",
+    "info.open_appdata": "📂 Open AppData Folder",
+    "info.open_cache": "📂 Open DLL Cache",
+    "info.open_backups": "📂 Open Backups Vault",
+    "info.check_update": "🔄 Check App Update",
+    "info.catalog_title": "Supported Upscaler Technologies & Catalog",
+    "info.catalog_desc": "Active manifest versions compatible with your detected GPU hardware:",
+    "info.launchers_safety_title": "Supported Launchers & Safety Architecture",
+    "info.launchers_sub": "9 Auto-Detected Game Launchers",
+    "info.launchers_list": "• <strong>Steam</strong> (Registry + <code>libraryfolders.vdf</code> + <code>appmanifest_*.acf</code> + <code>loginusers.vdf</code>)<br />• <strong>Star Citizen</strong> (<code>%APPDATA%\\rsilauncher\\logs\\log.log</code> + <code>LIVE</code>, <code>PTU</code>, <code>EPTU</code>, <code>TECH-PREVIEW</code>, <code>HOTFIX</code>)<br />• <strong>Battle.net</strong> (<code>product.db</code> Protobuf + Windows Uninstall Registry)<br />• <strong>Epic Games</strong> (<code>ProgramData\\Epic\\...\\Manifests\\*.item</code>)<br />• <strong>GOG Galaxy</strong>, <strong>EA App / Origin</strong>, <strong>Ubisoft Connect</strong>, <strong>Xbox / Game Pass</strong> &amp; Custom Folders",
+    "info.safety_sub": "Integrity & Anti-Cheat Protection",
+    "info.safety_list": "• <strong>PE Binary Verification</strong>: Every downloaded DLL is validated for <code>MZ</code> headers and Win32 <code>VS_FIXEDFILEINFO</code> version resources before touching a game directory.<br />• <strong>Watermark Protection</strong>: Automatically detects and warns about faulty DLSS <code>310.7.0</code> builds.<br />• <strong>Anti-Cheat Detection</strong>: Automatically flags EasyAntiCheat, BattlEye, Vanguard &amp; Ricochet games.",
+  },
+};
+
+function getLang() {
+  const l = (appState.config?.language || "de").toLowerCase();
+  return l === "en" ? "en" : "de";
+}
+
+function isDe() {
+  return getLang() === "de";
+}
+
+function t(key) {
+  const lang = getLang();
+  return I18N[lang]?.[key] ?? I18N.de?.[key] ?? key;
+}
+
+function applyLanguage() {
+  const lang = getLang();
+  document.documentElement.lang = lang;
+
+  const langBtnLabel = document.getElementById("lang-toggle-label");
+  if (langBtnLabel) {
+    langBtnLabel.textContent = lang === "de" ? "🇩🇪 DE" : "🇬🇧 EN";
+  }
+  const cfgLang = document.getElementById("cfg-language");
+  if (cfgLang && cfgLang.value !== lang) {
+    cfgLang.value = lang;
+  }
+
+  document.querySelectorAll("[data-i18n]").forEach((el) => {
+    const k = el.getAttribute("data-i18n");
+    if (k && I18N[lang]?.[k]) {
+      el.textContent = I18N[lang][k];
+    }
+  });
+  document.querySelectorAll("[data-i18n-html]").forEach((el) => {
+    const k = el.getAttribute("data-i18n-html");
+    if (k && I18N[lang]?.[k]) {
+      el.innerHTML = I18N[lang][k];
+    }
+  });
+  document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
+    const k = el.getAttribute("data-i18n-placeholder");
+    if (k && I18N[lang]?.[k]) {
+      el.setAttribute("placeholder", I18N[lang][k]);
+    }
+  });
+}
+
 function showToast(message, isError = false) {
   const container = document.getElementById("toast-container");
   if (!container) return;
@@ -189,6 +439,8 @@ function buildTechSummaryLine(game) {
 }
 
 function renderAll() {
+  applyLanguage();
+
   document.getElementById("app-version-badge").textContent = `v${appState.version}`;
   const infoVer = document.getElementById("info-version-badge");
   if (infoVer) infoVer.textContent = `v${appState.version}`;
@@ -213,9 +465,15 @@ function renderAll() {
 
   if (appState.gpu) {
     const vendor = (appState.gpu.vendor || "GPU").toUpperCase();
-    document.getElementById("gpu-vendor-badge").textContent = `DETECTED ${vendor} GPU`;
+    document.getElementById("gpu-vendor-badge").textContent = isDe()
+      ? `ERKANNTE ${vendor} GPU`
+      : `DETECTED ${vendor} GPU`;
     document.getElementById("gpu-name").textContent = appState.gpu.name;
-    const drv = appState.gpu.driver_version ? ` · Driver ${appState.gpu.driver_version}` : "";
+    const drv = appState.gpu.driver_version
+      ? isDe()
+        ? ` · Treiber ${appState.gpu.driver_version}`
+        : ` · Driver ${appState.gpu.driver_version}`
+      : "";
     document.getElementById("gpu-arch").textContent = `${appState.gpu.architecture}${drv}`;
 
     const caps = document.getElementById("gpu-caps");
@@ -289,7 +547,11 @@ function renderSteamApiStatus() {
   const pill1 = document.getElementById("steam-api-status-pill");
   const pill2 = document.getElementById("settings-steam-status-pill");
   const label = hasKey
-    ? `● Connected${sid ? ` · ID ${sid}` : ""}`
+    ? isDe()
+      ? `● Verbunden${sid ? ` · ID ${sid}` : ""}`
+      : `● Connected${sid ? ` · ID ${sid}` : ""}`
+    : isDe()
+    ? "○ Nicht konfiguriert"
     : "○ Not configured";
   if (pill1) {
     pill1.textContent = label;
@@ -318,7 +580,11 @@ function renderSteamApiStatus() {
     const cnt = appState.stats?.game_db_count || 0;
     const hasDbKey = !!(appState.config?.game_db_api_key || "").trim();
     dbPill.textContent = hasDbKey
-      ? `● API Key Active · ${cnt} Profiles Loaded`
+      ? isDe()
+        ? `● API-Key aktiv · ${cnt} Profile geladen`
+        : `● API Key Active · ${cnt} Profiles Loaded`
+      : isDe()
+      ? `● ${cnt} Profile (Lokal / Seed-DB)`
       : `● ${cnt} Profiles (Local / Seed DB)`;
   }
 }
@@ -333,10 +599,18 @@ window.syncGameDatabaseNow = async function () {
   const customUrl = document.getElementById("settings-game-db-url")?.value || null;
   const apiKey = document.getElementById("settings-game-db-api-key")?.value ?? null;
   try {
-    showToast("Syncing Game Compatibility & Settings Database...");
+    showToast(
+      isDe()
+        ? "Synchronisiere Spiele-Kompatibilitäts- & Einstellungs-Datenbank..."
+        : "Syncing Game Compatibility & Settings Database..."
+    );
     const payload = await invoke("sync_game_database", { customUrl, apiKey });
     applyPayload(payload);
-    showToast(`✓ Game Database synced (${payload.stats?.game_db_count || 0} profiles active)!`);
+    showToast(
+      isDe()
+        ? `✓ Datenbank synchronisiert (${payload.stats?.game_db_count || 0} Profile aktiv)!`
+        : `✓ Game Database synced (${payload.stats?.game_db_count || 0} profiles active)!`
+    );
   } catch (e) {
     showToast(String(e), true);
   }
@@ -348,7 +622,11 @@ window.reportGamesToDbNow = async function (gameId = null) {
     return;
   }
   try {
-    showToast("Sending all scanned games & detected technologies to dlssdb.goover.dev...");
+    showToast(
+      isDe()
+        ? "Sende alle gescannten Spiele & erkannten Technologien an dlssdb.goover.dev..."
+        : "Sending all scanned games & detected technologies to dlssdb.goover.dev..."
+    );
     const msg = await invoke("report_games_to_db", {
       gameId: null,
       worksStatus: null,
@@ -373,14 +651,18 @@ window.openReportGameModal = function (gameId) {
   const techs = Array.from(new Set((game.dlls || []).map((d) => d.type_label)));
   const existingSettings = (game.db_profile?.recommended_settings || []).join("\n");
   const defaultPreset = game.dlss_sr_preset || game.db_profile?.recommended_sr_preset || "";
+  const de = isDe();
 
   content.innerHTML = `
     <div class="modal-header">
       <div>
-        <h2>📤 Spiel an Online-DB melden</h2>
+        <h2>${de ? "📤 Spiel an Online-DB melden" : "📤 Report Game to Online-DB"}</h2>
         <p class="muted" style="font-size:0.82rem;margin-top:2px">
-          Melde <strong>${escapeHtml(game.name)}</strong> an <code>dlssdb.goover.dev</code>.
-          <strong>Pflichtangabe:</strong> Geht oder Geht nicht — alles andere ist optional.
+          ${
+            de
+              ? `Melde <strong>${escapeHtml(game.name)}</strong> an <code>dlssdb.goover.dev</code>. <strong>Pflichtangabe:</strong> Geht oder Geht nicht — alles andere ist optional.`
+              : `Report <strong>${escapeHtml(game.name)}</strong> to <code>dlssdb.goover.dev</code>. <strong>Required:</strong> Works or Doesn't Work — everything else is optional.`
+          }
         </p>
       </div>
       <button class="btn-icon" onclick="closeSecondaryModal()">✕</button>
@@ -389,19 +671,23 @@ window.openReportGameModal = function (gameId) {
     <div class="modal-body" style="display:flex;flex-direction:column;gap:14px;padding-top:10px">
       <div style="background:rgba(15,23,42,0.65);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:10px 14px;font-size:0.82rem">
         <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px">
-          <span><strong>Spiel:</strong> ${escapeHtml(game.name)} (${escapeHtml(game.launcher_name)})</span>
-          <span><strong>Erkannte DLLs:</strong> ${escapeHtml(techs.join(", ") || "DLSS")}</span>
+          <span><strong>${de ? "Spiel:" : "Game:"}</strong> ${escapeHtml(game.name)} (${escapeHtml(game.launcher_name)})</span>
+          <span><strong>${de ? "Erkannte DLLs:" : "Detected DLLs:"}</strong> ${escapeHtml(techs.join(", ") || "DLSS")}</span>
         </div>
         ${
           game.anti_cheat
-            ? `<div style="margin-top:4px;color:#fcd34d">🛡️ Erkanntes Anti-Cheat: ${escapeHtml(game.anti_cheat)}</div>`
+            ? `<div style="margin-top:4px;color:#fcd34d">🛡️ ${de ? "Erkanntes Anti-Cheat:" : "Detected Anti-Cheat:"} ${escapeHtml(game.anti_cheat)}</div>`
             : ""
         }
       </div>
 
       <div>
         <label style="display:block;font-size:0.82rem;font-weight:700;margin-bottom:6px">
-          Status: Funktioniert das Spiel mit DLSS / Upscaler-Update? <span style="color:#a3e635">* (Muss)</span>
+          ${
+            de
+              ? `Status: Funktioniert das Spiel mit DLSS / Upscaler-Update? <span style="color:#a3e635">* (Muss)</span>`
+              : `Status: Does this game work with DLSS / Upscaler updates? <span style="color:#a3e635">* (Required)</span>`
+          }
         </label>
         <input type="hidden" id="modal-rep-works-status" value="works" />
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
@@ -412,7 +698,7 @@ window.openReportGameModal = function (gameId) {
             onclick="setModalReportStatus('works')"
             style="justify-content:center;padding:11px;border:1px solid rgba(118,185,0,0.75);background:rgba(118,185,0,0.2);color:#d9f99d;font-weight:700"
           >
-            ✅ Geht (Funktioniert)
+            ${de ? "✅ Geht (Funktioniert)" : "✅ Works"}
           </button>
           <button
             type="button"
@@ -421,17 +707,17 @@ window.openReportGameModal = function (gameId) {
             onclick="setModalReportStatus('broken')"
             style="justify-content:center;padding:11px;opacity:0.75"
           >
-            ❌ Geht nicht (Probleme / Blockiert)
+            ${de ? "❌ Geht nicht (Probleme / Blockiert)" : "❌ Doesn't Work (Broken / Blocked)"}
           </button>
         </div>
       </div>
 
       <div>
         <label style="display:block;font-size:0.8rem;color:var(--text-muted);margin-bottom:5px">
-          Empfohlenes DLSS Preset <span style="opacity:0.75">(Optional)</span>
+          ${de ? "Empfohlenes DLSS Preset" : "Recommended DLSS Preset"} <span style="opacity:0.75">(Optional)</span>
         </label>
         <select id="modal-rep-preset" class="filter-select" style="width:100%">
-          <option value="" ${!defaultPreset ? "selected" : ""}>— Keine Angabe (Optional) —</option>
+          <option value="" ${!defaultPreset ? "selected" : ""}>${de ? "— Keine Angabe (Optional) —" : "— Not specified (Optional) —"}</option>
           <option value="Preset K" ${defaultPreset === "Preset K" ? "selected" : ""}>Preset K (DLSS 4.5 Transformer Gen 2)</option>
           <option value="Preset J" ${defaultPreset === "Preset J" ? "selected" : ""}>Preset J (DLSS 4.5 Transformer)</option>
           <option value="Latest" ${defaultPreset === "Latest" ? "selected" : ""}>Latest (Driver Default)</option>
@@ -442,35 +728,35 @@ window.openReportGameModal = function (gameId) {
 
       <div>
         <label style="display:block;font-size:0.8rem;color:var(--text-muted);margin-bottom:5px">
-          Empfohlene In-Game Einstellungen <span style="opacity:0.75">(Optional, eine pro Zeile)</span>
+          ${de ? "Empfohlene In-Game Einstellungen" : "Recommended In-Game Settings"} <span style="opacity:0.75">${de ? "(Optional, eine pro Zeile)" : "(Optional, one per line)"}</span>
         </label>
         <textarea
           id="modal-rep-settings"
           class="search-input"
           rows="3"
           style="width:100%;height:auto;padding:8px 10px;resize:vertical;font-family:inherit"
-          placeholder="Optional, z.B.&#10;Graphics Renderer: Vulkan&#10;Upscaling: DLSS Quality"
+          placeholder="${de ? "Optional, z.B.&#10;Graphics Renderer: Vulkan&#10;Upscaling: DLSS Quality" : "Optional, e.g.&#10;Graphics Renderer: Vulkan&#10;Upscaling: DLSS Quality"}"
         >${escapeHtml(existingSettings)}</textarea>
       </div>
 
       <div>
         <label style="display:block;font-size:0.8rem;color:var(--text-muted);margin-bottom:5px">
-          Hinweise / Fehlerbeschreibung <span style="opacity:0.75">(Optional)</span>
+          ${de ? "Hinweise / Fehlerbeschreibung" : "Notes / Issue Description"} <span style="opacity:0.75">(Optional)</span>
         </label>
         <input
           type="text"
           id="modal-rep-notes"
           class="search-input"
           style="width:100%"
-          placeholder="Optional: z.B. Läuft super / Anti-Cheat blockiert / Flackern bei..."
+          placeholder="${de ? "Optional: z.B. Läuft super / Anti-Cheat blockiert / Flackern bei..." : "Optional: e.g. Runs great / Anti-Cheat blocks swap / Flickering..."}"
         />
       </div>
     </div>
 
     <div class="modal-footer" style="margin-top:16px;display:flex;justify-content:flex-end;gap:10px">
-      <button class="btn btn-secondary" onclick="closeSecondaryModal()">Abbrechen</button>
+      <button class="btn btn-secondary" onclick="closeSecondaryModal()">${de ? "Abbrechen" : "Cancel"}</button>
       <button class="btn btn-primary" onclick="submitModalGameReport('${escapeHtml(game.id)}')">
-        📤 Jetzt an Datenbank melden
+        ${de ? "📤 Jetzt an Datenbank melden" : "📤 Submit Report to Database"}
       </button>
     </div>
   `;
@@ -517,7 +803,7 @@ window.submitModalGameReport = async function (gameId) {
   const notes = document.getElementById("modal-rep-notes")?.value?.trim() || null;
 
   try {
-    showToast("Sende Meldung an dlssdb.goover.dev...");
+    showToast(isDe() ? "Sende Meldung an dlssdb.goover.dev..." : "Submitting report to dlssdb.goover.dev...");
     const msg = await invoke("report_games_to_db", {
       gameId,
       worksStatus,
@@ -536,7 +822,11 @@ window.applyRecommendedProfileNow = async function (gameId) {
   try {
     const payload = await invoke("apply_recommended_game_profile", { gameId });
     applyPayload(payload);
-    showToast("✨ Applied recommended DLSS presets from Game Database!");
+    showToast(
+      isDe()
+        ? "✨ Empfohlene DLSS-Presets aus der Datenbank angewendet!"
+        : "✨ Applied recommended DLSS presets from Game Database!"
+    );
   } catch (e) {
     showToast(String(e), true);
   }
@@ -562,7 +852,7 @@ window.validateAndSaveSteamApiFromSettings = async function () {
 
 async function runSteamValidation(apiKey, steamId) {
   const fb = document.getElementById("steam-api-feedback");
-  if (fb) fb.textContent = "Validating Steam Web API key...";
+  if (fb) fb.textContent = isDe() ? "Prüfe Steam Web API Key..." : "Validating Steam Web API key...";
   try {
     const res = await invoke("validate_and_save_steam_api", {
       apiKey,
@@ -571,7 +861,7 @@ async function runSteamValidation(apiKey, steamId) {
     const initial = await invoke("get_initial_state");
     applyPayload(initial);
     if (fb) fb.textContent = res.message || "";
-    showToast(res.message || "Steam API updated.", !res.valid && apiKey.trim().length > 0);
+    showToast(res.message || (isDe() ? "Steam API aktualisiert." : "Steam API updated."), !res.valid && apiKey.trim().length > 0);
   } catch (e) {
     if (fb) fb.textContent = String(e);
     showToast(String(e), true);
@@ -580,13 +870,19 @@ async function runSteamValidation(apiKey, steamId) {
 
 window.reresolveGamesViaSteamNow = async function () {
   const fb = document.getElementById("steam-api-feedback");
-  if (fb) fb.textContent = "Re-resolving game App IDs & artwork via Steam API...";
+  if (fb)
+    fb.textContent = isDe()
+      ? "Gleiche App-IDs & Cover-Bilder über Steam API neu ab..."
+      : "Re-resolving game App IDs & artwork via Steam API...";
   try {
-    showToast("Re-resolving games via Steam Web API...");
+    showToast(isDe() ? "Gleiche Spiele über Steam Web API ab..." : "Re-resolving games via Steam Web API...");
     const payload = await invoke("reresolve_games_via_steam_api");
     applyPayload(payload);
-    if (fb) fb.textContent = "Re-resolution complete! Artwork and App IDs updated.";
-    showToast("✓ Steam API re-resolution complete!");
+    if (fb)
+      fb.textContent = isDe()
+        ? "Abgleich abgeschlossen! Cover und App-IDs aktualisiert."
+        : "Re-resolution complete! Artwork and App IDs updated.";
+    showToast(isDe() ? "✓ Steam API Abgleich abgeschlossen!" : "✓ Steam API re-resolution complete!");
   } catch (e) {
     if (fb) fb.textContent = String(e);
     showToast(String(e), true);
@@ -598,16 +894,26 @@ function renderInfoPage() {
   if (diagGrid) {
     const gpu = appState.gpu || {};
     const stats = appState.stats || {};
+    const de = isDe();
     const items = [
-      { label: "Detected GPU", val: gpu.name || "Unknown" },
-      { label: "GPU Architecture", val: gpu.architecture || "—" },
-      { label: "Graphics Driver", val: gpu.driver_version || "—" },
-      { label: "Recommended Preset", val: gpu.recommended_preset || "—" },
-      { label: "Cached Repository DLLs", val: `${stats.cached_dlls || 0} files (${(stats.cache_size_mb || 0).toFixed(1)} MB)` },
-      { label: "Active Game Backups", val: `${stats.total_backups || 0} files (${(stats.backup_size_mb || 0).toFixed(1)} MB)` },
-      { label: "Game Settings DB", val: `${stats.game_db_count || 0} Profiles (Cloudflare Pages + Local)` },
-      { label: "Steam64 ID", val: appState.config?.steam_id || "Auto-detected on scan" },
-      { label: "AppData Storage Path", val: stats.app_data_dir || "%LOCALAPPDATA%\\Recol\\DLSS-Updater" },
+      { label: de ? "Erkannte GPU" : "Detected GPU", val: gpu.name || (de ? "Unbekannt" : "Unknown") },
+      { label: de ? "GPU-Architektur" : "GPU Architecture", val: gpu.architecture || "—" },
+      { label: de ? "Grafiktreiber" : "Graphics Driver", val: gpu.driver_version || "—" },
+      { label: de ? "Empfohlenes Preset" : "Recommended Preset", val: gpu.recommended_preset || "—" },
+      {
+        label: de ? "Zwischengespeicherte DLLs" : "Cached Repository DLLs",
+        val: `${stats.cached_dlls || 0} ${de ? "Dateien" : "files"} (${(stats.cache_size_mb || 0).toFixed(1)} MB)`,
+      },
+      {
+        label: de ? "Aktive Spiel-Backups" : "Active Game Backups",
+        val: `${stats.total_backups || 0} ${de ? "Dateien" : "files"} (${(stats.backup_size_mb || 0).toFixed(1)} MB)`,
+      },
+      {
+        label: de ? "Spiele-Datenbank" : "Game Settings DB",
+        val: `${stats.game_db_count || 0} ${de ? "Profile (Cloudflare Pages + Lokal)" : "Profiles (Cloudflare Pages + Local)"}`,
+      },
+      { label: "Steam64 ID", val: appState.config?.steam_id || (de ? "Automatisch beim Scan erkannt" : "Auto-detected on scan") },
+      { label: de ? "AppData-Speicherpfad" : "AppData Storage Path", val: stats.app_data_dir || "%LOCALAPPDATA%\\Recol\\DLSS-Updater" },
     ];
     diagGrid.innerHTML = items
       .map(
@@ -663,13 +969,21 @@ window.openAppDataDir = async function (sub) {
 
 window.manualCheckAppUpdate = async function () {
   try {
-    showToast("Checking GitHub for newer DLSS Manager releases...");
+    showToast(isDe() ? "Prüfe GitHub auf neue DLSS Manager Versionen..." : "Checking GitHub for newer DLSS Manager releases...");
     const info = await invoke("check_app_update");
     if (info && info.update_available) {
-      showToast(`New release v${info.latest_version} available! Opening release page...`);
+      showToast(
+        isDe()
+          ? `Neue Version v${info.latest_version} verfügbar! Öffne Release-Seite...`
+          : `New release v${info.latest_version} available! Opening release page...`
+      );
       openExternalUrl(info.release_url);
     } else {
-      showToast(`✓ You are running the latest version (v${appState.version}).`);
+      showToast(
+        isDe()
+          ? `✓ Du nutzt bereits die neueste Version (v${appState.version}).`
+          : `✓ You are running the latest version (v${appState.version}).`
+      );
     }
   } catch (e) {
     showToast(String(e), true);
@@ -693,7 +1007,7 @@ function renderHubTechStrip() {
       <div class="tech-group-pill">
         <div class="tech-name">${escapeHtml(c.type_label)}</div>
         <div class="tech-ver">v${escapeHtml(c.version)}</div>
-        <div class="tech-sub">${escapeHtml(c.preset_hint || "Latest official release")}</div>
+        <div class="tech-sub">${escapeHtml(c.preset_hint || (isDe() ? "Offizielles Release" : "Latest official release"))}</div>
       </div>`
     )
     .join("");
@@ -711,9 +1025,14 @@ function renderHubLaunchers() {
     }
   }
 
+  const de = isDe();
   const entries = Object.entries(counts);
   if (entries.length === 0) {
-    grid.innerHTML = `<div class="muted">No games with compatible upscaler DLLs detected yet. Click <strong>Scan Games</strong> on the left.</div>`;
+    grid.innerHTML = `<div class="muted">${
+      de
+        ? "Noch keine Spiele mit kompatiblen Upscaler-DLLs erkannt. Klicke links auf <strong>Spiele scannen</strong>."
+        : "No games with compatible upscaler DLLs detected yet. Click <strong>Scan Games</strong> on the left."
+    }</div>`;
     return;
   }
 
@@ -724,15 +1043,15 @@ function renderHubLaunchers() {
         <img src="assets/icons/${escapeHtml(info.icon)}" alt="${escapeHtml(name)}" />
         <div style="flex:1;min-width:0">
           <div style="font-weight:600">${escapeHtml(name)}</div>
-          <div class="muted">${info.count} Games · ${
+          <div class="muted">${info.count} ${de ? "Spiele" : "Games"} · ${
         info.outdatedCount > 0
-          ? `<span style="color:#fbbf24">${info.outdatedCount} need update</span>`
-          : `<span style="color:#a3e635">All up to date</span>`
+          ? `<span style="color:#fbbf24">${info.outdatedCount} ${de ? "Update verfügbar" : "need update"}</span>`
+          : `<span style="color:#a3e635">${de ? "Alle aktuell" : "All up to date"}</span>`
       }</div>
         </div>
         <button class="btn btn-secondary btn-card-action" style="padding:5px 8px"
                 onclick="event.stopPropagation(); openLauncherDetailsModal('${escapeJsStr(name)}')"
-                title="View detected ${escapeHtml(name)} folders">
+                title="${de ? `Erkannte ${escapeHtml(name)}-Ordner anzeigen` : `View detected ${escapeHtml(name)} folders`}">
           📂
         </button>
       </div>`
@@ -777,10 +1096,11 @@ function renderStatusChips() {
     ? appState.games.filter((g) => !g.ignored).length
     : appState.games.length;
 
+  const de = isDe();
   const chips = [
-    { id: "all", label: `All (${visibleTotal})` },
-    { id: "needs_update", label: `● Needs Update (${needsUpdate})` },
-    { id: "up_to_date", label: `● Up to Date (${upToDate})` },
+    { id: "all", label: de ? `Alle (${visibleTotal})` : `All (${visibleTotal})` },
+    { id: "needs_update", label: de ? `● Update verfügbar (${needsUpdate})` : `● Needs Update (${needsUpdate})` },
+    { id: "up_to_date", label: de ? `● Aktuell (${upToDate})` : `● Up to Date (${upToDate})` },
     { id: "has_backups", label: `🛡️ Backups (${withBackups})` },
   ];
 
@@ -799,8 +1119,16 @@ function renderStatusChips() {
     html += `
       <button class="status-chip ${!hiding ? "active" : ""}"
               onclick="toggleHideIgnoredChip()"
-              title="Toggle visibility of ignored games">
-        👁️ ${hiding ? `Show Ignored (${ignoredCount})` : `Ignored Shown (${ignoredCount})`}
+              title="${de ? "Sichtbarkeit ignorierter Spiele umschalten" : "Toggle visibility of ignored games"}">
+        👁️ ${
+          hiding
+            ? de
+              ? `Ignorierte zeigen (${ignoredCount})`
+              : `Show Ignored (${ignoredCount})`
+            : de
+            ? `Ignorierte sichtbar (${ignoredCount})`
+            : `Ignored Shown (${ignoredCount})`
+        }
       </button>`;
   }
 
@@ -824,11 +1152,12 @@ function renderLauncherSelect() {
   const sel = document.getElementById("select-launcher-filter");
   if (!sel) return;
   const launchers = ["all", ...new Set(appState.games.map((g) => g.launcher_name))];
+  const de = isDe();
   sel.innerHTML = launchers
     .map(
       (l) => `
       <option value="${escapeHtml(l)}" ${appState.selectedLauncher === l ? "selected" : ""}>
-        ${l === "all" ? "All Launchers" : escapeHtml(l)}
+        ${l === "all" ? (de ? "Alle Launcher" : "All Launchers") : escapeHtml(l)}
       </option>`
     )
     .join("");
@@ -884,18 +1213,25 @@ function renderBatchSelectionBar() {
   const btnToggle = document.getElementById("btn-toggle-select-mode");
   if (!bar) return;
 
+  const de = isDe();
   const count = appState.selectedGameIds.size;
   if (btnToggle) {
     btnToggle.classList.toggle("btn-primary", appState.selectMode);
     btnToggle.classList.toggle("btn-secondary", !appState.selectMode);
-    btnToggle.textContent = appState.selectMode ? "✕ Exit Select" : "☑ Select";
+    btnToggle.textContent = appState.selectMode
+      ? de
+        ? "✕ Auswahl beenden"
+        : "✕ Exit Select"
+      : de
+      ? "☑ Auswählen"
+      : "☑ Select";
   }
 
   if (appState.selectMode || count > 0) {
     bar.style.display = "flex";
-    document.getElementById("batch-selected-label").textContent = `${count} ${
-      count === 1 ? "game" : "games"
-    } selected`;
+    document.getElementById("batch-selected-label").textContent = de
+      ? `${count} ${count === 1 ? "Spiel" : "Spiele"} ausgewählt`
+      : `${count} ${count === 1 ? "game" : "games"} selected`;
     document.getElementById("btn-update-selected-count").textContent = count;
     document.getElementById("btn-update-selected").disabled = count === 0;
   } else {
@@ -942,7 +1278,11 @@ window.updateSelectedGamesNow = async function () {
   const ids = Array.from(appState.selectedGameIds);
   if (ids.length === 0) return;
   try {
-    showToast(`Updating ${ids.length} selected game(s)...`);
+    showToast(
+      isDe()
+        ? `Aktualisiere ${ids.length} ausgewählte(s) Spiel(e)...`
+        : `Updating ${ids.length} selected game(s)...`
+    );
     const payload = await invoke("bulk_update_selected_games", {
       gameIds: ids,
       allowedTechs: null,
@@ -950,7 +1290,11 @@ window.updateSelectedGamesNow = async function () {
     appState.selectedGameIds.clear();
     appState.selectMode = false;
     applyPayload(payload);
-    showToast(`✓ Updated ${ids.length} selected game(s)!`);
+    showToast(
+      isDe()
+        ? `✓ ${ids.length} ausgewählte(s) Spiel(e) aktualisiert!`
+        : `✓ Updated ${ids.length} selected game(s)!`
+    );
   } catch (e) {
     showToast(String(e), true);
   }
@@ -961,9 +1305,14 @@ function renderGamesGrid() {
   grid.className = `games-hero-grid density-${appState.gridDensity}`;
 
   const filtered = getFilteredGames();
+  const de = isDe();
 
   if (filtered.length === 0) {
-    grid.innerHTML = `<div class="muted">No matching games found for the active filter.</div>`;
+    grid.innerHTML = `<div class="muted">${
+      de
+        ? "Keine passenden Spiele für den aktiven Filter gefunden."
+        : "No matching games found for the active filter."
+    }</div>`;
     return;
   }
 
@@ -991,9 +1340,15 @@ function renderGamesGrid() {
         : "";
 
       const statusText = g.ignored
-        ? "Ignored"
+        ? de
+          ? "Ignoriert"
+          : "Ignored"
         : hasUpdate
-        ? "Needs update"
+        ? de
+          ? "Update verfügbar"
+          : "Needs update"
+        : de
+        ? "Aktuell"
         : "Up to date";
       const statusDotClass = g.ignored ? "" : hasUpdate ? "outdated" : "current";
       const statusColor = g.ignored
@@ -1003,9 +1358,15 @@ function renderGamesGrid() {
         : "#a3e635";
 
       const badgeText = g.ignored
-        ? `👁️ Ignored`
+        ? de
+          ? `👁️ Ignoriert`
+          : `👁️ Ignored`
         : hasUpdate
-        ? `⚡ ${counts.outdated}/${counts.total} outdated`
+        ? de
+          ? `⚡ ${counts.outdated}/${counts.total} veraltet`
+          : `⚡ ${counts.outdated}/${counts.total} outdated`
+        : de
+        ? `✓ Aktuell`
         : `✓ Up to date`;
       const badgeClass = g.ignored
         ? ""
@@ -1061,7 +1422,7 @@ function renderGamesGrid() {
                   ? `<span class="anticheat-badge">🛡️ ${escapeHtml(g.anti_cheat)}</span>`
                   : ""
               }
-              <button class="card-menu-btn" onclick="openCardContextMenu(event, '${g.id}')" title="More actions">⋮</button>
+              <button class="card-menu-btn" onclick="openCardContextMenu(event, '${g.id}')" title="${de ? "Weitere Aktionen" : "More actions"}">⋮</button>
             </div>
           </div>
           <div class="hero-scrim">
@@ -1078,20 +1439,28 @@ function renderGamesGrid() {
 
         <!-- Fixed 52px Footer -->
         <div class="hero-card-footer">
-          <button class="footer-dll-badge ${badgeClass}" onclick="openGameDllModal('${g.id}')" title="Click to inspect technology groups">
+          <button class="footer-dll-badge ${badgeClass}" onclick="openGameDllModal('${g.id}')" title="${de ? "Klicken, um Technologien zu prüfen" : "Click to inspect technology groups"}">
             <span>${badgeText}</span>
           </button>
           <div class="footer-actions">
             ${
               g.has_backups
-                ? `<button class="btn btn-secondary btn-card-action" onclick="restoreAllGameBackups('${g.id}')" title="Restore original DLLs for ${escapeHtml(g.name)}">
-                     ⏪ Restore
+                ? `<button class="btn btn-secondary btn-card-action" onclick="restoreAllGameBackups('${g.id}')" title="${
+                    de
+                      ? `Originale DLLs für ${escapeHtml(g.name)} wiederherstellen`
+                      : `Restore original DLLs for ${escapeHtml(g.name)}`
+                  }">
+                     ⏪ ${de ? "Backup" : "Restore"}
                    </button>`
                 : ""
             }
             ${
               hasUpdate
-                ? `<button class="btn btn-primary btn-card-action" id="btn-update-card-${g.id}" onclick="updateAllGameDlls('${g.id}')" title="Update all outdated technologies in ${escapeHtml(g.name)}">
+                ? `<button class="btn btn-primary btn-card-action" id="btn-update-card-${g.id}" onclick="updateAllGameDlls('${g.id}')" title="${
+                    de
+                      ? `Alle veralteten Technologien in ${escapeHtml(g.name)} aktualisieren`
+                      : `Update all outdated technologies in ${escapeHtml(g.name)}`
+                  }">
                      ⚡ Update
                    </button>`
                 : `<button class="btn btn-secondary btn-card-action" onclick="openGameDllModal('${g.id}')">
@@ -1117,44 +1486,53 @@ window.openCardContextMenu = function (event, gameId) {
   const menu = document.getElementById("card-context-menu");
   const counts = getGameUpdateCounts(game);
   const isNvidia = (appState.gpu?.vendor || "").toUpperCase() === "NVIDIA";
+  const de = isDe();
 
   menu.innerHTML = `
     ${
       counts.outdated > 0
         ? `<button class="context-menu-item" onclick="closeCardContextMenu(); updateAllGameDlls('${game.id}')">
-             <span>⚡</span><span>Update Outdated DLLs (${counts.outdated})</span>
+             <span>⚡</span><span>${de ? `Veraltete DLLs aktualisieren (${counts.outdated})` : `Update Outdated DLLs (${counts.outdated})`}</span>
            </button>`
         : ""
     }
     <button class="context-menu-item" onclick="closeCardContextMenu(); openGameDllModal('${game.id}')">
-      <span>🔍</span><span>Inspect Technologies & Backups</span>
+      <span>🔍</span><span>${de ? "Technologien & Backups prüfen" : "Inspect Technologies & Backups"}</span>
     </button>
     ${
       isNvidia
         ? `<button class="context-menu-item" onclick="closeCardContextMenu(); openGameDlssPresetsModal('${game.id}')">
-             <span>🎛️</span><span>DLSS Preset Settings (DRS)</span>
+             <span>🎛️</span><span>${de ? "DLSS Preset-Einstellungen (DRS)" : "DLSS Preset Settings (DRS)"}</span>
            </button>`
         : ""
     }
     <button class="context-menu-item" onclick="closeCardContextMenu(); openEditDisplayModal('${game.id}')">
-      <span>✏️</span><span>Edit Name & Cover Art</span>
+      <span>✏️</span><span>${de ? "Name & Cover-Bild bearbeiten" : "Edit Name & Cover Art"}</span>
     </button>
     <button class="context-menu-item" onclick="closeCardContextMenu(); reportGamesToDbNow('${game.id}')">
-      <span>📤</span><span>Report Game to Online-DB</span>
+      <span>📤</span><span>${de ? "Spiel an Online-DB melden" : "Report Game to Online-DB"}</span>
     </button>
     <div class="context-menu-divider"></div>
     <button class="context-menu-item" onclick="closeCardContextMenu(); launchGameNow('${game.id}')">
-      <span>🚀</span><span>Launch Game</span>
+      <span>🚀</span><span>${de ? "Spiel starten" : "Launch Game"}</span>
     </button>
     <button class="context-menu-item" onclick="closeCardContextMenu(); openFolderInExplorer('${escapeJsStr(game.path)}')">
-      <span>📂</span><span>Open Game Folder</span>
+      <span>📂</span><span>${de ? "Spielordner öffnen" : "Open Game Folder"}</span>
     </button>
-    <button class="context-menu-item" onclick="closeCardContextMenu(); copyTextToClipboard('${escapeJsStr(game.path)}', 'Copied game path to clipboard')">
-      <span>📋</span><span>Copy Install Path</span>
+    <button class="context-menu-item" onclick="closeCardContextMenu(); copyTextToClipboard('${escapeJsStr(game.path)}', '${de ? "Spielpfad in Zwischenablage kopiert" : "Copied game path to clipboard"}')">
+      <span>📋</span><span>${de ? "Installationspfad kopieren" : "Copy Install Path"}</span>
     </button>
     <div class="context-menu-divider"></div>
     <button class="context-menu-item" onclick="closeCardContextMenu(); toggleIgnoreGameNow('${game.id}')">
-      <span>👁️</span><span>${game.ignored ? "Unignore Game" : "Ignore Game"}</span>
+      <span>👁️</span><span>${
+        game.ignored
+          ? de
+            ? "Nicht mehr ignorieren"
+            : "Unignore Game"
+          : de
+          ? "Spiel ignorieren"
+          : "Ignore Game"
+      }</span>
     </button>
   `;
 
@@ -1179,12 +1557,13 @@ window.openFolderInExplorer = async function (path) {
   }
 };
 
-window.copyTextToClipboard = async function (text, toastMsg = "Copied to clipboard") {
+window.copyTextToClipboard = async function (text, toastMsg = null) {
+  const msg = toastMsg || (isDe() ? "In Zwischenablage kopiert" : "Copied to clipboard");
   try {
     await navigator.clipboard.writeText(text);
-    showToast(toastMsg);
+    showToast(msg);
   } catch (_) {
-    showToast("Copied: " + text);
+    showToast((isDe() ? "Kopiert: " : "Copied: ") + text);
   }
 };
 
@@ -1201,7 +1580,7 @@ window.toggleIgnoreGameNow = async function (gameId) {
   try {
     const payload = await invoke("toggle_ignore_game", { gameId });
     applyPayload(payload);
-    showToast("Updated Ignore List.");
+    showToast(isDe() ? "Ignorier-Liste aktualisiert." : "Updated Ignore List.");
   } catch (e) {
     showToast(String(e), true);
   }
@@ -1219,6 +1598,7 @@ window.openGameDllModal = function (gameId) {
   const modal = document.getElementById("dll-modal-content");
   const counts = getGameUpdateCounts(game);
   const isNvidia = (appState.gpu?.vendor || "").toUpperCase() === "NVIDIA";
+  const de = isDe();
 
   const groupRows = counts.groups
     .map((grp) => {
@@ -1226,7 +1606,7 @@ window.openGameDllModal = function (gameId) {
       const shortFileList =
         grp.dlls.length <= 2
           ? fullFileList
-          : `${grp.dlls.length} files (${grp.dlls
+          : `${grp.dlls.length} ${de ? "Dateien" : "files"} (${grp.dlls
               .slice(0, 2)
               .map((d) => d.filename)
               .join(", ")}, …)`;
@@ -1249,12 +1629,16 @@ window.openGameDllModal = function (gameId) {
               grp.updateAvailable
                 ? `<span style="color:#76b900;font-weight:600;font-size:0.82rem">→ v${escapeHtml(grp.latestVersion)}</span>`
                 : !grp.technologyEnabled
-                ? `<span class="muted" style="font-size:0.74rem;margin-left:4px">(Updates disabled in Settings)</span>`
-                : `<span class="muted" style="font-size:0.75rem;margin-left:4px">✓ Up to date</span>`
+                ? `<span class="muted" style="font-size:0.74rem;margin-left:4px">${
+                    de ? "(Updates in Einstellungen deaktiviert)" : "(Updates disabled in Settings)"
+                  }</span>`
+                : `<span class="muted" style="font-size:0.75rem;margin-left:4px">✓ ${de ? "Aktuell" : "Up to date"}</span>`
             }
             ${
               grp.badBuildWarning
-                ? `<span class="anticheat-badge" title="${escapeHtml(grp.badBuildWarning)}">⚠️ Watermark Build</span>`
+                ? `<span class="anticheat-badge" title="${escapeHtml(grp.badBuildWarning)}">⚠️ ${
+                    de ? "Wasserzeichen-Build" : "Watermark Build"
+                  }</span>`
                 : ""
             }
           </div>
@@ -1265,8 +1649,12 @@ window.openGameDllModal = function (gameId) {
         <div class="dll-row-action" style="gap:6px">
           ${
             techBackupsCount > 0
-              ? `<button class="btn btn-secondary btn-card-action" onclick="restoreTechGroupForGame('${game.id}', '${encodedType}')" title="Restore original ${escapeHtml(grp.typeLabel)} files">
-                   ⏪ Restore
+              ? `<button class="btn btn-secondary btn-card-action" onclick="restoreTechGroupForGame('${game.id}', '${encodedType}')" title="${
+                  de
+                    ? `Originale ${escapeHtml(grp.typeLabel)}-Dateien wiederherstellen`
+                    : `Restore original ${escapeHtml(grp.typeLabel)} files`
+                }">
+                   ⏪ ${de ? "Backup" : "Restore"}
                  </button>`
               : ""
           }
@@ -1275,7 +1663,7 @@ window.openGameDllModal = function (gameId) {
               ? `<button class="btn btn-primary btn-card-action" onclick="updateTechGroupForGame('${game.id}', '${encodedType}')">
                    ⚡ Update
                  </button>`
-              : `<span class="muted" style="font-size:0.76rem">Current</span>`
+              : `<span class="muted" style="font-size:0.76rem">${de ? "Aktuell" : "Current"}</span>`
           }
         </div>
       </div>`;
@@ -1288,19 +1676,43 @@ window.openGameDllModal = function (gameId) {
     const status = (dbProf?.anticheat_status || "signed_only").toLowerCase();
     const statusMeta =
       status === "safe"
-        ? { label: "🟢 Safe — Full DLL Swap & Driver DRS Supported", cls: "compat-safe" }
+        ? {
+            label: de
+              ? "🟢 Sicher — Voller DLL-Austausch & Treiber-DRS unterstützt"
+              : "🟢 Safe — Full DLL Swap & Driver DRS Supported",
+            cls: "compat-safe",
+          }
         : status === "driver_override_only"
-        ? { label: "🟠 Driver DRS Override Recommended (Avoid DLL File Swap)", cls: "compat-warn" }
+        ? {
+            label: de
+              ? "🟠 Treiber-DRS empfohlen (Kein direkter DLL-Austausch)"
+              : "🟠 Driver DRS Override Recommended (Avoid DLL File Swap)",
+            cls: "compat-warn",
+          }
         : status === "blocked"
-        ? { label: "🔴 Blocked by Anti-Cheat — Do Not Modify Game DLLs", cls: "compat-danger" }
-        : { label: "🟡 Official Signed DLLs & Driver DRS Presets Only", cls: "compat-info" };
+        ? {
+            label: de
+              ? "🔴 Durch Anti-Cheat blockiert — Spiel-DLLs nicht verändern"
+              : "🔴 Blocked by Anti-Cheat — Do Not Modify Game DLLs",
+            cls: "compat-danger",
+          }
+        : {
+            label: de
+              ? "🟡 Nur offiziell signierte DLLs & Treiber-DRS-Presets"
+              : "🟡 Official Signed DLLs & Driver DRS Presets Only",
+            cls: "compat-info",
+          };
 
     const warnBanner = dbProf?.warning_banner
       ? `<div class="compat-warning-banner">⚠️ ${escapeHtml(dbProf.warning_banner)}</div>`
       : game.anti_cheat
-      ? `<div class="compat-warning-banner">🛡️ <strong>${escapeHtml(
-          game.anti_cheat
-        )} detected:</strong> Only use official signed upscaler DLLs or NVIDIA Driver DRS Presets.</div>`
+      ? `<div class="compat-warning-banner">🛡️ <strong>${escapeHtml(game.anti_cheat)} ${
+          de ? "erkannt:" : "detected:"
+        }</strong> ${
+          de
+            ? "Bitte nur offiziell signierte Upscaler-DLLs oder NVIDIA Treiber-DRS-Presets verwenden."
+            : "Only use official signed upscaler DLLs or NVIDIA Driver DRS Presets."
+        }</div>`
       : "";
 
     const unsupportedRows = (dbProf?.unsupported_techs || [])
@@ -1329,13 +1741,13 @@ window.openGameDllModal = function (gameId) {
       <div class="compat-db-box">
         <div class="compat-db-header">
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-            <strong>🎯 Compatibility &amp; Optimal Settings</strong>
+            <strong>🎯 ${de ? "Kompatibilität & Optimale Einstellungen" : "Compatibility & Optimal Settings"}</strong>
             <span class="compat-status-pill ${statusMeta.cls}">${statusMeta.label}</span>
           </div>
           ${
             isNvidia && recPresetBadges.length > 0
-              ? `<button class="btn btn-accent btn-card-action" onclick="applyRecommendedProfileNow('${game.id}')" title="Apply ${escapeHtml(recPresetBadges.join(" · "))}">
-                   ✨ Apply Optimal Preset (${escapeHtml(dbProf.recommended_sr_preset || "Preset K")})
+              ? `<button class="btn btn-accent btn-card-action" onclick="applyRecommendedProfileNow('${game.id}')" title="${escapeHtml(recPresetBadges.join(" · "))}">
+                   ✨ ${de ? "Optimales Preset anwenden" : "Apply Optimal Preset"} (${escapeHtml(dbProf.recommended_sr_preset || "Preset K")})
                  </button>`
               : ""
           }
@@ -1343,13 +1755,19 @@ window.openGameDllModal = function (gameId) {
         ${warnBanner}
         ${
           unsupportedRows
-            ? `<div class="compat-section-title">Why some technologies are not listed / supported:</div>
+            ? `<div class="compat-section-title">${
+                de
+                  ? "Warum bestimmte Technologien nicht unterstützt werden:"
+                  : "Why some technologies are not listed / supported:"
+              }</div>
                <div class="compat-unsupported-list">${unsupportedRows}</div>`
             : ""
         }
         ${
           recSettingsList
-            ? `<div class="compat-section-title">Recommended Graphics &amp; Upscaler Settings:</div>
+            ? `<div class="compat-section-title">${
+                de ? "Empfohlene Grafik- & Upscaler-Einstellungen:" : "Recommended Graphics & Upscaler Settings:"
+              }</div>
                <ul class="compat-settings-list">${recSettingsList}</ul>`
             : ""
         }
@@ -1368,16 +1786,16 @@ window.openGameDllModal = function (gameId) {
         <div class="muted" style="font-size:0.75rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${escapeHtml(game.path)}">${escapeHtml(game.path)}</div>
       </div>
       <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
-        <button class="btn btn-secondary btn-card-action" onclick="reportGamesToDbNow('${game.id}')" title="Report Game & Detected Techs to dlssdb.goover.dev">📤</button>
-        <button class="btn btn-secondary btn-card-action" onclick="openFolderInExplorer('${escapeJsStr(game.path)}')" title="Open Game Folder">📂</button>
-        <button class="btn btn-secondary btn-card-action" onclick="openEditDisplayModal('${game.id}')" title="Edit Name & Cover">✏️</button>
+        <button class="btn btn-secondary btn-card-action" onclick="reportGamesToDbNow('${game.id}')" title="${de ? "Spiel & Status an dlssdb.goover.dev melden" : "Report Game & Detected Techs to dlssdb.goover.dev"}">📤</button>
+        <button class="btn btn-secondary btn-card-action" onclick="openFolderInExplorer('${escapeJsStr(game.path)}')" title="${de ? "Spielordner öffnen" : "Open Game Folder"}">📂</button>
+        <button class="btn btn-secondary btn-card-action" onclick="openEditDisplayModal('${game.id}')" title="${de ? "Name & Cover bearbeiten" : "Edit Name & Cover"}">✏️</button>
         ${
           isNvidia
-            ? `<button class="btn btn-secondary btn-card-action" onclick="openGameDlssPresetsModal('${game.id}')" title="DLSS Preset Overrides">🎛️</button>`
+            ? `<button class="btn btn-secondary btn-card-action" onclick="openGameDlssPresetsModal('${game.id}')" title="${de ? "DLSS Preset-Einstellungen" : "DLSS Preset Overrides"}">🎛️</button>`
             : ""
         }
-        <button class="btn btn-secondary btn-card-action" onclick="launchGameNow('${game.id}')" title="Launch Game">🚀</button>
-        <button class="btn btn-secondary btn-card-action" onclick="closeGameDllModal()">✕ Close</button>
+        <button class="btn btn-secondary btn-card-action" onclick="launchGameNow('${game.id}')" title="${de ? "Spiel starten" : "Launch Game"}">🚀</button>
+        <button class="btn btn-secondary btn-card-action" onclick="closeGameDllModal()">✕ ${de ? "Schließen" : "Close"}</button>
       </div>
     </div>
     <div class="modal-body">
@@ -1388,14 +1806,14 @@ window.openGameDllModal = function (gameId) {
       ${
         game.has_backups
           ? `<button class="btn btn-secondary" onclick="restoreAllGameBackups('${game.id}')">
-               ⏪ Restore All Backups
+               ⏪ ${de ? "Alle Backups wiederherstellen" : "Restore All Backups"}
              </button>`
           : ""
       }
       ${
         counts.outdated > 0
           ? `<button class="btn btn-accent" onclick="updateAllGameDlls('${game.id}')">
-               ⚡ Update All (${counts.outdated})
+               ⚡ ${de ? `Alle aktualisieren (${counts.outdated})` : `Update All (${counts.outdated})`}
              </button>`
           : ""
       }
@@ -1414,7 +1832,7 @@ window.updateTechGroupForGame = async function (gameId, typeLabel) {
   if (targetDlls.length === 0) return;
 
   try {
-    showToast(`Updating ${typeLabel} in ${game.name}...`);
+    showToast(isDe() ? `Aktualisiere ${typeLabel} in ${game.name}...` : `Updating ${typeLabel} in ${game.name}...`);
     let latestPayload = null;
     for (const d of targetDlls) {
       latestPayload = await invoke("update_single_game_dll", {
@@ -1423,7 +1841,7 @@ window.updateTechGroupForGame = async function (gameId, typeLabel) {
       });
     }
     if (latestPayload) applyPayload(latestPayload);
-    showToast(`✓ ${typeLabel} updated!`);
+    showToast(isDe() ? `✓ ${typeLabel} aktualisiert!` : `✓ ${typeLabel} updated!`);
   } catch (e) {
     showToast(String(e), true);
   }
@@ -1431,13 +1849,17 @@ window.updateTechGroupForGame = async function (gameId, typeLabel) {
 
 window.restoreTechGroupForGame = async function (gameId, techLabel) {
   try {
-    showToast(`Restoring ${techLabel} backups...`);
+    showToast(isDe() ? `Stelle ${techLabel}-Backup wieder her...` : `Restoring ${techLabel} backups...`);
     const payload = await invoke("restore_tech_group_for_game", {
       gameId,
       techLabel,
     });
     applyPayload(payload);
-    showToast(`✓ Restored original ${techLabel} files!`);
+    showToast(
+      isDe()
+        ? `✓ Originale ${techLabel}-Dateien wiederhergestellt!`
+        : `✓ Restored original ${techLabel} files!`
+    );
   } catch (e) {
     showToast(String(e), true);
   }
@@ -1463,44 +1885,49 @@ window.openEditDisplayModal = function (gameId) {
 
   const backdrop = document.getElementById("secondary-modal-backdrop");
   const modal = document.getElementById("secondary-modal-content");
+  const de = isDe();
 
   modal.innerHTML = `
     <div class="modal-header">
       <div class="modal-header-info">
-        <h3>✏️ Edit Display & Artwork — ${escapeHtml(game.name)}</h3>
-        <div class="muted" style="font-size:0.76rem">Search Steam for official cover art or set a custom display title.</div>
+        <h3>✏️ ${de ? "Anzeige & Cover bearbeiten" : "Edit Display & Artwork"} — ${escapeHtml(game.name)}</h3>
+        <div class="muted" style="font-size:0.76rem">${
+          de
+            ? "Suche im Steam-Store nach offiziellem Cover oder lege einen eigenen Anzeigenamen fest."
+            : "Search Steam for official cover art or set a custom display title."
+        }</div>
       </div>
-      <button class="btn btn-secondary btn-card-action" onclick="closeSecondaryModal()">✕ Close</button>
+      <button class="btn btn-secondary btn-card-action" onclick="closeSecondaryModal()">✕ ${de ? "Schließen" : "Close"}</button>
     </div>
     <div class="modal-body" style="gap:14px">
       <div class="preset-field">
-        <label>Search Steam Store for Official Cover & App ID</label>
+        <label>${de ? "Im Steam-Store nach offiziellem Cover & App-ID suchen" : "Search Steam Store for Official Cover & App ID"}</label>
         <div style="display:flex;gap:8px">
           <input type="text" id="edit-steam-query" class="toolbar-select" style="flex:1"
-                 value="${escapeHtml(game.name)}" placeholder="e.g. Overwatch 2, Diablo IV, Cyberpunk 2077" />
-          <button class="btn btn-primary" onclick="runSteamStoreSearch()">🔎 Search Steam</button>
+                 value="${escapeHtml(game.name)}" placeholder="${de ? "z.B. Overwatch 2, Diablo IV, Cyberpunk 2077" : "e.g. Overwatch 2, Diablo IV, Cyberpunk 2077"}" />
+          <button class="btn btn-primary" onclick="runSteamStoreSearch()">🔎 ${de ? "Steam durchsuchen" : "Search Steam"}</button>
         </div>
       </div>
       <div id="steam-search-results" class="steam-search-grid"></div>
 
       <div class="preset-field">
-        <label>Display Name</label>
+        <label>${de ? "Anzeigename" : "Display Name"}</label>
         <input type="text" id="edit-custom-name" class="toolbar-select" value="${escapeHtml(game.name)}" />
       </div>
       <div class="preset-select-grid">
         <div class="preset-field">
-          <label>Steam App ID (for Hero & Portrait Artwork)</label>
-          <input type="text" id="edit-custom-appid" class="toolbar-select" value="${escapeHtml(game.app_id || "")}" placeholder="e.g. 2357570" />
+          <label>${de ? "Steam App-ID (für Hero- & Cover-Artwork)" : "Steam App ID (for Hero & Portrait Artwork)"}</label>
+          <input type="text" id="edit-custom-appid" class="toolbar-select" value="${escapeHtml(game.app_id || "")}" placeholder="z.B. 2357570" />
         </div>
         <div class="preset-field">
-          <label>Custom Cover Image URL (Optional)</label>
+          <label>${de ? "Eigene Cover-Bild-URL (Optional)" : "Custom Cover Image URL (Optional)"}</label>
           <input type="text" id="edit-custom-cover" class="toolbar-select" value="${escapeHtml(game.cover_url || "")}" placeholder="https://..." />
         </div>
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="resetDisplayOverrideNow('${game.id}')">Reset to Default</button>
-      <button class="btn btn-accent" onclick="saveDisplayOverrideNow('${game.id}')">💾 Save Changes</button>
+      <button class="btn btn-secondary" onclick="resetDisplayOverrideNow('${game.id}')">${de ? "Auf Standard zurücksetzen" : "Reset to Default"}</button>
+      <button class="btn btn-accent" onclick="saveDisplayOverrideNow('${game.id}')">💾 ${de ? "Speichern" : "Save Changes"}</button>
     </div>
   `;
 
@@ -1515,11 +1942,16 @@ window.runSteamStoreSearch = async function () {
   const query = input.value.trim();
   if (!query) return;
 
-  container.innerHTML = `<div class="muted">Searching Steam Store...</div>`;
+  const de = isDe();
+  container.innerHTML = `<div class="muted">${de ? "Durchsuche Steam-Store..." : "Searching Steam Store..."}</div>`;
   try {
     const results = await invoke("search_steam_store", { query });
     if (!results || results.length === 0) {
-      container.innerHTML = `<div class="muted">No Steam Store matches found for "${escapeHtml(query)}".</div>`;
+      container.innerHTML = `<div class="muted">${
+        de
+          ? `Keine Treffer im Steam-Store für „${escapeHtml(query)}“.`
+          : `No Steam Store matches found for "${escapeHtml(query)}".`
+      }</div>`;
       return;
     }
     container.innerHTML = results
@@ -1532,7 +1964,7 @@ window.runSteamStoreSearch = async function () {
       )
       .join("");
   } catch (e) {
-    container.innerHTML = `<div class="muted">Steam search error: ${escapeHtml(String(e))}</div>`;
+    container.innerHTML = `<div class="muted">${de ? "Steam-Suchfehler:" : "Steam search error:"} ${escapeHtml(String(e))}</div>`;
   }
 };
 
@@ -1543,7 +1975,7 @@ window.pickSteamResult = function (name, appId, heroUrl) {
   if (nameEl) nameEl.value = name;
   if (appIdEl) appIdEl.value = appId;
   if (coverEl) coverEl.value = heroUrl;
-  showToast(`Selected "${name}" (App ID ${appId})`);
+  showToast(isDe() ? `„${name}“ ausgewählt (App-ID ${appId})` : `Selected "${name}" (App ID ${appId})`);
 };
 
 window.saveDisplayOverrideNow = async function (gameId) {
@@ -1559,7 +1991,7 @@ window.saveDisplayOverrideNow = async function (gameId) {
     });
     closeSecondaryModal();
     applyPayload(payload);
-    showToast("✓ Saved display & cover settings!");
+    showToast(isDe() ? "✓ Anzeige- & Cover-Einstellungen gespeichert!" : "✓ Saved display & cover settings!");
   } catch (e) {
     showToast(String(e), true);
   }
@@ -1570,7 +2002,7 @@ window.resetDisplayOverrideNow = async function (gameId) {
     const payload = await invoke("reset_game_display_override", { gameId });
     closeSecondaryModal();
     applyPayload(payload);
-    showToast("Reset display settings to default.");
+    showToast(isDe() ? "Anzeige-Einstellungen zurückgesetzt." : "Reset display settings to default.");
   } catch (e) {
     showToast(String(e), true);
   }
@@ -1585,6 +2017,7 @@ window.openGameDlssPresetsModal = function (gameId) {
 
   const backdrop = document.getElementById("secondary-modal-backdrop");
   const modal = document.getElementById("secondary-modal-content");
+  const de = isDe();
 
   const sr = game.dlss_sr_preset || "Default";
   const rr = game.dlss_rr_preset || "Default";
@@ -1598,10 +2031,14 @@ window.openGameDlssPresetsModal = function (gameId) {
   modal.innerHTML = `
     <div class="modal-header">
       <div class="modal-header-info">
-        <h3>🎛️ NVIDIA DLSS Preset Overrides — ${escapeHtml(game.name)}</h3>
-        <div class="muted" style="font-size:0.76rem">Configure driver-level DLSS 4 / 4.5 presets via NVIDIA DRS (<code>nvapi64.dll</code>).</div>
+        <h3>🎛️ NVIDIA DLSS Preset-Einstellungen — ${escapeHtml(game.name)}</h3>
+        <div class="muted" style="font-size:0.76rem">${
+          de
+            ? "Konfiguriere DLSS 4 / 4.5 Treiber-Presets über NVIDIA DRS (<code>nvapi64.dll</code>)."
+            : "Configure driver-level DLSS 4 / 4.5 presets via NVIDIA DRS (<code>nvapi64.dll</code>)."
+        }</div>
       </div>
-      <button class="btn btn-secondary btn-card-action" onclick="closeSecondaryModal()">✕ Close</button>
+      <button class="btn btn-secondary btn-card-action" onclick="closeSecondaryModal()">✕ ${de ? "Schließen" : "Close"}</button>
     </div>
     <div class="modal-body" style="gap:14px">
       <div class="preset-select-grid">
@@ -1631,13 +2068,23 @@ window.openGameDlssPresetsModal = function (gameId) {
         </div>
       </div>
       <div class="preset-field">
-        <label>Custom Game Executable Path (Optional — used for Launch & DRS Profile)</label>
-        <input type="text" id="game-custom-exe" class="toolbar-select" value="${escapeHtml(exe)}" placeholder="Auto-detected in ${escapeHtml(game.path)}" />
+        <label>${
+          de
+            ? "Eigener Spiel-Executable-Pfad (.exe) (Optional — für Spielstart & DRS-Profilbindung)"
+            : "Custom Game Executable Path (Optional — used for Launch & DRS Profile)"
+        }</label>
+        <input type="text" id="game-custom-exe" class="toolbar-select" value="${escapeHtml(exe)}" placeholder="${
+    de ? `Automatisch erkannt in ${escapeHtml(game.path)}` : `Auto-detected in ${escapeHtml(game.path)}`
+  }" />
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="saveGameDlssPresetsNow('${game.id}', true)">Reset to Default</button>
-      <button class="btn btn-accent" onclick="saveGameDlssPresetsNow('${game.id}', false)">⚡ Apply Presets</button>
+      <button class="btn btn-secondary" onclick="saveGameDlssPresetsNow('${game.id}', true)">${
+    de ? "Auf Standard zurücksetzen" : "Reset to Default"
+  }</button>
+      <button class="btn btn-accent" onclick="saveGameDlssPresetsNow('${game.id}', false)">⚡ ${
+    de ? "Presets anwenden" : "Apply Presets"
+  }</button>
     </div>
   `;
 
@@ -1660,7 +2107,15 @@ window.saveGameDlssPresetsNow = async function (gameId, reset = false) {
     });
     closeSecondaryModal();
     applyPayload(payload);
-    showToast(reset ? "Reset game DLSS presets to Default." : "✓ Applied NVIDIA DLSS presets!");
+    showToast(
+      reset
+        ? isDe()
+          ? "DLSS-Presets auf Standard zurückgesetzt."
+          : "Reset game DLSS presets to Default."
+        : isDe()
+        ? "✓ NVIDIA DLSS-Presets angewendet!"
+        : "✓ Applied NVIDIA DLSS presets!"
+    );
   } catch (e) {
     showToast(String(e), true);
   }
@@ -1673,6 +2128,7 @@ window.openBulkUpdateScopeModal = function () {
   const backdrop = document.getElementById("secondary-modal-backdrop");
   const modal = document.getElementById("secondary-modal-content");
   const enabledList = appState.config?.enabled_technologies || ALL_TECH_GROUPS.map((t) => t.label);
+  const de = isDe();
 
   // Filter to technologies supported by the user's GPU or present in games
   const presentLabels = new Set();
@@ -1688,10 +2144,14 @@ window.openBulkUpdateScopeModal = function () {
   modal.innerHTML = `
     <div class="modal-header">
       <div class="modal-header-info">
-        <h3>🚀 Batch Update All Games</h3>
-        <div class="muted" style="font-size:0.76rem">Select which upscaler technologies to update across all non-ignored games.</div>
+        <h3>🚀 ${de ? "Massen-Update für alle Spiele" : "Batch Update All Games"}</h3>
+        <div class="muted" style="font-size:0.76rem">${
+          de
+            ? "Wähle aus, welche Upscaler-Technologien in allen nicht-ignorierten Spielen aktualisiert werden sollen."
+            : "Select which upscaler technologies to update across all non-ignored games."
+        }</div>
       </div>
-      <button class="btn btn-secondary btn-card-action" onclick="closeSecondaryModal()">✕ Close</button>
+      <button class="btn btn-secondary btn-card-action" onclick="closeSecondaryModal()">✕ ${de ? "Schließen" : "Close"}</button>
     </div>
     <div class="modal-body" style="gap:12px">
       <div class="tech-scope-grid">
@@ -1708,8 +2168,10 @@ window.openBulkUpdateScopeModal = function () {
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeSecondaryModal()">Cancel</button>
-      <button class="btn btn-accent" onclick="executeScopedBulkUpdate()">🚀 Start Batch Update</button>
+      <button class="btn btn-secondary" onclick="closeSecondaryModal()">${de ? "Abbrechen" : "Cancel"}</button>
+      <button class="btn btn-accent" onclick="executeScopedBulkUpdate()">🚀 ${
+        de ? "Massen-Update starten" : "Start Batch Update"
+      }</button>
     </div>
   `;
 
@@ -1721,18 +2183,27 @@ window.executeScopedBulkUpdate = async function () {
     (cb) => cb.value
   );
   if (checked.length === 0) {
-    showToast("Please select at least one technology to update.", true);
+    showToast(
+      isDe()
+        ? "Bitte wähle mindestens eine Technologie für das Update aus."
+        : "Please select at least one technology to update.",
+      true
+    );
     return;
   }
   closeSecondaryModal();
   try {
-    showToast("Updating all games with selected technologies...");
+    showToast(
+      isDe()
+        ? "Aktualisiere alle Spiele mit den ausgewählten Technologien..."
+        : "Updating all games with selected technologies..."
+    );
     const payload = await invoke("bulk_update_selected_games", {
       gameIds: [],
       allowedTechs: checked,
     });
     applyPayload(payload);
-    showToast("✓ Batch update complete!");
+    showToast(isDe() ? "✓ Massen-Update abgeschlossen!" : "✓ Batch update complete!");
   } catch (e) {
     showToast(String(e), true);
   }
@@ -1745,10 +2216,15 @@ window.openLogsModal = function () {
   const backdrop = document.getElementById("secondary-modal-backdrop");
   const modal = document.getElementById("secondary-modal-content");
   const logs = appState.logs || [];
+  const de = isDe();
 
   const rows =
     logs.length === 0
-      ? `<div class="muted">No log events recorded in this session.</div>`
+      ? `<div class="muted">${
+          de
+            ? "Noch keine Protokoll-Einträge in dieser Sitzung vorhanden."
+            : "No log events recorded in this session."
+        }</div>`
       : logs
           .slice()
           .reverse()
@@ -1765,17 +2241,19 @@ window.openLogsModal = function () {
   modal.innerHTML = `
     <div class="modal-header">
       <div class="modal-header-info">
-        <h3>📋 Application Activity Logs</h3>
-        <div class="muted" style="font-size:0.76rem">${logs.length} events recorded in current session</div>
+        <h3>📋 ${de ? "Aktivitäts-Protokoll (Logs)" : "Application Activity Logs"}</h3>
+        <div class="muted" style="font-size:0.76rem">${
+          de ? `${logs.length} Einträge in der aktuellen Sitzung` : `${logs.length} events recorded in current session`
+        }</div>
       </div>
-      <button class="btn btn-secondary btn-card-action" onclick="closeSecondaryModal()">✕ Close</button>
+      <button class="btn btn-secondary btn-card-action" onclick="closeSecondaryModal()">✕ ${de ? "Schließen" : "Close"}</button>
     </div>
     <div class="modal-body" style="max-height:55vh">
       ${rows}
     </div>
     <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="copyLogsNow()">📋 Copy All</button>
-      <button class="btn btn-secondary" onclick="clearLogsNow()">🗑️ Clear Logs</button>
+      <button class="btn btn-secondary" onclick="copyLogsNow()">📋 ${de ? "Alle kopieren" : "Copy All"}</button>
+      <button class="btn btn-secondary" onclick="clearLogsNow()">🗑️ ${de ? "Logs leeren" : "Clear Logs"}</button>
     </div>
   `;
 
@@ -1795,20 +2273,26 @@ window.copyLogsNow = function () {
   const text = (appState.logs || [])
     .map((l) => `[${l.timestamp}] [${l.level}] ${l.message}`)
     .join("\n");
-  copyTextToClipboard(text || "No logs", "Copied application logs to clipboard");
+  copyTextToClipboard(
+    text || "No logs",
+    isDe() ? "Protokoll in Zwischenablage kopiert" : "Copied application logs to clipboard"
+  );
 };
 
 window.openLauncherDetailsModal = function (launcherName) {
   const backdrop = document.getElementById("secondary-modal-backdrop");
   const modal = document.getElementById("secondary-modal-content");
   const games = appState.games.filter((g) => g.launcher_name === launcherName);
+  const de = isDe();
 
   modal.innerHTML = `
     <div class="modal-header">
       <div class="modal-header-info">
-        <h3>📂 ${escapeHtml(launcherName)} — Detected Game Paths (${games.length})</h3>
+        <h3>📂 ${escapeHtml(launcherName)} — ${
+    de ? `Erkannte Spielpfade (${games.length})` : `Detected Game Paths (${games.length})`
+  }</h3>
       </div>
-      <button class="btn btn-secondary btn-card-action" onclick="closeSecondaryModal()">✕ Close</button>
+      <button class="btn btn-secondary btn-card-action" onclick="closeSecondaryModal()">✕ ${de ? "Schließen" : "Close"}</button>
     </div>
     <div class="modal-body">
       ${games
@@ -1820,15 +2304,21 @@ window.openLauncherDetailsModal = function (launcherName) {
             <div class="dll-preset-sub" title="${escapeHtml(g.path)}"><code>${escapeHtml(g.path)}</code></div>
           </div>
           <div class="dll-row-action" style="gap:6px">
-            <button class="btn btn-secondary btn-card-action" onclick="openFolderInExplorer('${escapeJsStr(g.path)}')">📂 Open</button>
-            <button class="btn btn-secondary btn-card-action" onclick="copyTextToClipboard('${escapeJsStr(g.path)}', 'Copied path')">📋 Copy</button>
+            <button class="btn btn-secondary btn-card-action" onclick="openFolderInExplorer('${escapeJsStr(g.path)}')">📂 ${
+            de ? "Öffnen" : "Open"
+          }</button>
+            <button class="btn btn-secondary btn-card-action" onclick="copyTextToClipboard('${escapeJsStr(g.path)}', '${
+            de ? "Pfad kopiert" : "Copied path"
+          }')">📋 ${de ? "Kopieren" : "Copy"}</button>
           </div>
         </div>`
         )
         .join("")}
     </div>
     <div class="modal-footer">
-      <button class="btn btn-primary" onclick="closeSecondaryModal(); selectLauncherFromHub('${escapeJsStr(launcherName)}')">View in Games Library</button>
+      <button class="btn btn-primary" onclick="closeSecondaryModal(); selectLauncherFromHub('${escapeJsStr(launcherName)}')">${
+    de ? "In Spiele-Bibliothek anzeigen" : "View in Games Library"
+  }</button>
     </div>
   `;
 
@@ -1840,8 +2330,13 @@ window.openLauncherDetailsModal = function (launcherName) {
    ========================================================================== */
 function renderBackups() {
   const list = document.getElementById("backups-list");
+  const de = isDe();
   if (appState.backups.length === 0) {
-    list.innerHTML = `<div class="muted">No backups recorded yet. Backups are created automatically before any DLL update.</div>`;
+    list.innerHTML = `<div class="muted">${
+      de
+        ? "Noch keine Backups vorhanden. Backups werden automatisch vor jedem DLL-Update angelegt."
+        : "No backups recorded yet. Backups are created automatically before any DLL update."
+    }</div>`;
     return;
   }
 
@@ -1866,13 +2361,17 @@ function renderBackups() {
         <div class="backup-card-info">
           <div style="font-weight:600;font-size:0.96rem">${escapeHtml(grp.gameName)}</div>
           <div class="muted" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${grp.items.map((i) => escapeHtml(i.filename)).join(", ")}">
-            ${grp.items.length} backed-up ${grp.items.length === 1 ? "DLL" : "DLLs"} (${grp.items.slice(0, 3).map((i) => escapeHtml(i.filename)).join(", ")}${grp.items.length > 3 ? ", …" : ""}) · ${new Date(grp.newestDate).toLocaleString()}
+            ${grp.items.length} ${de ? "gesicherte" : "backed-up"} ${grp.items.length === 1 ? "DLL" : "DLLs"} (${grp.items.slice(0, 3).map((i) => escapeHtml(i.filename)).join(", ")}${grp.items.length > 3 ? ", …" : ""}) · ${new Date(grp.newestDate).toLocaleString()}
           </div>
           <div class="muted" style="font-size:0.74rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(grp.gamePath)}</div>
         </div>
         <div class="backup-card-actions">
-          <button class="btn btn-secondary" onclick="openFolderInExplorer('${escapeJsStr(grp.gamePath)}')">📂 Folder</button>
-          <button class="btn btn-primary" onclick="restoreAllGameBackups('${grp.gameId}')">⏪ Restore Original</button>
+          <button class="btn btn-secondary" onclick="openFolderInExplorer('${escapeJsStr(grp.gamePath)}')">📂 ${
+        de ? "Ordner" : "Folder"
+      }</button>
+          <button class="btn btn-primary" onclick="restoreAllGameBackups('${grp.gameId}')">⏪ ${
+        de ? "Original wiederherstellen" : "Restore Original"
+      }</button>
         </div>
       </div>`
     )
@@ -1883,6 +2382,7 @@ function renderCustomFolders() {
   const container = document.getElementById("custom-folders-list");
   if (!container) return;
   const folders = appState.config?.custom_folders || [];
+  const de = isDe();
   container.innerHTML = folders
     .map(
       (f, idx) => `
@@ -1890,7 +2390,9 @@ function renderCustomFolders() {
         <code>${escapeHtml(f)}</code>
         <div style="display:flex;gap:6px">
           <button class="btn btn-secondary" style="padding:4px 8px" onclick="openFolderInExplorer('${escapeJsStr(f)}')">📂</button>
-          <button class="btn btn-secondary" style="padding:4px 8px" onclick="removeCustomFolder(${idx})">Remove</button>
+          <button class="btn btn-secondary" style="padding:4px 8px" onclick="removeCustomFolder(${idx})">${
+        de ? "Entfernen" : "Remove"
+      }</button>
         </div>
       </div>`
     )
@@ -1928,16 +2430,23 @@ function renderIgnoredAndBlacklistedSettings() {
   const blackEl = document.getElementById("blacklisted-games-settings-list");
   if (!ignoredEl || !blackEl || !appState.config) return;
 
+  const de = isDe();
   const ignoredGames = appState.games.filter((g) => g.ignored);
   ignoredEl.innerHTML =
     ignoredGames.length === 0
-      ? `<div class="muted" style="font-size:0.78rem">No games are currently ignored. Use a game card's <code>⋮</code> menu to ignore or unignore a game.</div>`
+      ? `<div class="muted" style="font-size:0.78rem">${
+          de
+            ? "Aktuell sind keine Spiele ignoriert. Über das <code>⋮</code>-Menü einer Spielkarte kannst du Spiele ignorieren."
+            : "No games are currently ignored. Use a game card's <code>⋮</code> menu to ignore or unignore a game."
+        }</div>`
       : ignoredGames
           .map(
             (g) => `
           <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border-subtle)">
             <span><strong>${escapeHtml(g.name)}</strong> <span class="muted">(${escapeHtml(g.launcher_name)})</span></span>
-            <button class="btn btn-secondary" style="padding:4px 8px" onclick="toggleIgnoreGameNow('${g.id}')">Unignore</button>
+            <button class="btn btn-secondary" style="padding:4px 8px" onclick="toggleIgnoreGameNow('${g.id}')">${
+              de ? "Freigeben" : "Unignore"
+            }</button>
           </div>`
           )
           .join("");
@@ -1948,7 +2457,9 @@ function renderIgnoredAndBlacklistedSettings() {
       (b, idx) => `
       <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border-subtle)">
         <code>${escapeHtml(b)}</code>
-        <button class="btn btn-secondary" style="padding:4px 8px" onclick="removeBlacklistEntry(${idx})">Remove</button>
+        <button class="btn btn-secondary" style="padding:4px 8px" onclick="removeBlacklistEntry(${idx})">${
+        de ? "Entfernen" : "Remove"
+      }</button>
       </div>`
     )
     .join("");
@@ -1968,13 +2479,17 @@ window.updateAllGameDlls = async function (gameId) {
   const btn = document.getElementById(`btn-update-card-${gameId}`);
   if (btn) {
     btn.disabled = true;
-    btn.textContent = "⏳ Updating...";
+    btn.textContent = isDe() ? "⏳ Update..." : "⏳ Updating...";
   }
   try {
-    showToast(`Updating ${gameTitle}...`);
+    showToast(isDe() ? `Aktualisiere ${gameTitle}...` : `Updating ${gameTitle}...`);
     const payload = await invoke("update_all_for_game", { gameId });
     applyPayload(payload);
-    showToast(`✓ ${gameTitle} updated to latest DLLs!`);
+    showToast(
+      isDe()
+        ? `✓ ${gameTitle} auf neueste DLLs aktualisiert!`
+        : `✓ ${gameTitle} updated to latest DLLs!`
+    );
   } catch (e) {
     if (btn) {
       btn.disabled = false;
@@ -1986,10 +2501,10 @@ window.updateAllGameDlls = async function (gameId) {
 
 window.restoreAllGameBackups = async function (gameId) {
   try {
-    showToast("Restoring original DLLs for game...");
+    showToast(isDe() ? "Stelle originale Spiel-DLLs wieder her..." : "Restoring original DLLs for game...");
     const payload = await invoke("restore_all_for_game", { gameId });
     applyPayload(payload);
-    showToast("✓ Original game DLLs restored!");
+    showToast(isDe() ? "✓ Originale Spiel-DLLs wiederhergestellt!" : "✓ Original game DLLs restored!");
   } catch (e) {
     showToast(String(e), true);
   }
@@ -2007,7 +2522,7 @@ async function saveConfig() {
     appState.config = updated;
     renderCustomFolders();
     renderIgnoredAndBlacklistedSettings();
-    showToast("Settings saved.");
+    showToast(isDe() ? "Einstellungen gespeichert." : "Settings saved.");
   } catch (e) {
     showToast(String(e), true);
   }
@@ -2024,14 +2539,21 @@ window.switchView = function (viewName) {
 
 async function triggerGameScan(switchAfter = true) {
   const scanBtn = document.getElementById("btn-scan-now");
-  const origHtml = `<span>🔍 Scan Games</span>`;
   try {
     scanBtn.disabled = true;
-    scanBtn.innerHTML = `<span>⏳ Scanning...</span>`;
-    showToast("Scanning drives for games with GPU-compatible upscaler DLLs...");
+    scanBtn.innerHTML = `<span data-i18n="btn_scanning">${t("btn_scanning")}</span>`;
+    showToast(
+      isDe()
+        ? "Scanne alle Laufwerke nach Spielen mit kompatiblen Upscaler-DLLs..."
+        : "Scanning drives for games with GPU-compatible upscaler DLLs..."
+    );
     const payload = await invoke("scan_games");
     applyPayload(payload);
-    showToast(`Scan complete: ${payload.games.length} supported games found.`);
+    showToast(
+      isDe()
+        ? `Scan abgeschlossen: ${payload.games.length} unterstützte Spiele gefunden.`
+        : `Scan complete: ${payload.games.length} supported games found.`
+    );
     if (switchAfter) {
       switchView("games");
     }
@@ -2039,7 +2561,7 @@ async function triggerGameScan(switchAfter = true) {
     showToast(String(e), true);
   } finally {
     scanBtn.disabled = false;
-    scanBtn.innerHTML = origHtml;
+    scanBtn.innerHTML = `<span data-i18n="btn_scan_games">${t("btn_scan_games")}</span>`;
   }
 }
 
@@ -2110,6 +2632,27 @@ document.addEventListener("DOMContentLoaded", async () => {
     openLogsModal();
   });
 
+  const btnLangToggle = document.getElementById("btn-lang-toggle");
+  if (btnLangToggle) {
+    btnLangToggle.addEventListener("click", async () => {
+      if (!appState.config) return;
+      const next = getLang() === "de" ? "en" : "de";
+      appState.config.language = next;
+      renderAll();
+      await saveConfig();
+    });
+  }
+
+  const cfgLang = document.getElementById("cfg-language");
+  if (cfgLang) {
+    cfgLang.addEventListener("change", async (e) => {
+      if (!appState.config) return;
+      appState.config.language = e.target.value === "en" ? "en" : "de";
+      renderAll();
+      await saveConfig();
+    });
+  }
+
   document.getElementById("btn-theme-toggle").addEventListener("click", async () => {
     if (!appState.config) return;
     const next = appState.config.theme_mode === "light" ? "dark" : "light";
@@ -2120,10 +2663,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   document.getElementById("btn-refresh-manifest").addEventListener("click", async () => {
     try {
-      showToast("Checking latest DLL versions...");
+      showToast(isDe() ? "Prüfe auf neueste DLL-Versionen..." : "Checking latest DLL versions...");
       appState.catalog = await invoke("refresh_dll_manifest");
       renderHubTechStrip();
-      showToast("Upscaler versions up to date!");
+      showToast(isDe() ? "Upscaler-Versionen sind aktuell!" : "Upscaler versions up to date!");
     } catch (e) {
       showToast(String(e), true);
     }
@@ -2133,7 +2676,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     try {
       const enabled = await invoke("toggle_dlss_indicator", { enabled: e.target.checked });
       e.target.checked = enabled;
-      showToast(`DLSS Overlay Indicator ${enabled ? "enabled" : "disabled"}.`);
+      showToast(
+        isDe()
+          ? `DLSS-Overlay-Anzeige ${enabled ? "aktiviert" : "deaktiviert"}.`
+          : `DLSS Overlay Indicator ${enabled ? "enabled" : "disabled"}.`
+      );
     } catch (err) {
       e.target.checked = !e.target.checked;
       showToast(String(err), true);
@@ -2237,7 +2784,9 @@ document.addEventListener("DOMContentLoaded", async () => {
           const pill = document.getElementById("app-update-pill");
           if (pill) {
             pill.style.display = "inline-flex";
-            pill.innerHTML = `<span>⬆️ v${escapeHtml(info.latest_version)} Available</span>`;
+            pill.innerHTML = `<span>⬆️ v${escapeHtml(info.latest_version)} ${
+              isDe() ? "verfügbar" : "Available"
+            }</span>`;
             pill.onclick = () => openExternalUrl(info.release_url);
           }
         }

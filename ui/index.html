@@ -21,40 +21,40 @@
         <nav class="nav-menu">
           <button class="nav-item active" data-view="hub">
             <span class="nav-icon">⚡</span>
-            <span>Hub</span>
+            <span data-i18n="nav_hub">Hub</span>
           </button>
           <button class="nav-item" data-view="games">
             <span class="nav-icon">🎮</span>
-            <span>Games</span>
+            <span data-i18n="nav_games">Spiele</span>
             <span class="nav-count" id="nav-games-count">0</span>
           </button>
           <button class="nav-item" data-view="backups">
             <span class="nav-icon">🛡️</span>
-            <span>Backups</span>
+            <span data-i18n="nav_backups">Backups</span>
             <span class="nav-count" id="nav-backups-count">0</span>
           </button>
           <button class="nav-item" data-view="settings">
             <span class="nav-icon">⚙️</span>
-            <span>Settings</span>
+            <span data-i18n="nav_settings">Einstellungen</span>
           </button>
           <button class="nav-item" data-view="info">
             <span class="nav-icon">ℹ️</span>
-            <span>Info</span>
+            <span data-i18n="nav_info">Info</span>
           </button>
         </nav>
 
         <!-- Detected GPU Card -->
         <div class="gpu-card" id="gpu-card">
           <div class="gpu-card-header">
-            <span class="gpu-vendor-badge" id="gpu-vendor-badge">DETECTING GPU</span>
+            <span class="gpu-vendor-badge" id="gpu-vendor-badge" data-i18n="gpu_detecting">ERKENNE GPU</span>
           </div>
-          <div class="gpu-name" id="gpu-name">Scanning Hardware...</div>
+          <div class="gpu-name" id="gpu-name" data-i18n="gpu_scanning">Scanne Hardware...</div>
           <div class="gpu-arch" id="gpu-arch">—</div>
           <div class="gpu-caps" id="gpu-caps"></div>
         </div>
 
         <button class="btn btn-primary btn-scan" id="btn-scan-now">
-          <span>🔍 Scan Games</span>
+          <span data-i18n="btn_scan_games">🔍 Spiele scannen</span>
         </button>
       </aside>
 
@@ -67,7 +67,8 @@
             <input
               type="text"
               id="global-search"
-              placeholder="Search games..."
+              data-i18n-placeholder="search_placeholder"
+              placeholder="Spiele durchsuchen..."
             />
           </div>
 
@@ -78,24 +79,28 @@
               style="display:none;padding:6px 11px;font-size:0.76rem"
               title="A newer release of DLSS Manager is available on GitHub"
             >
-              <span>⬆️ Update Available</span>
+              <span data-i18n="update_available">⬆️ Update verfügbar</span>
             </button>
 
-            <label class="toggle-pill" id="dlss-overlay-pill" title="Toggle NVIDIA DLSS On-Screen Indicator (Registry)">
-              <span>DLSS Overlay</span>
+            <label class="toggle-pill" id="dlss-overlay-pill" title="NVIDIA DLSS On-Screen Indicator (Registry)">
+              <span data-i18n="dlss_overlay">DLSS-Overlay</span>
               <input type="checkbox" id="toggle-dlss-overlay" />
             </label>
 
-            <button class="btn btn-secondary" id="btn-open-logs" title="View Application Logs" style="padding:7px 10px">
-              <span>📋 Logs</span>
+            <button class="btn btn-secondary" id="btn-open-logs" title="Logs" style="padding:7px 10px">
+              <span data-i18n="btn_logs">📋 Logs</span>
             </button>
 
-            <button class="btn btn-secondary" id="btn-theme-toggle" title="Toggle Dark / Light Theme" style="padding:7px 10px">
+            <button class="btn btn-secondary" id="btn-lang-toggle" title="Sprache wechseln / Switch Language (DE / EN)" style="padding:7px 10px;font-weight:700;font-size:0.78rem">
+              <span id="lang-toggle-label">🇩🇪 DE</span>
+            </button>
+
+            <button class="btn btn-secondary" id="btn-theme-toggle" title="Dark / Light Theme" style="padding:7px 10px">
               <span id="theme-toggle-icon">☀️</span>
             </button>
 
-            <button class="btn btn-accent" id="btn-bulk-update" title="Update all outdated games (choose technologies)">
-              <span>🚀 Update All (<span id="bulk-update-count">0</span>)</span>
+            <button class="btn btn-accent" id="btn-bulk-update" title="Alle veralteten Spiele aktualisieren">
+              <span>🚀 <span data-i18n="btn_update_all">Alle aktualisieren</span> (<span id="bulk-update-count">0</span>)</span>
             </button>
           </div>
         </header>
@@ -104,24 +109,24 @@
         <section class="view-section active" id="view-hub">
           <div class="stats-grid">
             <div class="stat-card clickable" onclick="openGamesWithFilter('all')">
-              <div class="stat-label">Installed Games</div>
+              <div class="stat-label" data-i18n="stat_installed_title">Installierte Spiele</div>
               <div class="stat-value" id="stat-total-games">0</div>
-              <div class="stat-sub">With compatible upscaler DLLs</div>
+              <div class="stat-sub" data-i18n="stat_installed_sub">Mit kompatiblen Upscaler-DLLs</div>
             </div>
             <div class="stat-card accent clickable" onclick="openGamesWithFilter('needs_update')">
-              <div class="stat-label">Needs Update</div>
+              <div class="stat-label" data-i18n="stat_needs_update_title">Update verfügbar</div>
               <div class="stat-value" id="stat-updates">0</div>
-              <div class="stat-sub">Games with newer DLLs ready</div>
+              <div class="stat-sub" data-i18n="stat_needs_update_sub">Spiele mit neueren DLL-Versionen</div>
             </div>
             <div class="stat-card clickable" onclick="openGamesWithFilter('up_to_date')">
-              <div class="stat-label">Up to Date</div>
+              <div class="stat-label" data-i18n="stat_uptodate_title">Aktuell</div>
               <div class="stat-value" id="stat-dll-games">0</div>
-              <div class="stat-sub">Running latest upscaler versions</div>
+              <div class="stat-sub" data-i18n="stat_uptodate_sub">Auf neuester Upscaler-Version</div>
             </div>
             <div class="stat-card clickable" onclick="switchView('backups')">
-              <div class="stat-label">Protected Games</div>
+              <div class="stat-label" data-i18n="stat_backups_title">Gesicherte Spiele</div>
               <div class="stat-value" id="stat-backups">0</div>
-              <div class="stat-sub">Ready for 1-click rollback</div>
+              <div class="stat-sub" data-i18n="stat_backups_sub">Bereit für 1-Klick-Wiederherstellung</div>
             </div>
           </div>
 
@@ -132,47 +137,49 @@
                 <div style="display:flex;align-items:center;gap:10px">
                   <img src="assets/icons/Steam.png" alt="Steam" style="width:20px;height:20px" />
                   <div>
-                    <strong>Steam Web API Integration</strong>
-                    <span class="muted" style="margin-left:8px;font-size:0.78rem">Resolves official cover artwork &amp; App IDs across all launchers</span>
+                    <strong data-i18n="steam_api_hub_title">Steam Web API Integration</strong>
+                    <span class="muted" style="margin-left:8px;font-size:0.78rem" data-i18n="steam_api_hub_sub">Lädt offizielle Cover-Bilder &amp; App-IDs für alle Launcher nach</span>
                   </div>
                 </div>
                 <div style="display:flex;align-items:center;gap:10px">
-                  <span class="steam-status-pill" id="steam-api-status-pill">○ Not configured</span>
+                  <span class="steam-status-pill" id="steam-api-status-pill">○ Nicht konfiguriert</span>
                   <span class="muted" style="font-size:0.78rem">▾</span>
                 </div>
               </summary>
               <div class="steam-api-body">
                 <div class="preset-select-grid">
                   <div class="preset-field">
-                    <label>Steam Web API Key (<a href="#" onclick="event.preventDefault(); openExternalUrl('https://steamcommunity.com/dev/apikey')" style="color:var(--accent)">Get key from Steam ↗</a>)</label>
+                    <label><span data-i18n="steam_api_key_label">Steam Web API Key</span> (<a href="#" onclick="event.preventDefault(); openExternalUrl('https://steamcommunity.com/dev/apikey')" style="color:var(--accent)" data-i18n="steam_get_key_link">Key bei Steam erstellen ↗</a>)</label>
                     <div style="display:flex;gap:6px">
                       <input
                         type="password"
                         id="input-steam-api-key"
                         class="toolbar-select"
                         style="flex:1"
-                        placeholder="Paste 32-character Steam Web API key..."
+                        data-i18n-placeholder="steam_key_placeholder"
+                        placeholder="32-stelligen Steam Web API Key einfügen..."
                       />
-                      <button class="btn btn-secondary" onclick="toggleRevealSteamApiKey()" title="Show / Hide API Key" style="padding:6px 10px">👁️</button>
+                      <button class="btn btn-secondary" onclick="toggleRevealSteamApiKey()" title="API-Key anzeigen / verbergen" style="padding:6px 10px">👁️</button>
                     </div>
                   </div>
                   <div class="preset-field">
-                    <label>Steam64 ID (Auto-detected from local Steam installation if left empty)</label>
+                    <label data-i18n="steam_id_label">Steam64 ID (Wird automatisch aus lokaler Steam-Installation erkannt)</label>
                     <input
                       type="text"
                       id="input-steam-id"
                       class="toolbar-select"
-                      placeholder="e.g. 76561198000000000 (auto-detected)"
+                      data-i18n-placeholder="steam_id_placeholder"
+                      placeholder="z.B. 76561198000000000 (automatisch erkannt)"
                     />
                   </div>
                 </div>
                 <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-top:10px">
-                  <div class="muted" id="steam-api-feedback" style="font-size:0.78rem">
-                    Matches owned Steam games (`IPlayerService/GetOwnedGames`) + Steam Store search for non-Steam launchers.
+                  <div class="muted" id="steam-api-feedback" style="font-size:0.78rem" data-i18n="steam_api_feedback_default">
+                    Gleicht eigene Steam-Spiele (`IPlayerService/GetOwnedGames`) + Steam-Store-Suche für alle Launcher ab.
                   </div>
                   <div style="display:flex;gap:8px">
-                    <button class="btn btn-secondary" onclick="reresolveGamesViaSteamNow()">🔄 Re-resolve Game Covers</button>
-                    <button class="btn btn-primary" onclick="validateAndSaveSteamApiNow()">✓ Validate &amp; Save Key</button>
+                    <button class="btn btn-secondary" onclick="reresolveGamesViaSteamNow()" data-i18n="btn_reresolve_covers">🔄 Cover &amp; App-IDs neu abgleichen</button>
+                    <button class="btn btn-primary" onclick="validateAndSaveSteamApiNow()" data-i18n="btn_validate_save_key">✓ Prüfen &amp; Speichern</button>
                   </div>
                 </div>
               </div>
@@ -181,9 +188,9 @@
             <!-- Compact Latest Upscaler Versions Strip -->
             <div class="panel">
               <div class="panel-header">
-                <h3>Latest Available Upscaler Versions</h3>
-                <button class="btn btn-secondary" id="btn-refresh-manifest" style="padding:5px 10px;font-size:0.76rem">
-                  🔄 Check for Newer DLLs
+                <h3 data-i18n="hub_latest_versions">Aktuell verfügbare Upscaler-Versionen</h3>
+                <button class="btn btn-secondary" id="btn-refresh-manifest" style="padding:5px 10px;font-size:0.76rem" data-i18n="btn_check_newer_dlls">
+                  🔄 Auf neue DLLs prüfen
                 </button>
               </div>
               <div class="tech-strip-grid" id="hub-tech-strip"></div>
@@ -191,8 +198,8 @@
 
             <div class="panel">
               <div class="panel-header">
-                <h3>Detected Launchers</h3>
-                <span class="muted" style="font-size:0.76rem">Click a launcher to filter · Click 📂 to inspect paths</span>
+                <h3 data-i18n="hub_detected_launchers">Erkannte Launcher</h3>
+                <span class="muted" style="font-size:0.76rem" data-i18n="hub_detected_launchers_sub">Klicke auf einen Launcher zum Filtern · Klicke auf 📂 für Pfade</span>
               </div>
               <div class="launcher-summary-grid" id="hub-launcher-grid"></div>
             </div>
@@ -205,22 +212,22 @@
             <div class="status-chips" id="status-filter-chips"></div>
 
             <div class="toolbar-controls">
-              <button class="btn btn-secondary" id="btn-toggle-select-mode" style="padding:6px 10px;font-size:0.78rem" title="Select multiple games for batch update">
-                ☑ Select
+              <button class="btn btn-secondary" id="btn-toggle-select-mode" style="padding:6px 10px;font-size:0.78rem" title="Mehrere Spiele für Batch-Update auswählen">
+                ☑ Auswählen
               </button>
 
-              <select id="select-launcher-filter" class="toolbar-select" title="Filter by Launcher">
-                <option value="all">All Launchers</option>
+              <select id="select-launcher-filter" class="toolbar-select" title="Nach Launcher filtern">
+                <option value="all">Alle Launcher</option>
               </select>
 
-              <select id="select-sort-mode" class="toolbar-select" title="Sort Games">
-                <option value="name_asc">Name (A → Z)</option>
-                <option value="outdated_first">Outdated First</option>
-                <option value="name_desc">Name (Z → A)</option>
-                <option value="dll_count">Most Technologies</option>
+              <select id="select-sort-mode" class="toolbar-select" title="Sortierung">
+                <option value="name_asc" data-i18n="sort_name_asc">Name (A → Z)</option>
+                <option value="outdated_first" data-i18n="sort_outdated_first">Updates zuerst</option>
+                <option value="name_desc" data-i18n="sort_name_desc">Name (Z → A)</option>
+                <option value="dll_count" data-i18n="sort_dll_count">Meiste Technologien</option>
               </select>
 
-              <div class="density-group" title="Card Size">
+              <div class="density-group" title="Kartengröße">
                 <button class="density-btn" data-density="compact">S</button>
                 <button class="density-btn active" data-density="comfortable">M</button>
                 <button class="density-btn" data-density="large">L</button>
@@ -231,14 +238,14 @@
           <!-- Multi-Select Action Bar (shown when in Select Mode) -->
           <div class="batch-selection-bar" id="batch-selection-bar" style="display:none">
             <div style="display:flex;align-items:center;gap:10px">
-              <strong id="batch-selected-label">0 games selected</strong>
-              <button class="btn btn-secondary btn-card-action" onclick="selectOutdatedVisibleGames()">Select Outdated</button>
-              <button class="btn btn-secondary btn-card-action" onclick="selectAllVisibleGames()">Select All Visible</button>
-              <button class="btn btn-secondary btn-card-action" onclick="clearSelectedGames()">Clear</button>
+              <strong id="batch-selected-label">0 Spiele ausgewählt</strong>
+              <button class="btn btn-secondary btn-card-action" onclick="selectOutdatedVisibleGames()" data-i18n="btn_select_outdated">Veraltete auswählen</button>
+              <button class="btn btn-secondary btn-card-action" onclick="selectAllVisibleGames()" data-i18n="btn_select_all_visible">Alle sichtbaren auswählen</button>
+              <button class="btn btn-secondary btn-card-action" onclick="clearSelectedGames()" data-i18n="btn_clear_selection">Auswahl aufheben</button>
             </div>
             <div style="display:flex;align-items:center;gap:8px">
               <button class="btn btn-accent btn-card-action" id="btn-update-selected" onclick="updateSelectedGamesNow()">
-                ⚡ Update Selected (<span id="btn-update-selected-count">0</span>)
+                ⚡ <span data-i18n="btn_update_selected">Ausgewählte aktualisieren</span> (<span id="btn-update-selected-count">0</span>)
               </button>
             </div>
           </div>
@@ -250,9 +257,9 @@
         <section class="view-section" id="view-backups">
           <div class="section-toolbar">
             <div>
-              <h2>Automatic Backups &amp; Rollback</h2>
-              <p class="muted">
-                Original game DLLs are backed up automatically before any update. Restore an entire game or individual technologies with one click.
+              <h2 data-i18n="backups_title">Automatische Backups &amp; Wiederherstellung</h2>
+              <p class="muted" data-i18n="backups_sub">
+                Originale Spiel-DLLs werden vor jedem Update automatisch gesichert. Stelle ein komplettes Spiel oder einzelne Technologien mit einem Klick wieder her.
               </p>
             </div>
           </div>
@@ -263,35 +270,46 @@
         <section class="view-section" id="view-settings">
           <div class="settings-grid">
             <div class="settings-card">
-              <h3>Update &amp; Safety Preferences</h3>
+              <h3 data-i18n="settings_safety_title">Update- &amp; Sicherheitseinstellungen</h3>
               <label class="setting-row">
                 <div>
-                  <strong>Automatic Backup Before Replace</strong>
-                  <p class="muted">Always keep original game DLLs in the local backup vault before updating</p>
+                  <strong data-i18n="settings_lang_label">Sprache / Language</strong>
+                  <p class="muted" data-i18n="settings_lang_sub">Sprache der Benutzeroberfläche (Deutsch / English)</p>
+                </div>
+                <select id="cfg-language" class="toolbar-select" style="width:160px">
+                  <option value="de">🇩🇪 Deutsch</option>
+                  <option value="en">🇬🇧 English</option>
+                </select>
+              </label>
+
+              <label class="setting-row">
+                <div>
+                  <strong data-i18n="settings_autobackup_title">Automatisches Backup vor dem Ersetzen</strong>
+                  <p class="muted" data-i18n="settings_autobackup_sub">Originale Spiel-DLLs vor jedem Update im lokalen Backup-Tresor sichern</p>
                 </div>
                 <input type="checkbox" id="cfg-auto-backup" checked />
               </label>
 
               <label class="setting-row">
                 <div>
-                  <strong>Skip Anti-Cheat Protected Games in Bulk Updates</strong>
-                  <p class="muted">Exclude EasyAntiCheat, BattlEye, Vanguard &amp; Ricochet titles from "Update All"</p>
+                  <strong data-i18n="settings_skip_ac_title">Anti-Cheat-geschützte Spiele bei Massen-Updates überspringen</strong>
+                  <p class="muted" data-i18n="settings_skip_ac_sub">EasyAntiCheat-, BattlEye-, Vanguard- &amp; Ricochet-Titel bei „Alle aktualisieren“ auslassen</p>
                 </div>
                 <input type="checkbox" id="cfg-skip-anticheat" checked />
               </label>
 
               <label class="setting-row">
                 <div>
-                  <strong>Allow Experimental / Preview DLLs</strong>
-                  <p class="muted">Include pre-release DLSS / FSR / XeSS builds when checking for updates</p>
+                  <strong data-i18n="settings_preview_title">Experimentelle / Preview-DLLs erlauben</strong>
+                  <p class="muted" data-i18n="settings_preview_sub">Vorabversionen von DLSS / FSR / XeSS bei der Update-Prüfung berücksichtigen</p>
                 </div>
                 <input type="checkbox" id="cfg-allow-preview" />
               </label>
 
               <label class="setting-row">
                 <div>
-                  <strong>Hide Ignored Games from Library</strong>
-                  <p class="muted">Hide games marked as Ignored unless "Show Ignored" is active</p>
+                  <strong data-i18n="settings_hide_ignored_title">Ignorierte Spiele in der Bibliothek ausblenden</strong>
+                  <p class="muted" data-i18n="settings_hide_ignored_sub">Als ignoriert markierte Spiele komplett verstecken, sofern der Filter nicht aktiv ist</p>
                 </div>
                 <input type="checkbox" id="cfg-hide-ignored" />
               </label>
@@ -299,38 +317,38 @@
 
             <!-- Steam Web API Settings Card -->
             <div class="settings-card">
-              <h3>Steam Web API &amp; Cover Resolution</h3>
-              <p class="muted">
-                Configure your Steam Web API key to automatically match Steam App IDs and high-resolution cover art for all games.
+              <h3 data-i18n="settings_steam_title">Steam Web API &amp; Cover-Auflösung</h3>
+              <p class="muted" data-i18n="settings_steam_sub">
+                Hinterlege deinen Steam Web API Key, um Steam-App-IDs und hochauflösende Cover-Bilder automatisch zuzuordnen.
               </p>
               <div class="preset-select-grid" style="margin-top:10px">
                 <div class="preset-field">
-                  <label>Steam Web API Key (<a href="#" onclick="event.preventDefault(); openExternalUrl('https://steamcommunity.com/dev/apikey')" style="color:var(--accent)">Get Key ↗</a>)</label>
-                  <input type="password" id="settings-steam-api-key" class="toolbar-select" placeholder="32-char Steam API Key" />
+                  <label><span data-i18n="steam_api_key_label">Steam Web API Key</span> (<a href="#" onclick="event.preventDefault(); openExternalUrl('https://steamcommunity.com/dev/apikey')" style="color:var(--accent)" data-i18n="steam_get_key_link">Key bei Steam erstellen ↗</a>)</label>
+                  <input type="password" id="settings-steam-api-key" class="toolbar-select" data-i18n-placeholder="steam_key_placeholder" placeholder="32-stelliger Steam API Key" />
                 </div>
                 <div class="preset-field">
-                  <label>Steam64 ID (Optional — auto-detected from Steam VDF)</label>
-                  <input type="text" id="settings-steam-id" class="toolbar-select" placeholder="Auto-detected" />
+                  <label data-i18n="steam_id_label">Steam64 ID (Optional — automatisch aus Steam-VDF erkannt)</label>
+                  <input type="text" id="settings-steam-id" class="toolbar-select" data-i18n-placeholder="steam_id_placeholder" placeholder="Automatisch erkannt" />
                 </div>
               </div>
               <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;gap:8px;flex-wrap:wrap">
-                <span class="steam-status-pill" id="settings-steam-status-pill">○ Not configured</span>
+                <span class="steam-status-pill" id="settings-steam-status-pill">○ Nicht konfiguriert</span>
                 <div style="display:flex;gap:8px">
-                  <button class="btn btn-secondary" onclick="reresolveGamesViaSteamNow()">🔄 Re-resolve All Games</button>
-                  <button class="btn btn-primary" onclick="validateAndSaveSteamApiFromSettings()">💾 Save Steam API</button>
+                  <button class="btn btn-secondary" onclick="reresolveGamesViaSteamNow()" data-i18n="btn_reresolve_covers">🔄 Alle Spiele neu abgleichen</button>
+                  <button class="btn btn-primary" onclick="validateAndSaveSteamApiFromSettings()" data-i18n="btn_save_steam_api">💾 Steam API speichern</button>
                 </div>
               </div>
             </div>
 
             <!-- Cloudflare Pages Game Compatibility & Settings Database Card -->
             <div class="settings-card">
-              <h3>☁️ Game Compatibility &amp; Settings Database (<code>dlssdb.goover.dev</code>)</h3>
-              <p class="muted">
-                Online database for per-game upscaler support warnings, Anti-Cheat policies, and recommended DLSS presets. Create your personal API Key on <a href="#" onclick="event.preventDefault(); openExternalUrl('https://dlssdb.goover.dev')" style="color:var(--accent)">dlssdb.goover.dev ↗</a>.
+              <h3 data-i18n="settings_db_title">☁️ Spiele-Kompatibilitäts- &amp; Einstellungs-Datenbank (<code>dlssdb.goover.dev</code>)</h3>
+              <p class="muted" data-i18n="settings_db_sub">
+                Online-Datenbank für Upscaler-Kompatibilität, Anti-Cheat-Hinweise und empfohlene DLSS-Presets. Erstelle deinen persönlichen API-Key auf <a href="#" onclick="event.preventDefault(); openExternalUrl('https://dlssdb.goover.dev')" style="color:var(--accent)">dlssdb.goover.dev ↗</a>.
               </p>
               <div class="preset-select-grid" style="margin-top:10px">
                 <div class="preset-field">
-                  <label>Personal DLSS-DB API Key (<a href="#" onclick="event.preventDefault(); openExternalUrl('https://dlssdb.goover.dev')" style="color:var(--accent)">Create API Key ↗</a>)</label>
+                  <label><span data-i18n="settings_db_key_label">Persönlicher DLSS-DB API-Key</span> (<a href="#" onclick="event.preventDefault(); openExternalUrl('https://dlssdb.goover.dev')" style="color:var(--accent)" data-i18n="settings_db_create_key">API-Key erstellen ↗</a>)</label>
                   <div style="display:flex;gap:6px">
                     <input
                       type="password"
@@ -339,11 +357,11 @@
                       style="flex:1"
                       placeholder="dlss_live_..."
                     />
-                    <button class="btn btn-secondary" onclick="toggleRevealGameDbKey()" title="Show / Hide API Key" style="padding:6px 10px">👁️</button>
+                    <button class="btn btn-secondary" onclick="toggleRevealGameDbKey()" title="API-Key anzeigen / verbergen" style="padding:6px 10px">👁️</button>
                   </div>
                 </div>
                 <div class="preset-field">
-                  <label>Database Endpoint URL (<code>games.json</code>)</label>
+                  <label data-i18n="settings_db_url_label">Datenbank-Endpunkt-URL (<code>games.json</code>)</label>
                   <input
                     type="text"
                     id="settings-game-db-url"
@@ -355,31 +373,31 @@
               <div style="margin-top:10px">
                 <label class="toggle-row" style="font-size:0.8rem">
                   <input type="checkbox" id="cfg-auto-report-db" checked />
-                  <span>Automatically report scanned games &amp; detected technologies to <code>dlssdb.goover.dev</code> when API Key is set</span>
+                  <span data-i18n="settings_db_auto_report">Gescannte Spiele &amp; erkannte Technologien automatisch an <code>dlssdb.goover.dev</code> senden, sobald ein API-Key hinterlegt ist</span>
                 </label>
               </div>
               <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;gap:8px;flex-wrap:wrap">
-                <span class="steam-status-pill connected" id="settings-game-db-status-pill">● Loaded</span>
+                <span class="steam-status-pill connected" id="settings-game-db-status-pill">● Geladen</span>
                 <div style="display:flex;gap:8px;flex-wrap:wrap">
-                  <button class="btn btn-secondary" onclick="openExternalUrl('https://dlssdb.goover.dev')">🌐 Open Web Portal</button>
-                  <button class="btn btn-secondary" onclick="reportGamesToDbNow(null)" title="Send all locally detected games to dlssdb.goover.dev">📤 Send Scanned Games to DB</button>
-                  <button class="btn btn-primary" onclick="syncGameDatabaseNow()">🔄 Save Key &amp; Sync Database</button>
+                  <button class="btn btn-secondary" onclick="openExternalUrl('https://dlssdb.goover.dev')" data-i18n="btn_open_web_portal">🌐 Web-Portal öffnen</button>
+                  <button class="btn btn-secondary" onclick="reportGamesToDbNow(null)" data-i18n="btn_send_scanned_games">📤 Gescannte Spiele an DB senden</button>
+                  <button class="btn btn-primary" onclick="syncGameDatabaseNow()" data-i18n="btn_save_sync_db">🔄 Key speichern &amp; DB synchronisieren</button>
                 </div>
               </div>
             </div>
 
             <!-- Global NVIDIA DLSS Presets -->
             <div class="settings-card" id="settings-nvidia-presets-card">
-              <h3>Global Default NVIDIA DLSS Presets (Driver DRS)</h3>
-              <p class="muted">
-                Default driver-level DLSS 4 / 4.5 presets (`nvapi64.dll`). You can also override presets per-game via the card menu (<code>⋮</code>).
+              <h3 data-i18n="settings_nv_presets_title">Globale NVIDIA DLSS-Presets (Treiber-DRS)</h3>
+              <p class="muted" data-i18n="settings_nv_presets_sub">
+                Globale DLSS 4 / 4.5 Treiber-Presets (`nvapi64.dll`). Über das Kartenmenü (<code>⋮</code>) können Presets auch pro Spiel überschrieben werden.
               </p>
               <div class="preset-select-grid" style="margin-top:10px">
                 <div class="preset-field">
                   <label>DLSS Super Resolution</label>
                   <select id="cfg-global-sr-preset" class="toolbar-select">
-                    <option value="Default">Default (Game Controlled)</option>
-                    <option value="Latest">Latest (Driver Recommended)</option>
+                    <option value="Default">Default (Vom Spiel gesteuert)</option>
+                    <option value="Latest">Latest (Vom Treiber empfohlen)</option>
                     <option value="Preset J">Preset J (Transformer Gen 1)</option>
                     <option value="Preset K">Preset K (Transformer Gen 2 · RTX 20/30)</option>
                     <option value="Preset L">Preset L (DLSS 4.5 · RTX 40/50)</option>
@@ -409,43 +427,45 @@
 
             <!-- Enabled Technology Scope -->
             <div class="settings-card">
-              <h3>Enabled Upscaler Technologies</h3>
-              <p class="muted">
-                Choose which technology groups should be flagged for updates and included in batch updates.
+              <h3 data-i18n="settings_tech_scope_title">Aktivierte Upscaler-Technologien</h3>
+              <p class="muted" data-i18n="settings_tech_scope_sub">
+                Wähle aus, welche Technologiegruppen auf Updates geprüft und bei Massen-Updates berücksichtigt werden sollen.
               </p>
               <div class="tech-scope-grid" id="settings-tech-scope-grid" style="margin-top:10px"></div>
             </div>
 
             <div class="settings-card">
-              <h3>Custom Game Library Folders</h3>
-              <p class="muted">
-                Add custom directories if you store standalone games outside standard launchers.
+              <h3 data-i18n="settings_custom_folders_title">Eigene Spieleordner</h3>
+              <p class="muted" data-i18n="settings_custom_folders_sub">
+                Füge eigene Verzeichnisse hinzu, wenn du Standalone-Spiele außerhalb der Standard-Launcher speicherst.
               </p>
               <div class="custom-folder-input">
                 <input
                   type="text"
                   id="input-custom-folder"
-                  placeholder="e.g. D:\Games or E:\Standalone"
+                  data-i18n-placeholder="custom_folder_placeholder"
+                  placeholder="z.B. D:\Games oder E:\Standalone"
                 />
-                <button class="btn btn-secondary" id="btn-browse-folder" title="Browse folder...">📂 Browse</button>
-                <button class="btn btn-primary" id="btn-add-folder">Add Path</button>
+                <button class="btn btn-secondary" id="btn-browse-folder" data-i18n="btn_browse_folder">📂 Durchsuchen</button>
+                <button class="btn btn-primary" id="btn-add-folder" data-i18n="btn_add_path">Pfad hinzufügen</button>
               </div>
               <div id="custom-folders-list" class="custom-folders-list"></div>
             </div>
 
             <!-- Ignored & Blacklisted Games Manager -->
             <div class="settings-card">
-              <h3>Ignored &amp; Blacklisted Games</h3>
-              <p class="muted">
-                Manage games excluded from updates or add custom title patterns to the blacklist.
+              <h3 data-i18n="settings_ignored_title">Ignorierte &amp; Blacklist-Spiele</h3>
+              <p class="muted" data-i18n="settings_ignored_sub">
+                Verwalte vom Update ausgeschlossene Spiele oder füge Ordnernamen zur Blacklist hinzu.
               </p>
               <div class="custom-folder-input" style="margin-top:10px">
                 <input
                   type="text"
                   id="input-blacklist-game"
-                  placeholder="Enter game title to blacklist (e.g. Valorant)"
+                  data-i18n-placeholder="blacklist_placeholder"
+                  placeholder="Spielname für Blacklist eingeben (z.B. Valorant)"
                 />
-                <button class="btn btn-secondary" id="btn-add-blacklist">Add to Blacklist</button>
+                <button class="btn btn-secondary" id="btn-add-blacklist" data-i18n="btn_add_blacklist">Zur Blacklist hinzufügen</button>
               </div>
               <div id="ignored-games-settings-list" class="custom-folders-list"></div>
               <div id="blacklisted-games-settings-list" class="custom-folders-list"></div>
@@ -465,20 +485,20 @@
                       <h2 style="font-size:1.35rem">DLSS Manager</h2>
                       <span class="badge-version" id="info-version-badge">v1.0.0-beta.1</span>
                     </div>
-                    <p class="muted" style="margin-top:4px">
-                      Universal Upscaler &amp; Frame Generation Manager for NVIDIA DLSS 4.5 / 5, AMD FSR 3.1 / 4, Intel XeSS 2, Streamline &amp; DirectStorage.
+                    <p class="muted" style="margin-top:4px" data-i18n="info.subtitle">
+                      Universeller Upscaler- &amp; Frame-Generation-Manager für NVIDIA DLSS 4.5 / 5, AMD FSR 3.1 / 4, Intel XeSS 2, Streamline &amp; DirectStorage.
                     </p>
                   </div>
                 </div>
                 <div style="display:flex;gap:10px;flex-wrap:wrap">
-                  <button class="btn btn-secondary" data-url="https://github.com/gOOvER/DLSS-Manager">
+                  <button class="btn btn-secondary" data-url="https://github.com/gOOvER/DLSS-Manager" data-i18n="info.github_repo">
                     ⭐ GitHub Repository
                   </button>
-                  <button class="btn btn-secondary" data-url="https://github.com/gOOvER/DLSS-Manager/releases">
+                  <button class="btn btn-secondary" data-url="https://github.com/gOOvER/DLSS-Manager/releases" data-i18n="info.releases">
                     📦 Releases &amp; Changelog
                   </button>
-                  <button class="btn btn-secondary" data-url="https://github.com/gOOvER/DLSS-Manager/issues">
-                    🐞 Report Issue
+                  <button class="btn btn-secondary" data-url="https://github.com/gOOvER/DLSS-Manager/issues" data-i18n="info.report_issue">
+                    🐞 Fehler melden
                   </button>
                 </div>
               </div>
@@ -487,12 +507,12 @@
             <!-- System & Storage Diagnostics -->
             <div class="settings-card">
               <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-                <h3>System &amp; Storage Diagnostics</h3>
+                <h3 data-i18n="info.diag_title">System- &amp; Speicher-Diagnose</h3>
                 <div style="display:flex;gap:8px">
-                  <button class="btn btn-secondary btn-card-action" onclick="openAppDataDir('root')">📂 Open AppData Folder</button>
-                  <button class="btn btn-secondary btn-card-action" onclick="openAppDataDir('cache')">📂 Open DLL Cache</button>
-                  <button class="btn btn-secondary btn-card-action" onclick="openAppDataDir('backups')">📂 Open Backups Vault</button>
-                  <button class="btn btn-secondary btn-card-action" onclick="manualCheckAppUpdate()">🔄 Check App Update</button>
+                  <button class="btn btn-secondary btn-card-action" onclick="openAppDataDir('root')" data-i18n="info.open_appdata">📂 AppData-Ordner öffnen</button>
+                  <button class="btn btn-secondary btn-card-action" onclick="openAppDataDir('cache')" data-i18n="info.open_cache">📂 DLL-Cache öffnen</button>
+                  <button class="btn btn-secondary btn-card-action" onclick="openAppDataDir('backups')" data-i18n="info.open_backups">📂 Backup-Tresor öffnen</button>
+                  <button class="btn btn-secondary btn-card-action" onclick="manualCheckAppUpdate()" data-i18n="info.check_update">🔄 Nach App-Update suchen</button>
                 </div>
               </div>
               <div class="info-kv-grid" id="info-diagnostics-grid" style="margin-top:12px"></div>
@@ -500,33 +520,33 @@
 
             <!-- Supported Upscaler Technologies & Presets -->
             <div class="settings-card">
-              <h3>Supported Upscaler Technologies &amp; Catalog</h3>
-              <p class="muted" style="margin-bottom:10px">
-                Active manifest versions compatible with your detected GPU hardware:
+              <h3 data-i18n="info.catalog_title">Unterstützte Upscaler-Technologien &amp; Katalog</h3>
+              <p class="muted" style="margin-bottom:10px" data-i18n="info.catalog_desc">
+                Aktive Manifest-Versionen kompatibel mit deiner erkannten GPU-Hardware:
               </p>
               <div class="info-catalog-table" id="info-catalog-table"></div>
             </div>
 
             <!-- Supported Launchers & Anti-Cheat Protection -->
             <div class="settings-card">
-              <h3>Supported Launchers &amp; Safety Architecture</h3>
+              <h3 data-i18n="info.launchers_safety_title">Unterstützte Launcher &amp; Sicherheitsarchitektur</h3>
               <div class="info-two-col">
                 <div>
-                  <h4 style="margin-bottom:6px;font-size:0.9rem">9 Auto-Detected Game Launchers</h4>
-                  <p class="muted" style="line-height:1.5">
+                  <h4 style="margin-bottom:6px;font-size:0.9rem" data-i18n="info.launchers_sub">9 Automatisch erkannte Spiele-Launcher</h4>
+                  <p class="muted" style="line-height:1.5" data-i18n-html="info.launchers_list">
                     • <strong>Steam</strong> (Registry + <code>libraryfolders.vdf</code> + <code>appmanifest_*.acf</code> + <code>loginusers.vdf</code>)<br />
                     • <strong>Star Citizen</strong> (<code>%APPDATA%\rsilauncher\logs\log.log</code> + <code>LIVE</code>, <code>PTU</code>, <code>EPTU</code>, <code>TECH-PREVIEW</code>, <code>HOTFIX</code>)<br />
                     • <strong>Battle.net</strong> (<code>product.db</code> Protobuf + Windows Uninstall Registry)<br />
                     • <strong>Epic Games</strong> (<code>ProgramData\Epic\...\Manifests\*.item</code>)<br />
-                    • <strong>GOG Galaxy</strong>, <strong>EA App / Origin</strong>, <strong>Ubisoft Connect</strong>, <strong>Xbox / Game Pass</strong> &amp; Custom Folders
+                    • <strong>GOG Galaxy</strong>, <strong>EA App / Origin</strong>, <strong>Ubisoft Connect</strong>, <strong>Xbox / Game Pass</strong> &amp; Eigene Ordner
                   </p>
                 </div>
                 <div>
-                  <h4 style="margin-bottom:6px;font-size:0.9rem">Integrity &amp; Anti-Cheat Protection</h4>
-                  <p class="muted" style="line-height:1.5">
-                    • <strong>PE Binary Verification</strong>: Every downloaded DLL is validated for <code>MZ</code> headers and Win32 <code>VS_FIXEDFILEINFO</code> version resources before touching a game directory.<br />
-                    • <strong>Watermark Protection</strong>: Automatically detects and warns about faulty DLSS <code>310.7.0</code> builds.<br />
-                    • <strong>Anti-Cheat Detection</strong>: Automatically flags EasyAntiCheat, BattlEye, Vanguard &amp; Ricochet games.
+                  <h4 style="margin-bottom:6px;font-size:0.9rem" data-i18n="info.safety_sub">Integritäts- &amp; Anti-Cheat-Schutz</h4>
+                  <p class="muted" style="line-height:1.5" data-i18n-html="info.safety_list">
+                    • <strong>PE-Binärprüfung</strong>: Jede heruntergeladene DLL wird vor dem Kopieren auf gültige <code>MZ</code>-Header und Win32 <code>VS_FIXEDFILEINFO</code>-Versionsressourcen geprüft.<br />
+                    • <strong>Wasserzeichen-Schutz</strong>: Erkennt und warnt automatisch vor fehlerhaften DLSS <code>310.7.0</code>-Builds.<br />
+                    • <strong>Anti-Cheat-Erkennung</strong>: Markiert automatisch Spiele mit EasyAntiCheat, BattlEye, Vanguard &amp; Ricochet.
                   </p>
                 </div>
               </div>
