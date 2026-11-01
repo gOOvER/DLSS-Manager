@@ -666,7 +666,7 @@ async fn restore_backup(
         .map(|g| g.clone())
         .unwrap_or_else(|_| detect_gpu_info());
 
-    let (games, backups) = {
+    let (mut games, backups) = {
         let db = state.db.lock().map_err(|e| e.to_string())?;
         (
             db.load_games().unwrap_or_default(),
@@ -722,7 +722,7 @@ async fn restore_all_for_game(
         .map(|g| g.clone())
         .unwrap_or_else(|_| detect_gpu_info());
 
-    let (games, backups) = {
+    let (mut games, backups) = {
         let db = state.db.lock().map_err(|e| e.to_string())?;
         (
             db.load_games().unwrap_or_default(),
@@ -790,7 +790,7 @@ async fn restore_tech_group_for_game(
         .map(|g| g.clone())
         .unwrap_or_else(|_| detect_gpu_info());
 
-    let (games, backups) = {
+    let (mut games, backups) = {
         let db = state.db.lock().map_err(|e| e.to_string())?;
         (
             db.load_games().unwrap_or_default(),
@@ -1404,7 +1404,7 @@ async fn reset_game_display_override(
         .map(|g| g.clone())
         .unwrap_or_else(|_| detect_gpu_info());
 
-    let (games, backups) = {
+    let (mut games, backups) = {
         let db = state.db.lock().map_err(|e| e.to_string())?;
         let _ = db.delete_override(&game_id);
         (
