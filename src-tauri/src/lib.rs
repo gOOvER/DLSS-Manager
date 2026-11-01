@@ -19,6 +19,7 @@ use database::{
 };
 use game_db::{
     annotate_games_with_db_profiles, fetch_remote_game_db, load_cached_or_seed_game_db,
+    report_games_to_remote_db,
 };
 use gpu_nvapi::{
     apply_nvapi_dlss_presets, detect_gpu_info, get_dlss_indicator_state, set_dlss_indicator_state,
@@ -247,6 +248,19 @@ async fn scan_games(state: State<'_, AppState>) -> Result<InitialPayload, String
         "INFO",
         format!("Library scan complete: discovered {} games with upscaler DLLs", games.len()),
     );
+
+    if config.auto_report_games_to_db && !config.game_db_api_key.trim().is_empty() {
+        if let Ok(msg) = report_games_to_remote_db(
+            &config.game_db_url,
+            &config.game_db_api_key,
+            &games,
+            "auto_scan",
+        )
+        .await
+        {
+            push_log(&state, "INFO", format!("Auto-reported games to Online-DB: {}", msg));
+        }
+    }
 
     build_payload(&state, games, backups, &manifest, gpu, config)
 }
@@ -1676,7 +1690,57 @@ async fn sync_game_database(
         )
     };
 
+    if config.auto_report_games_to_db && !config.game_db_api_key.trim().is_empty() && !games.is_empty() {
+        if let Ok(msg) = report_games_to_remote_db(&url, &key, &games, "auto_sync").await {
+            push_log(&state, "INFO", format!("Auto-reported games to Online-DB: {}", msg));
+        }
+    }
+
     build_payload(&state, games, backups, &manifest, gpu, config)
+}
+
+#[tauri::command]
+async fn report_games_to_db(
+    game_id: Option<String>,
+    state: State<'_, AppState>,
+) -> Result<String, String> {
+    let config = state
+        .config
+        .lock()
+        .map(|c| c.clone())
+        .unwrap_or_default();
+
+    let games = {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        let mut list = db.load_games().unwrap_or_default();
+        db.apply_overrides_and_config(&mut list, &config);
+        list
+    };
+
+    let target_games: Vec<Game> = if let Some(ref gid) = game_id {
+        games
+            .into_iter()
+            .filter(|g| g.id == *gid)
+            .collect()
+    } else {
+        games
+    };
+
+    if target_games.is_empty() {
+        return Err("Kein Spiel zum Melden gefunden.".to_string());
+    }
+
+    let source = if game_id.is_some() { "manual_card" } else { "manual_batch" };
+    let msg = report_games_to_remote_db(
+        &config.game_db_url,
+        &config.game_db_api_key,
+        &target_games,
+        source,
+    )
+    .await?;
+
+    push_log(&state, "INFO", format!("Reported games to Online-DB: {}", msg));
+    Ok(msg)
 }
 
 #[tauri::command]
@@ -1820,6 +1884,7 @@ pub fn run() {
             validate_and_save_steam_api,
             reresolve_games_via_steam_api,
             sync_game_database,
+            report_games_to_db,
             apply_recommended_game_profile,
         ])
         .run(tauri::generate_context!())

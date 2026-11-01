@@ -728,3 +728,97 @@ pub fn annotate_games_with_db_profiles(games: &mut [Game], profiles: &[GameProfi
         }
     }
 }
+
+/// Reports scanned or user-selected games to `https://dlssdb.goover.dev/api/v1/games/report`
+/// using the user's personal `api_key`.
+pub async fn report_games_to_remote_db(
+    db_url: &str,
+    api_key: &str,
+    games: &[Game],
+    source: &str,
+) -> Result<String, String> {
+    let trimmed_key = api_key.trim();
+    if trimmed_key.is_empty() {
+        return Err(
+            "Kein persönlicher DLSS-DB API Key hinterlegt. Bitte unter Settings -> Game Compatibility & Settings Database eintragen."
+                .to_string(),
+        );
+    }
+
+    let report_url = if db_url.contains("/api/v1/games.json") {
+        db_url.replace("/api/v1/games.json", "/api/v1/games/report")
+    } else {
+        "https://dlssdb.goover.dev/api/v1/games/report".to_string()
+    };
+
+    let mut payload_games = Vec::new();
+    for g in games {
+        if g.dlls.is_empty() {
+            continue;
+        }
+        let mut techs: Vec<String> = Vec::new();
+        for d in &g.dlls {
+            if !techs.iter().any(|t| t.eq_ignore_ascii_case(&d.type_label)) {
+                techs.push(d.type_label.clone());
+            }
+        }
+        let exe_name = g
+            .custom_exe_path
+            .as_deref()
+            .and_then(|p| Path::new(p).file_name())
+            .and_then(|n| n.to_str())
+            .map(|s| s.to_string())
+            .unwrap_or_default();
+
+        payload_games.push(serde_json::json!({
+            "title": g.name,
+            "app_id": g.app_id,
+            "executable": exe_name,
+            "supported_techs": techs,
+            "launcher": g.launcher_name,
+            "anticheat_status": if g.anti_cheat.is_some() { "signed_only" } else { "safe" },
+            "notes": g.anti_cheat.as_ref().map(|ac| format!("Anti-Cheat: {}", ac)),
+        }));
+    }
+
+    if payload_games.is_empty() {
+        return Err("Keine Spiele mit erkannten Upscaler-DLLs zum Melden gefunden.".to_string());
+    }
+
+    let client = reqwest::Client::builder()
+        .user_agent("DLSS-Manager/1.0.0-beta.1")
+        .timeout(std::time::Duration::from_secs(12))
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    let resp = client
+        .post(&report_url)
+        .header("X-API-Key", trimmed_key)
+        .header("Authorization", format!("Bearer {}", trimmed_key))
+        .json(&serde_json::json!({
+            "source": source,
+            "games": payload_games,
+        }))
+        .send()
+        .await
+        .map_err(|e| format!("Verbindungsfehler zu {}: {}", report_url, e))?;
+
+    let status = resp.status();
+    let body_text = resp.text().await.unwrap_or_default();
+    if !status.is_success() {
+        if let Ok(val) = serde_json::from_str::<serde_json::Value>(&body_text) {
+            if let Some(err_msg) = val.get("error").and_then(|v| v.as_str()) {
+                return Err(err_msg.to_string());
+            }
+        }
+        return Err(format!("HTTP {} von {}", status, report_url));
+    }
+
+    if let Ok(val) = serde_json::from_str::<serde_json::Value>(&body_text) {
+        if let Some(msg) = val.get("message").and_then(|v| v.as_str()) {
+            return Ok(msg.to_string());
+        }
+    }
+
+    Ok("Spiele erfolgreich an dlssdb.goover.dev gemeldet!".to_string())
+}

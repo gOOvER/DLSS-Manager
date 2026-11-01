@@ -387,6 +387,8 @@ pub struct AppConfig {
     pub game_db_url: String,
     #[serde(default)]
     pub game_db_api_key: String,
+    #[serde(default = "default_true")]
+    pub auto_report_games_to_db: bool,
 }
 
 impl Default for AppConfig {
@@ -411,6 +413,7 @@ impl Default for AppConfig {
             check_app_updates_on_startup: true,
             game_db_url: default_game_db_url(),
             game_db_api_key: String::new(),
+            auto_report_games_to_db: true,
         }
     }
 }

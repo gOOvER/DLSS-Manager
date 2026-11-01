@@ -309,6 +309,10 @@ function renderSteamApiStatus() {
   if (dbKeyEl && document.activeElement !== dbKeyEl) {
     dbKeyEl.value = appState.config?.game_db_api_key || "";
   }
+  const autoRepEl = document.getElementById("cfg-auto-report-db");
+  if (autoRepEl) {
+    autoRepEl.checked = appState.config?.auto_report_games_to_db !== false;
+  }
   const dbPill = document.getElementById("settings-game-db-status-pill");
   if (dbPill) {
     const cnt = appState.stats?.game_db_count || 0;
@@ -333,6 +337,20 @@ window.syncGameDatabaseNow = async function () {
     const payload = await invoke("sync_game_database", { customUrl, apiKey });
     applyPayload(payload);
     showToast(`✓ Game Database synced (${payload.stats?.game_db_count || 0} profiles active)!`);
+  } catch (e) {
+    showToast(String(e), true);
+  }
+};
+
+window.reportGamesToDbNow = async function (gameId = null) {
+  try {
+    showToast(
+      gameId
+        ? "Reporting game to dlssdb.goover.dev..."
+        : "Sending all scanned games & detected technologies to dlssdb.goover.dev..."
+    );
+    const msg = await invoke("report_games_to_db", { gameId });
+    showToast(`✓ ${msg}`);
   } catch (e) {
     showToast(String(e), true);
   }
@@ -945,6 +963,9 @@ window.openCardContextMenu = function (event, gameId) {
     <button class="context-menu-item" onclick="closeCardContextMenu(); openEditDisplayModal('${game.id}')">
       <span>✏️</span><span>Edit Name & Cover Art</span>
     </button>
+    <button class="context-menu-item" onclick="closeCardContextMenu(); reportGamesToDbNow('${game.id}')">
+      <span>📤</span><span>Report Game to Online-DB</span>
+    </button>
     <div class="context-menu-divider"></div>
     <button class="context-menu-item" onclick="closeCardContextMenu(); launchGameNow('${game.id}')">
       <span>🚀</span><span>Launch Game</span>
@@ -1171,6 +1192,7 @@ window.openGameDllModal = function (gameId) {
         <div class="muted" style="font-size:0.75rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${escapeHtml(game.path)}">${escapeHtml(game.path)}</div>
       </div>
       <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+        <button class="btn btn-secondary btn-card-action" onclick="reportGamesToDbNow('${game.id}')" title="Report Game & Detected Techs to dlssdb.goover.dev">📤</button>
         <button class="btn btn-secondary btn-card-action" onclick="openFolderInExplorer('${escapeJsStr(game.path)}')" title="Open Game Folder">📂</button>
         <button class="btn btn-secondary btn-card-action" onclick="openEditDisplayModal('${game.id}')" title="Edit Name & Cover">✏️</button>
         ${
@@ -1976,7 +1998,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
-  ["cfg-auto-backup", "cfg-skip-anticheat", "cfg-allow-preview", "cfg-hide-ignored"].forEach((id) => {
+  ["cfg-auto-backup", "cfg-skip-anticheat", "cfg-allow-preview", "cfg-hide-ignored", "cfg-auto-report-db"].forEach((id) => {
     const el = document.getElementById(id);
     if (!el) return;
     el.addEventListener("change", async () => {
@@ -1985,6 +2007,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       appState.config.skip_anti_cheat_games = document.getElementById("cfg-skip-anticheat").checked;
       appState.config.allow_preview_dlls = document.getElementById("cfg-allow-preview").checked;
       appState.config.hide_ignored_games = document.getElementById("cfg-hide-ignored").checked;
+      const autoRep = document.getElementById("cfg-auto-report-db");
+      if (autoRep) appState.config.auto_report_games_to_db = autoRep.checked;
       await saveConfig();
       const initial = await invoke("get_initial_state");
       applyPayload(initial);

@@ -352,10 +352,17 @@
                   />
                 </div>
               </div>
+              <div style="margin-top:10px">
+                <label class="toggle-row" style="font-size:0.8rem">
+                  <input type="checkbox" id="cfg-auto-report-db" checked />
+                  <span>Automatically report scanned games &amp; detected technologies to <code>dlssdb.goover.dev</code> when API Key is set</span>
+                </label>
+              </div>
               <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;gap:8px;flex-wrap:wrap">
                 <span class="steam-status-pill connected" id="settings-game-db-status-pill">● Loaded</span>
-                <div style="display:flex;gap:8px">
+                <div style="display:flex;gap:8px;flex-wrap:wrap">
                   <button class="btn btn-secondary" onclick="openExternalUrl('https://dlssdb.goover.dev')">🌐 Open Web Portal</button>
+                  <button class="btn btn-secondary" onclick="reportGamesToDbNow(null)" title="Send all locally detected games to dlssdb.goover.dev">📤 Send Scanned Games to DB</button>
                   <button class="btn btn-primary" onclick="syncGameDatabaseNow()">🔄 Save Key &amp; Sync Database</button>
                 </div>
               </div>
