@@ -1749,6 +1749,220 @@ body {
   color: var(--text-primary);
 }
 
+/* ==========================================================================
+   Clean Modal Sections, Active Preset Chips & Inline Preset Bar
+   ========================================================================== */
+.modal-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+  margin: 2px 0 4px 2px;
+}
+
+.active-preset-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(118, 185, 0, 0.18);
+  color: #a3e635;
+  border: 1px solid rgba(118, 185, 0, 0.42);
+}
+
+.default-preset-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.71rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.12);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle);
+}
+
+.applied-presets-box {
+  background: linear-gradient(135deg, rgba(22, 30, 46, 0.92), rgba(15, 21, 34, 0.96));
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 11px 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.applied-presets-box.has-active-preset {
+  border-color: rgba(118, 185, 0, 0.38);
+}
+
+[data-theme="light"] .applied-presets-box {
+  background: #f8fafc;
+  border-color: rgba(15, 23, 42, 0.12);
+}
+
+.preset-slots-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+@media (max-width: 640px) {
+  .preset-slots-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.preset-slot-card {
+  background: rgba(11, 15, 23, 0.55);
+  border: 1px solid var(--border-subtle);
+  border-radius: 9px;
+  padding: 7px 9px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.preset-slot-card.is-active {
+  background: rgba(118, 185, 0, 0.08);
+  border-color: rgba(118, 185, 0, 0.42);
+}
+
+[data-theme="light"] .preset-slot-card {
+  background: #ffffff;
+}
+
+.preset-slot-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.preset-slot-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.preset-slot-rec {
+  font-size: 0.66rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(118, 185, 0, 0.16);
+  color: #a3e635;
+  border: 1px solid rgba(118, 185, 0, 0.32);
+  white-space: nowrap;
+}
+
+.preset-slot-select {
+  width: 100%;
+  padding: 5px 8px;
+  font-size: 0.79rem;
+  font-weight: 600;
+  border-radius: 6px;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+  cursor: pointer;
+}
+
+.preset-slot-card.is-active .preset-slot-select {
+  color: #d9f99d;
+  border-color: rgba(118, 185, 0, 0.45);
+}
+
+[data-theme="light"] .preset-slot-card.is-active .preset-slot-select {
+  color: #365314;
+}
+
+.compat-settings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 6px;
+}
+
+.compat-setting-pill {
+  background: rgba(11, 15, 23, 0.48);
+  border: 1px solid var(--border-subtle);
+  border-radius: 7px;
+  padding: 6px 9px;
+  font-size: 0.76rem;
+  line-height: 1.35;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+[data-theme="light"] .compat-setting-pill {
+  background: #ffffff;
+}
+
+.compat-setting-key {
+  font-size: 0.69rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-secondary);
+}
+
+.compat-setting-val {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.compat-details-accordion {
+  background: rgba(11, 15, 23, 0.38);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 6px 10px;
+}
+
+[data-theme="light"] .compat-details-accordion {
+  background: #ffffff;
+}
+
+.compat-details-accordion summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  user-select: none;
+}
+
+.compat-details-accordion summary::-webkit-details-marker {
+  display: none;
+}
+
+.compat-details-body {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+
 
 
 

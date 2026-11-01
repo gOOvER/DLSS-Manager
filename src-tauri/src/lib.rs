@@ -2033,7 +2033,7 @@ async fn apply_recommended_game_profile(
         .map(|p| p.clone())
         .unwrap_or_else(|_| load_cached_or_seed_game_db());
 
-    let (games, backups, matched_profile, game_name, exe_override) = {
+    let (games, backups, matched_profile, game_name, game_path, exe_override) = {
         let db = state.db.lock().map_err(|e| e.to_string())?;
         let mut g_list = db.load_games().unwrap_or_default();
         db.apply_overrides_and_config(&mut g_list, &config);
@@ -2048,6 +2048,7 @@ async fn apply_recommended_game_profile(
             .clone()
             .ok_or_else(|| "No database profile found for this game.".to_string())?;
         let gname = game.name.clone();
+        let gpath = game.path.clone();
         let exe_opt = game.custom_exe_path.clone();
 
         let sr = prof
@@ -2074,10 +2075,17 @@ async fn apply_recommended_game_profile(
         db.save_override(&ov).map_err(|e| e.to_string())?;
 
         let b_list = db.load_backups().unwrap_or_default();
-        (g_list, b_list, prof, gname, exe_opt)
+        (g_list, b_list, prof, gname, gpath, exe_opt)
     };
 
     if gpu.vendor.eq_ignore_ascii_case("NVIDIA") {
+        let resolved_exe = exe_override
+            .clone()
+            .filter(|s| !s.trim().is_empty())
+            .or_else(|| {
+                find_primary_game_executable(Path::new(&game_path))
+                    .map(|exe| exe.to_string_lossy().to_string())
+            });
         let sr = matched_profile
             .recommended_sr_preset
             .as_deref()
@@ -2090,7 +2098,7 @@ async fn apply_recommended_game_profile(
             .recommended_fg_preset
             .as_deref()
             .unwrap_or("Default");
-        let _ = apply_nvapi_dlss_presets(Some(&game_name), exe_override.as_deref(), sr, rr, fg);
+        let _ = apply_nvapi_dlss_presets(Some(&game_name), resolved_exe.as_deref(), sr, rr, fg);
     }
 
     push_log(
