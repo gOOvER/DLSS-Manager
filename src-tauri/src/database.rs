@@ -105,6 +105,10 @@ pub fn load_legacy_db_game_roots() -> Vec<(String, String, String, Option<String
         };
         for r in rows.flatten() {
             let p = PathBuf::from(&r.1);
+            let is_epic = r.2.to_ascii_lowercase().contains("epic") || p.join(".egstore").is_dir();
+            if is_epic && !crate::scanner::is_verified_epic_install(&p) {
+                continue;
+            }
             if p.exists() && crate::scanner::has_valid_game_executable(&p) {
                 roots.push(r);
             }
@@ -275,9 +279,12 @@ impl Database {
         let mut games = Vec::new();
         for r in rows.flatten() {
             if let Ok(g) = serde_json::from_str::<Game>(&r) {
-                if std::path::Path::new(&g.path).exists()
-                    && crate::scanner::has_valid_game_executable(std::path::Path::new(&g.path))
-                {
+                let p = std::path::Path::new(&g.path);
+                let is_epic = g.launcher == crate::models::LauncherType::Epic || p.join(".egstore").is_dir();
+                if is_epic && !crate::scanner::is_verified_epic_install(p) {
+                    continue;
+                }
+                if p.exists() && crate::scanner::has_valid_game_executable(p) {
                     games.push(g);
                 }
             }

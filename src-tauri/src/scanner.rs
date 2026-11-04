@@ -246,8 +246,54 @@ pub fn scan_all_games(
     });
 
     // Only keep games that actually contain at least one upscaler DLL and a valid game executable (.exe)
-    // This filters out uninstalled leftover/ghost directories that only left behind an orphaned DLL or backup file.
-    games.retain(|g| !g.dlls.is_empty() && has_valid_game_executable(Path::new(&g.path)));
+    // and are not uninstalled Epic Games leftover folders (`.egstore` without an active Epic manifest).
+    games.retain(|g| {
+        let p = Path::new(&g.path);
+        if (g.launcher == LauncherType::Epic || p.join(".egstore").is_dir())
+            && !is_verified_epic_install(p)
+        {
+            return false;
+        }
+        !g.dlls.is_empty() && has_valid_game_executable(p)
+    });
+
+    // If a game is already discovered under an official launcher (Steam, Epic, Battle.net, GOG, Ubisoft, EA, Xbox, RSI),
+    // drop any duplicate standalone `Custom Folder` entry with the same normalized title.
+    let official_titles: HashSet<String> = games
+        .iter()
+        .filter(|g| g.launcher != LauncherType::Custom)
+        .map(|g| normalize_game_name_for_match(&g.name))
+        .filter(|s| !s.is_empty())
+        .collect();
+
+    let custom_folder_norms: HashSet<String> = custom_folders
+        .iter()
+        .map(|f| {
+            f.replace('/', "\\")
+                .trim_end_matches('\\')
+                .to_ascii_lowercase()
+        })
+        .collect();
+
+    games.retain(|g| {
+        if g.launcher == LauncherType::Custom {
+            let norm_path = g
+                .path
+                .replace('/', "\\")
+                .trim_end_matches('\\')
+                .to_ascii_lowercase();
+            let explicitly_configured = custom_folder_norms
+                .iter()
+                .any(|cf| norm_path == *cf || norm_path.starts_with(&format!("{}\\", cf)));
+            if !explicitly_configured {
+                let norm_title = normalize_game_name_for_match(&g.name);
+                if official_titles.contains(&norm_title) {
+                    return false;
+                }
+            }
+        }
+        true
+    });
 
     games.sort_by(|a, b| a.name.to_ascii_lowercase().cmp(&b.name.to_ascii_lowercase()));
     games
@@ -965,6 +1011,7 @@ fn discover_steam_games(drives: &[char]) -> Vec<DiscoveredGameRoot> {
     let installdir_re = Regex::new(r#"(?i)"installdir"\s+"([^"]+)""#).unwrap();
 
     for sa_dir in steamapps_dirs {
+        let mut found_acf_in_library = false;
         // 1a. Parse appmanifest_*.acf
         if let Ok(entries) = fs::read_dir(&sa_dir) {
             for entry in entries.flatten() {
@@ -972,6 +1019,7 @@ fn discover_steam_games(drives: &[char]) -> Vec<DiscoveredGameRoot> {
                 if !fname.starts_with("appmanifest_") || !fname.ends_with(".acf") {
                     continue;
                 }
+                found_acf_in_library = true;
                 let Ok(acf) = fs::read_to_string(entry.path()) else {
                     continue;
                 };
@@ -1002,35 +1050,39 @@ fn discover_steam_games(drives: &[char]) -> Vec<DiscoveredGameRoot> {
             }
         }
 
-        // 1b. Also enumerate every directory in steamapps/common/* directly
-        // (catches games whose appmanifest is missing or on another mount)
-        let common_dir = if sa_dir
-            .to_string_lossy()
-            .to_ascii_lowercase()
-            .ends_with("common")
-        {
-            sa_dir.clone()
-        } else {
-            sa_dir.join("common")
-        };
+        // 1b. Only enumerate `steamapps/common/*` directly as a fallback when this `steamapps`
+        // directory has zero `appmanifest_*.acf` files (e.g. a user-added `common` folder).
+        // When `appmanifest_*.acf` files exist, any folder in `common/` without an `.acf` manifest
+        // is an uninstalled Steam game leftover directory and should not be added.
+        if !found_acf_in_library {
+            let common_dir = if sa_dir
+                .to_string_lossy()
+                .to_ascii_lowercase()
+                .ends_with("common")
+            {
+                sa_dir.clone()
+            } else {
+                sa_dir.join("common")
+            };
 
-        if let Ok(entries) = fs::read_dir(&common_dir) {
-            for entry in entries.flatten() {
-                let path = entry.path();
-                if !path.is_dir() {
-                    continue;
+            if let Ok(entries) = fs::read_dir(&common_dir) {
+                for entry in entries.flatten() {
+                    let path = entry.path();
+                    if !path.is_dir() {
+                        continue;
+                    }
+                    let name = entry.file_name().to_string_lossy().to_string();
+                    if is_redist_or_non_game(&name) {
+                        continue;
+                    }
+                    results.push(DiscoveredGameRoot {
+                        name,
+                        path,
+                        launcher: LauncherType::Steam,
+                        app_id: None,
+                        cover_url: None,
+                    });
                 }
-                let name = entry.file_name().to_string_lossy().to_string();
-                if is_redist_or_non_game(&name) {
-                    continue;
-                }
-                results.push(DiscoveredGameRoot {
-                    name,
-                    path,
-                    launcher: LauncherType::Steam,
-                    app_id: None,
-                    cover_url: None,
-                });
             }
         }
     }
@@ -1039,11 +1091,13 @@ fn discover_steam_games(drives: &[char]) -> Vec<DiscoveredGameRoot> {
 }
 
 // =============================================================================
-// 2. Epic Games Discovery (Manifests + HKCR Registry + all drives)
+// 2. Epic Games Discovery (Manifests + LauncherInstalled.dat)
 // =============================================================================
 
-fn discover_epic_games(drives: &[char]) -> Vec<DiscoveredGameRoot> {
-    let mut results = Vec::new();
+/// Returns the set of normalized lowercase paths of games actively installed in Epic Games Launcher.
+pub fn get_verified_epic_install_paths() -> HashSet<String> {
+    let mut verified = HashSet::new();
+
     let manifests_dir = PathBuf::from("C:\\ProgramData\\Epic\\EpicGamesLauncher\\Data\\Manifests");
     if let Ok(entries) = fs::read_dir(manifests_dir) {
         for entry in entries.flatten() {
@@ -1057,6 +1111,83 @@ fn discover_epic_games(drives: &[char]) -> Vec<DiscoveredGameRoot> {
             let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) else {
                 continue;
             };
+            if json
+                .get("bIsIncompleteInstall")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false)
+            {
+                continue;
+            }
+            if let Some(install_loc) = json.get("InstallLocation").and_then(|v| v.as_str()) {
+                let norm = install_loc
+                    .replace('/', "\\")
+                    .trim_end_matches('\\')
+                    .to_ascii_lowercase();
+                if !norm.is_empty() {
+                    verified.insert(norm);
+                }
+            }
+        }
+    }
+
+    let installed_dat =
+        PathBuf::from("C:\\ProgramData\\Epic\\UnrealEngineLauncher\\LauncherInstalled.dat");
+    if let Ok(content) = fs::read_to_string(installed_dat) {
+        if let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) {
+            if let Some(list) = json.get("InstallationList").and_then(|v| v.as_array()) {
+                for item in list {
+                    if let Some(install_loc) = item.get("InstallLocation").and_then(|v| v.as_str())
+                    {
+                        let norm = install_loc
+                            .replace('/', "\\")
+                            .trim_end_matches('\\')
+                            .to_ascii_lowercase();
+                        if !norm.is_empty() {
+                            verified.insert(norm);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    verified
+}
+
+/// Checks if `path` is an actively installed Epic Games directory according to Epic Games Launcher manifests.
+pub fn is_verified_epic_install(path: &Path) -> bool {
+    let norm = path
+        .to_string_lossy()
+        .replace('/', "\\")
+        .trim_end_matches('\\')
+        .to_ascii_lowercase();
+    get_verified_epic_install_paths().contains(&norm)
+}
+
+fn discover_epic_games(_drives: &[char]) -> Vec<DiscoveredGameRoot> {
+    let mut results = Vec::new();
+    let mut seen_paths = HashSet::new();
+
+    let manifests_dir = PathBuf::from("C:\\ProgramData\\Epic\\EpicGamesLauncher\\Data\\Manifests");
+    if let Ok(entries) = fs::read_dir(manifests_dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.extension().and_then(|e| e.to_str()) != Some("item") {
+                continue;
+            }
+            let Ok(content) = fs::read_to_string(&path) else {
+                continue;
+            };
+            let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) else {
+                continue;
+            };
+            if json
+                .get("bIsIncompleteInstall")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false)
+            {
+                continue;
+            }
             let Some(install_loc) = json.get("InstallLocation").and_then(|v| v.as_str()) else {
                 continue;
             };
@@ -1070,6 +1201,11 @@ fn discover_epic_games(drives: &[char]) -> Vec<DiscoveredGameRoot> {
 
             let game_path = PathBuf::from(install_loc);
             if game_path.exists() {
+                let norm = install_loc
+                    .replace('/', "\\")
+                    .trim_end_matches('\\')
+                    .to_ascii_lowercase();
+                seen_paths.insert(norm);
                 results.push(DiscoveredGameRoot {
                     name: display_name.to_string(),
                     path: game_path,
@@ -1081,30 +1217,40 @@ fn discover_epic_games(drives: &[char]) -> Vec<DiscoveredGameRoot> {
         }
     }
 
-    for &d in drives {
-        for suffix in &[
-            "Program Files\\Epic Games",
-            "Epic Games",
-            "Epic",
-            "Games\\Epic Games",
-            "Games\\Epic",
-        ] {
-            let epic_root = PathBuf::from(format!("{}:\\{}", d, suffix));
-            if let Ok(entries) = fs::read_dir(&epic_root) {
-                for entry in entries.flatten() {
-                    let path = entry.path();
-                    if !path.is_dir() {
+    let installed_dat =
+        PathBuf::from("C:\\ProgramData\\Epic\\UnrealEngineLauncher\\LauncherInstalled.dat");
+    if let Ok(content) = fs::read_to_string(installed_dat) {
+        if let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) {
+            if let Some(list) = json.get("InstallationList").and_then(|v| v.as_array()) {
+                for item in list {
+                    let Some(install_loc) = item.get("InstallLocation").and_then(|v| v.as_str())
+                    else {
+                        continue;
+                    };
+                    let norm = install_loc
+                        .replace('/', "\\")
+                        .trim_end_matches('\\')
+                        .to_ascii_lowercase();
+                    if norm.is_empty() || !seen_paths.insert(norm) {
                         continue;
                     }
-                    let name = entry.file_name().to_string_lossy().to_string();
-                    if name.eq_ignore_ascii_case("Launcher") || name.eq_ignore_ascii_case("DirectXRedist") {
+                    let game_path = PathBuf::from(install_loc);
+                    if !game_path.exists() {
                         continue;
                     }
+                    let name = game_path
+                        .file_name()
+                        .map(|n| n.to_string_lossy().to_string())
+                        .unwrap_or_else(|| "Epic Game".to_string());
+                    let app_name = item
+                        .get("AppName")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string());
                     results.push(DiscoveredGameRoot {
                         name,
-                        path,
+                        path: game_path,
                         launcher: LauncherType::Epic,
-                        app_id: None,
+                        app_id: app_name,
                         cover_url: None,
                     });
                 }
@@ -1712,6 +1858,9 @@ fn discover_generic_game_dirs(drives: &[char]) -> Vec<DiscoveredGameRoot> {
 
                 // Check if this top-level folder looks like a game installation
                 let has_egstore = path.join(".egstore").is_dir();
+                if has_egstore && !is_verified_epic_install(&path) {
+                    continue;
+                }
                 let has_game_subdir = path.join("bin").is_dir()
                     || path.join("bin-mt").is_dir()
                     || path.join("Bin64").is_dir()
