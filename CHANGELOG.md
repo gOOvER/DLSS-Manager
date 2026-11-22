@@ -12,8 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- **Live Startup Progress Banner (`ui/index.html`, `ui/app.js`):**
-  - Added a live `#startup-status-bar` on the Hub view showing each startup phase (`1/3` loading games & enforcing NVIDIA DRS presets, `2/3` refreshing official upstream manifests & game database, `3/3` completed) before auto-hiding.
+- **Live Startup Progress Overlay (`ui/index.html`, `ui/app.js`):**
+  - Replaced the thin Hub banner with a centered `#startup-overlay` modal featuring larger typography, an animated progress bar (`33% -> 70% -> 100%`), step counter (`1 / 3` → `3 / 3`), and a **Run in Background** dismiss button.
 
 ### Security
 - **GitHub CodeQL / Code Scanning Fixes (`src-tauri/src/lib.rs`, `.github/workflows/build-flatpak.yml`):**

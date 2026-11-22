@@ -4049,19 +4049,22 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   });
 
-  const startupBar = document.getElementById("startup-status-bar");
+  const startupOverlay = document.getElementById("startup-overlay");
   const startupText = document.getElementById("startup-status-text");
   const startupStep = document.getElementById("startup-status-step");
-  const setStartupStatus = (msgDe, msgEn, stepText) => {
+  const startupProgress = document.getElementById("startup-progress-fill");
+  const setStartupStatus = (msgDe, msgEn, stepText, pct) => {
     if (startupText) startupText.textContent = isDe() ? msgDe : msgEn;
     if (startupStep && stepText !== undefined) startupStep.textContent = stepText;
+    if (startupProgress && pct !== undefined) startupProgress.style.width = `${pct}%`;
   };
 
   try {
     setStartupStatus(
       "⏳ Schritt 1/3: Lade Spielebibliothek, GPU & wende NVIDIA DRS Presets an…",
       "⏳ Step 1/3: Loading games library, GPU & enforcing NVIDIA DRS presets…",
-      "1 / 3"
+      "1 / 3",
+      33
     );
     const initial = await invoke("get_initial_state");
     applyPayload(initial);
@@ -4069,7 +4072,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       setStartupStatus(
         "🔍 Scanne Launcher & Spieleordner nach Upscaler-DLLs…",
         "🔍 Scanning launchers & game folders for upscaler DLLs…",
-        "1 / 3"
+        "1 / 3",
+        45
       );
       await triggerGameScan(false);
     }
@@ -4077,7 +4081,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     setStartupStatus(
       "🌐 Schritt 2/3: Prüfe offizielle Upstreams (NVIDIA DLSS, Streamline, DirectStorage, Intel XeSS) & Spiele-DB…",
       "🌐 Step 2/3: Checking official upstreams (NVIDIA DLSS, Streamline, DirectStorage, Intel XeSS) & Game DB…",
-      "2 / 3"
+      "2 / 3",
+      70
     );
 
     const manifestTask = invoke("refresh_dll_manifest")
@@ -4114,18 +4119,17 @@ document.addEventListener("DOMContentLoaded", async () => {
       setStartupStatus(
         "✅ Start-Checks abgeschlossen — Alle Manifeste, DRS-Presets & Spiele-Datenbank sind aktuell.",
         "✅ Startup checks complete — Manifests, DRS presets & game database are up to date.",
-        "3 / 3"
+        "3 / 3",
+        100
       );
-      if (startupBar) {
-        startupBar.style.borderColor = "rgba(16,185,129,0.4)";
-        startupBar.style.background = "rgba(16,185,129,0.08)";
+      if (startupOverlay) {
         setTimeout(() => {
-          startupBar.style.display = "none";
-        }, 3200);
+          startupOverlay.style.display = "none";
+        }, 1200);
       }
     });
   } catch (e) {
-    if (startupBar) startupBar.style.display = "none";
+    if (startupOverlay) startupOverlay.style.display = "none";
     showToast("Failed to load initial state: " + e, true);
   }
 });
