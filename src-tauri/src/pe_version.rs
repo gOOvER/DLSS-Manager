@@ -77,9 +77,9 @@ fn extract_version_win32(path: &Path) -> Option<String> {
 
 /// Cross-platform fallback that scans the binary for the `VS_FIXEDFILEINFO` magic signature `0xFEEF04BD`.
 fn extract_version_binary_scan(path: &Path) -> Option<String> {
-    let mut file = File::open(path).ok()?;
+    let file = File::open(path).ok()?;
     let mut buf = Vec::new();
-    file.read_to_end(&mut buf).ok()?;
+    file.take(32 * 1024 * 1024).read_to_end(&mut buf).ok()?;
 
     // Look for VS_FIXEDFILEINFO signature 0xFEEF04BD (little-endian: BD 04 EF FE)
     let sig = [0xBDu8, 0x04, 0xEF, 0xFE];
@@ -124,12 +124,14 @@ pub fn preset_hint_for_dll(dll_type: DllType, version: &str) -> Option<String> {
             let patch = *parts.get(2).unwrap_or(&0);
 
             if major >= 310 {
-                if minor >= 3 {
+                if minor >= 9 {
+                    Some("DLSS 4.5 (Transformer Gen 2 · Preset J/K/L/M)".to_string())
+                } else if minor >= 4 {
                     Some("DLSS 4.5 (Transformer Gen 2 · Preset J/K)".to_string())
                 } else if minor >= 2 {
-                    Some("DLSS 4 (Transformer · Preset J/K)".to_string())
+                    Some("DLSS 4.0 (Transformer Gen 1 · Preset J/K)".to_string())
                 } else {
-                    Some("DLSS 4 (Transformer · Preset J)".to_string())
+                    Some("DLSS 4.0 (Transformer Gen 1 · Preset J)".to_string())
                 }
             } else if major == 3 && minor >= 7 {
                 if patch >= 20 {
@@ -177,5 +179,117 @@ pub fn is_version_newer(candidate: &str, current: &str) -> bool {
         }
     }
     false
+}
+
+/// Verifies that a Windows PE binary (`.dll`) carries a valid Authenticode digital signature
+/// via `wintrust.dll!WinVerifyTrust(WINTRUST_ACTION_GENERIC_VERIFY_V2)`.
+pub fn verify_authenticode_signature(path: &std::path::Path) -> Result<(), String> {
+    #[cfg(windows)]
+    {
+        use libloading::{Library, Symbol};
+        use std::ffi::{c_int, c_void};
+
+        #[repr(C)]
+        struct Guid {
+            data1: u32,
+            data2: u16,
+            data3: u16,
+            data4: [u8; 8],
+        }
+
+        #[repr(C)]
+        struct WinTrustFileInfo {
+            cb_struct: u32,
+            pcwsz_file_path: *const u16,
+            h_file: *mut c_void,
+            pg_known_subject: *const Guid,
+        }
+
+        #[repr(C)]
+        struct WinTrustData {
+            cb_struct: u32,
+            p_policy_callback_data: *mut c_void,
+            p_sip_client_data: *mut c_void,
+            dw_ui_choice: u32,
+            fdw_revocation_checks: u32,
+            dw_union_choice: u32,
+            p_file: *mut WinTrustFileInfo,
+            dw_state_action: u32,
+            h_wvt_state_data: *mut c_void,
+            pwsz_url_reference: *const u16,
+            dw_prov_flags: u32,
+            dw_ui_context: u32,
+            p_signature_settings: *mut c_void,
+        }
+
+        const WTD_UI_NONE: u32 = 2;
+        const WTD_REVOKE_NONE: u32 = 0;
+        const WTD_CHOICE_FILE: u32 = 1;
+        const WTD_STATEACTION_VERIFY: u32 = 1;
+        const WTD_STATEACTION_CLOSE: u32 = 2;
+        const WTD_CACHE_ONLY_URL_RETRIEVAL: u32 = 0x0000_1000;
+
+        let mut wide: Vec<u16> = path
+            .to_string_lossy()
+            .encode_utf16()
+            .chain(std::iter::once(0))
+            .collect();
+
+        let mut file_info = WinTrustFileInfo {
+            cb_struct: std::mem::size_of::<WinTrustFileInfo>() as u32,
+            pcwsz_file_path: wide.as_mut_ptr(),
+            h_file: std::ptr::null_mut(),
+            pg_known_subject: std::ptr::null(),
+        };
+
+        let mut data = WinTrustData {
+            cb_struct: std::mem::size_of::<WinTrustData>() as u32,
+            p_policy_callback_data: std::ptr::null_mut(),
+            p_sip_client_data: std::ptr::null_mut(),
+            dw_ui_choice: WTD_UI_NONE,
+            fdw_revocation_checks: WTD_REVOKE_NONE,
+            dw_union_choice: WTD_CHOICE_FILE,
+            p_file: &mut file_info,
+            dw_state_action: WTD_STATEACTION_VERIFY,
+            h_wvt_state_data: std::ptr::null_mut(),
+            pwsz_url_reference: std::ptr::null(),
+            dw_prov_flags: WTD_CACHE_ONLY_URL_RETRIEVAL,
+            dw_ui_context: 0,
+            p_signature_settings: std::ptr::null_mut(),
+        };
+
+        let mut action_guid = Guid {
+            data1: 0x00AA_C56B,
+            data2: 0xCD44,
+            data3: 0x11d0,
+            data4: [0x8C, 0xC2, 0x00, 0xC0, 0x4F, 0xC2, 0x95, 0xEE],
+        };
+
+        let lib = unsafe { Library::new("wintrust.dll") }
+            .map_err(|e| format!("Failed to load wintrust.dll: {}", e))?;
+        type WinVerifyTrustFn =
+            unsafe extern "system" fn(*mut c_void, *mut Guid, *mut WinTrustData) -> c_int;
+        let verify_fn: Symbol<WinVerifyTrustFn> = unsafe { lib.get(b"WinVerifyTrust\0") }
+            .map_err(|e| format!("WinVerifyTrust not found: {}", e))?;
+
+        let status = unsafe { verify_fn(std::ptr::null_mut(), &mut action_guid, &mut data) };
+        data.dw_state_action = WTD_STATEACTION_CLOSE;
+        let _ = unsafe { verify_fn(std::ptr::null_mut(), &mut action_guid, &mut data) };
+
+        if status == 0 {
+            Ok(())
+        } else {
+            Err(format!(
+                "Authenticode signature verification failed for {} (WinVerifyTrust=0x{:08X})",
+                path.display(),
+                status as u32
+            ))
+        }
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = path;
+        Ok(())
+    }
 }
 

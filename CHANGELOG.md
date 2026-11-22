@@ -11,8 +11,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0-beta.2] - 2026-11-22
+
+### Changed
+- **Official Upstreams for Streamline & DirectStorage; Removed AMD FSR (`src-tauri/src/repository.rs`, `src-tauri/src/models.rs`, `ui/index.html`, `ui/app.js`):**
+  - Added official `NVIDIA-RTX/Streamline` GitHub Release SDK upstream (`sl.*.dll`) and official Microsoft NuGet (`Microsoft.Direct3D.DirectStorage`, `.nupkg`) upstream (`dstorage.dll`, `dstoragecore.dll`), plus `xess_dx11` (`libxess_dx11.dll`) from `dlss-swapper-manifest-builder`.
+  - Removed AMD FSR (`amd_fidelityfx_*`, `ffx_fsr2_*`, `FSR 3/4`, `FSR VK`, `FSR 2`) from DLL scanning, manifest resolution, and UI technology scope filters.
+- **Uniform Topbar Button Sizing (`ui/index.html`, `ui/styles.css`):**
+  - Standardized all Topbar action buttons and toggle pills (`DLSS-Overlay`, `Logs`, `DE/EN`, `Theme`, `Update All`, `App Update`) to a uniform `36px` height and consistent padding/typography.
+- **AppData Storage & Branding Migration (`src-tauri/src/database.rs`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`, `ui/app.js`):**
+  - Switched the application data directory from `%LOCALAPPDATA%\Recol\DLSS-Updater` to `%LOCALAPPDATA%\gOOvER\DLSS-Manager` with automatic one-time migration of existing config, SQLite DB, backups, DLL cache, and artwork cache, and removed remaining `Recol` publisher/author metadata references.
+
 ### Added
-- **Clean Game Details Modal & Inline Applied NVIDIA DLSS Presets Bar (`ui/app.js`, `ui/styles.css`, `src-tauri/src/lib.rs`):**
+- **UAC Admin Manifest & Runtime Elevation Guard (`src-tauri/build.rs`, `src-tauri/src/nvapp_whitelist.rs`, `src-tauri/src/lib.rs`, `ui/index.html`, `ui/app.js`):**
+  - Embedded a `requireAdministrator` Windows application manifest in `src-tauri/build.rs` so `dlss-manager.exe` automatically requests UAC elevation on launch, plus a runtime `is_running_as_admin()` check with a prominent warning banner and **🛡️ Als Administrator neu starten** (`relaunch_as_admin_cmd`) button if launched without elevation.
+- **PE Authenticode Signature Verification (`src-tauri/src/pe_version.rs`, `src-tauri/src/repository.rs`):**
+  - Added `verify_authenticode_signature` via `wintrust.dll!WinVerifyTrust` and enforced it before copying `nvngx_dlss*.dll` or Streamline DLLs into game directories.
+- **Live NVIDIA DRS Readback, DLSS-G MFG Controls & NGX OTA Status (`src-tauri/src/gpu_nvapi.rs`, `src-tauri/src/nvapp_whitelist.rs`, `src-tauri/src/models.rs`, `src-tauri/src/database.rs`, `ui/app.js`):**
+  - Added `read_live_drs_status` (`NvAPI_DRS_GetSetting`) to inspect actual live driver DRS values (`sr_override`, `sr_preset`, `fg_mode`, `streamline_gate`, `is_blocked_by_zero`) directly in the Game Details modal.
+  - Added DLSS-G Multi-Frame Generation (MFG) DRS controls (`Fixed 2x–6x`, `Dynamic + Target FPS`, `Off`) in the Preset Settings modal for games with `nvngx_dlssg.dll` (`0x10308298`, `0x104D6667`, `0x10562D0F`, `0x10CF4125`).
+  - Added `IsOpsSupported` unlock option and local NGX OTA version detection (`C:\ProgramData\NVIDIA\NGX\models\dlss\versions\`) in the Hub & Settings whitelist status bar.
+- **NVIDIA App Override Whitelist & Per-Game DRS Blocker Cleanup (`src-tauri/src/nvapp_whitelist.rs`, `src-tauri/src/gpu_nvapi.rs`, `src-tauri/src/lib.rs`, `ui/index.html`, `ui/app.js`):**
+  - Added NVIDIA App Whitelist detection & one-click unlock (`get_nvidia_app_whitelist_status`, `apply_nvidia_app_whitelist`, `restart_nvidia_services_cmd` with automatic UAC elevation fallback) both on the **Hub** start page and in **Settings → Globale NVIDIA DLSS-Presets (Treiber-DRS)**, automatically backing up and flipping `Disable_FG_Override`, `Disable_RR_Override`, `Disable_SR_Override`, `Disable_RR_Model_Override`, and `Disable_SR_Model_Override` to `false` / `0` in `ApplicationStorage.json` and `fingerprint.db` so non-whitelisted games (such as **Star Citizen**) stop having their DLSS overrides reverted to `0` by NVIDIA App.
+  - Updated `gpu_nvapi.rs` to also clear `NGX_ENABLE_STREAMLINE_OVERRIDE_ID` (`0x10E41E06`) and added `clear_game_dlss_profile_blocks` so games inheriting Global DRS presets have any stale NVIDIA App `0`-blocks on their per-game DRS profile (`"Squadron 42 - Star Citizen"`) cleared automatically on startup and after whitelisting.
+- **Clean Game Details Modal, Preset Descriptions & Inline Applied NVIDIA DLSS Presets Bar (`ui/app.js`, `ui/styles.css`, `src-tauri/src/lib.rs`):**
+  - Expanded default window size (`1540×940` in `src-tauri/tauri.conf.json`) and modal width (`1120px`), eliminated horizontal scrollbars (`overflow-x: hidden`) on all reference tables, and added a sleek custom dark scrollbar so the Game Details Modal, Preset Settings Modal, and Reference Matrix never show a horizontal scrollbar or appear cramped.
+  - Added version-aware DLSS Preset rendering (`getSupportedPresetsForDllVersion` & `buildPresetOptionsHtml` in `ui/app.js`) so unsupported presets for a game's currently installed DLL version (e.g., `Preset L` / `Preset M` DLSS 4.5 on Star Citizen's stock `v310.2.1.0`) remain visible as disabled/grayed-out `<option disabled>` items with their required minimum DLL version rather than being silently hidden.
+  - Upgraded `NvDrsApplicationV1` (`1 << 16`) to `NvDrsApplicationV4` (`4 << 16`) in `src-tauri/src/gpu_nvapi.rs` so `NvAPI_DRS_FindApplicationByName` and `NvAPI_DRS_CreateApplication` never fail with `NVAPI_INCOMPATIBLE_STRUCT_VERSION` (`-161`) on modern NVIDIA drivers and always resolve the official driver profile (e.g. `starcitizen.exe` -> `"Squadron 42 - Star Citizen"`).
+  - Added a comprehensive tabular **📊 Versions-, Preset- & Hardware-Referenzübersicht** (`buildVersionReferenceTablesHtml` & `openVersionReferenceModal`) in the **Info** tab, via a quick-access button in the **Hub** dashboard, and directly inside the expandable **📖 Alle DLSS-Presets & Versions-Kompatibilität erklärt** section of the Game Details & Preset Settings modals, detailing which DLL version range (`v2.0 – 2.5.1`, `v3.1.1 – 3.6.0`, `v3.7.0 – 3.8.10`, `v310.1.0`, `v310.2.1 – 310.3.0`, `v310.4.0 – 310.8.0`, `v310.9.0 – 310.9.16+`) supports which DLSS generation (`CNN`, `Transformer Gen 1`, `DLSS 4.5 Transformer Gen 2`), presets (`A–F`, `J`, `K`, `L`, `M`), and GPU architectures.
+  - Added detailed German and English descriptions (`DLSS_PRESET_META`) for every DLSS Super Resolution (`Preset J`, `Preset K`, `Preset L`, `Preset M`, `Latest`, `Default`), Ray Reconstruction (`Preset D`, `Preset F`, `Latest`, `Default`), and Frame Generation (`Preset A`, `Preset B`, `Latest`, `Default`) preset, including a live description line below the active selector and a collapsible **📖 Alle DLSS-Presets & Unterschiede erklärt** comparison guide.
+  - Filtered the inline **🎛️ Angewendete NVIDIA DLSS Presets (Treiber-DRS)** grid to only display cards for DLSS technologies actually present in the game (`DLSS`, `DLSS-RR`, `DLSS-G`), giving single-technology games (like **Star Citizen**) full width without wasted disabled dropdown columns.
   - Reordered and decluttered the **Game Details Modal** so **📦 Detected Upscaler DLLs** are placed right at the top with inline active preset badges (`🎛️ Aktiv: Preset K` / `🎛️ Preset: Standard`).
   - Added a dedicated **🎛️ Angewendete NVIDIA DLSS Presets (Treiber-DRS)** 3-column status and control bar (`Super Resolution (SR)`, `Ray Reconstruction (RR)`, `Frame Generation (FG)`) directly inside the Game Details Modal, showing live active status (`✓ Optimales Preset aktiv`, `● Eigenes Preset aktiv`, or `○ Treiber-Standard`), recommended preset badges (`★ Preset K`), one-click optimal preset application, and inline dropdown selectors.
   - Streamlined the **🎯 Compatibility & In-Game Recommendations** box with a 2-column settings grid, collapsible `<details>` accordion for unsupported technologies, and automatic German/English translation of database notes (`translateDbText`).
@@ -22,7 +50,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added complete, consistent German and English translations across the entire application (Sidebar, Topbar, Hub, Games Library, Status Filters, Batch Selection Bar, Game Hero Cards, Card Context Menu, Game Details Modal, Report Game Modal, Edit Display & Artwork Modal, NVIDIA DLSS Presets Modal, Batch Update Scope Modal, Activity Logs Modal, Backups, Settings, Info page, and Toast notifications) with zero language mixing.
   - Added a one-click language switcher button (`🇩🇪 DE` / `🇬🇧 EN`) in the Topbar as well as a persisted language selector in **Settings -> Update- & Sicherheitseinstellungen (`AppConfig.language`)**.
   - Added a matching `🇩🇪 DE` / `🇬🇧 EN` language switcher to the `dlssdb.goover.dev` Online Database web portal.
-- **Custom `DM` (DLSS Manager) Application Icon & Branding (`src-tauri/icons/`, `ui/index.html`, `ui/assets/logo.png`):**
+- **Custom `DM` (DLSS Manager) Application Icon, Social Preview Banner & Documentation (`src-tauri/icons/`, `.github/assets/`, `CONTRIBUTORS.md`, `README.md`):**
+  - Created `.github/assets/logo.png`, `.github/assets/logo.svg`, and the `1280×640` `.github/assets/social-banner.png` social preview banner.
+  - Created [`CONTRIBUTORS.md`](CONTRIBUTORS.md) documenting core maintainers (`gOOvER`), original upstream authorship (`Recol / Deco`), upstream SDK providers, and contribution guidelines.
+  - Overhauled [`README.md`](README.md) for the **Rust + Tauri 2** architecture with the centered social preview banner, unified badge bar, 9-launcher detection matrix, **📊 DLSS Version, Preset & Hardware Reference Matrix**, Online-DB (`dlssdb.goover.dev`) documentation, and Rust/Tauri build instructions.
   - Replaced the legacy `DU` icon with a custom high-contrast **DM** monogram icon across the Windows executable resource table (`icon.ico`, `dlss_manager.ico`), taskbar/window icon (`32x32.png`, `128x128.png`, `128x128@2x.png`, `icon.png`), in-app sidebar & Info page (embedded directly as an inline Base64 PNG in `ui/index.html` plus `ui/assets/logo.png`), and the `dlssdb.goover.dev` web portal (`favicon.png`).
   - Encoded `16x16`, `24x24`, `32x32`, `48x48`, `64x64`, and `128x128` icon frames as uncompressed 32-bit BGRA `BITMAPINFOHEADER` DIBs with 1-bit AND masks alongside the `256x256` PNG frame so Windows Explorer Details/Small-Icon views always render the new `DM` icon cleanly.
 - **Online Database Personal API Key & Community Game Reporting (`src-tauri/src/game_db.rs`, `ui/app.js`):**
@@ -37,7 +68,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Updated **Star Citizen** recommended setting to `Graphics Renderer: Vulkan`.
   - Updated **Overwatch 2** (`2357570`) to include `FSR 3/4` and `XeSS` alongside `DLSS`.
 
+### Changed
+- **Dependency Upgrades & Whole-Codebase Optimization (`src-tauri/Cargo.toml`, `src-tauri/src/*.rs`, `.github/workflows/*.yml`, `ui/app.js`):**
+  - Upgraded all Rust dependencies to their latest releases: `reqwest 0.13.5`, `rusqlite 0.43.0`, `zip 9.8.1`, `sha2 0.11.1`, `dirs 7.0.0`, `libloading 0.9.1`, `winreg 0.56.0`, `windows-sys 0.61.2`, `tauri 2.12.7`, `tauri-build 2.7.6`, `tauri-plugin-opener 2.7.3`, `tauri-plugin-dialog 2.8.4`, `wry 0.57.3`, `tao 0.37.3`, `regex 1.13.2`, and removed unused dead dependencies (`toml`, `thiserror`, `log`, `once_cell`).
+  - Upgraded GitHub Actions workflows (`rust-ci.yml`, `update-version-badge.yml`) to `actions/checkout@v7`.
+  - Expanded `.gitignore` to exclude `*.code-workspace`, `.vscode/`, `cloudflare-pages-gamedb/`, installers/binaries (`*.exe`, `*.msi`, `*.nupkg`, `*.pdb`, `*.dll`), local SQLite databases, secrets/keys, and OS metadata (`Thumbs.db`, `Desktop.ini`, `.DS_Store`), and untracked `DLSS-Updater.code-workspace` and `.vscode/` from the Git index (`git rm --cached`).
+  - Replaced per-request `reqwest::Client::builder()` instantiations with a shared connection-pooled `shared_http_client()` (`std::sync::LazyLock<reqwest::Client>`).
+  - Pre-compiled all VDF, ACF, and RSI Launcher regular expressions in `src-tauri/src/scanner.rs` using `std::sync::LazyLock<Regex>`.
+  - Optimized Epic Games manifest verification (`is_verified_epic_install_in`) to read `C:\ProgramData\Epic\...\Manifests\*.item` once per scan/load pass instead of per directory.
+  - Preserved original game DLL backups during batch updates (`bulk_update_selected_games` now checks `!already_backed_up`).
+  - Completely removed `Recol/DLSS-Updater-DLLs` from `src-tauri/src/repository.rs` and switched exclusively to official NVIDIA upstream sources (`https://github.com/NVIDIA/DLSS` and the local official NVIDIA GeForce Driver NGX Model cache `C:\ProgramData\NVIDIA\NGX\models\`), preferring the full `74.18 MB` all-presets DLSS 4.5 (`v310.9.16.0`) binary over trimmed SDK builds.
+  - Updated `apply_nvapi_dlss_presets` (`src-tauri/src/gpu_nvapi.rs`) to delete disabled/unsupported `Default` preset settings via `NvAPI_DRS_DeleteProfileSetting` (`0xE4A26362`) instead of writing `0` overrides, and prevented `get_initial_state` from applying global Ray Reconstruction or Frame Generation presets to games that do not ship with `nvngx_dlssd.dll` or `nvngx_dlssg.dll`.
+
 ### Fixed
+- **Game Card Top Badge Overflow, Technology-Aware DLSS Presets & Live On-Disk DLL Version Refresh (`ui/app.js`, `ui/styles.css`, `src-tauri/src/database.rs`):**
+  - Fixed game card header badge overflow where multi-word launcher pills (e.g. `Star Citizen`) wrapped onto two lines and pushed the Anti-Cheat badge (`🛡️ EasyAntiCheat`) and context menu button (`⋮`) off the right edge of the card. Launcher pills now enforce `white-space: nowrap; flex-shrink: 0;`, while the active DLSS Preset badge (`🎛️ Preset K`) is displayed cleanly inline next to the detected DLSS version (`DLSS 310.9.16 · 🎛️ Preset K`) inside `.hero-tech-line`.
+  - Restricted per-game DLSS preset display and dropdown selection (`Super Resolution (SR)`, `Ray Reconstruction (RR)`, `Frame Generation (FG)`) to technologies actually present in the game's folder (`DLSS`, `DLSS-RR`, `DLSS-G`), preventing games without Frame Generation or Ray Reconstruction (such as **Star Citizen**) from falsely showing or applying `FG: Preset B` or `RR` overrides.
+  - Added live on-disk PE version refreshing inside `Database::load_games` so external DLL changes or game patches are reflected immediately on startup without requiring a manual library scan.
 - **Uninstalled Ghost Directory, Multi-Drive Root & Launcher Folder Variants (`src-tauri/src/scanner.rs`, `src-tauri/src/database.rs`):**
   - Filtered out uninstalled leftover game directories (such as an uninstalled Battle.net `Overwatch\_retail_` folder that only left behind an orphaned `nvngx_dlss.dll` without `Overwatch.exe`) by verifying that both the game root and any Battle.net flavor directory (`_retail_`, `_classic_`, `_ptr_`, `_beta_`) contain a valid shipping `.exe` executable.
   - Verified Epic Games installations (`is_verified_epic_install`) against `C:\ProgramData\Epic\EpicGamesLauncher\Data\Manifests\*.item` and `C:\ProgramData\Epic\UnrealEngineLauncher\LauncherInstalled.dat`, preventing leftover `.egstore` folders on disk (such as an uninstalled `F:\Cyberpunk2077` copy) from appearing as active Epic Games installations.
@@ -45,7 +92,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Expanded multi-drive (`A:`–`Z:`) discovery to also scan top-level standalone game directories installed directly at a drive root (e.g. `F:\DCS World`) as well as alternate launcher folder names (`<Drive>:\XBox`, `<Drive>:\Battlenet`, `<Drive>:\GoG`, `<Drive>:\UPlay`, `<Drive>:\Rockstars`).
 - **Steam Store Search Modal Preview Images (`search_steam_store`):**
   - Fixed broken preview images for 2025/2026 Steam titles in the **✏️ Edit Display & Artwork** dialog by using hashed `tiny_image` / `IStoreBrowseService` asset URLs instead of legacy unhashed `/header.jpg` paths.
-- **NVIDIA DRS DLSS Preset Persistence & `.exe` Profile Binding (`src-tauri/src/gpu_nvapi.rs`, `src-tauri/src/lib.rs`):**
+- **NVIDIA DRS DLSS Preset Persistence, `0x10E41DF5` Scaling-Ratio Bugfix & `.exe` Profile Binding (`src-tauri/src/gpu_nvapi.rs`, `src-tauri/src/lib.rs`):**
+  - **Root Cause Fix for DLSS 4.5 (`v310.9.16.0`) `GPU: DLSS Support = Unavailable`:** Fixed `NGX_DLSS_FG_PRESET_ID` in `src-tauri/src/gpu_nvapi.rs` which was previously set to `0x10E4_1DF5` (`"Override scaling ratio for DLSS-SR"`) instead of `0x10E4_1DF1` (`"Override DLSS-FG preset"`). Writing a Frame Generation preset value (`1` or `2`) into `0x10E4_1DF5` set the global DLSS Super Resolution custom scaling ratio to `2%`, which older DLSS `310.2.1.0` ignored but DLSS 4.5 `310.9.16.0` rejected with `InvalidParameter` (`GPU: DLSS Support = Unavailable`). Automatically deletes/resets any poisoned `0x10E4_1DF5` / `0x10AF_B768` / `0x10BD_9423` scaling-ratio overrides in both the Global Base Profile and per-game DRS profiles.
+  - Fixed an NVAPI DRS return-code bug where `NvAPI_DRS_FindApplicationByName` / `NvAPI_DRS_FindProfileByName` could leave `h_profile` uninitialized on non-zero return codes or create an empty orphan profile (`numApps = 0`, e.g., `"Star Citizen"`) instead of targeting NVIDIA's predefined profile bound to `starcitizen.exe` (`"Squadron 42 - Star Citizen"`), `diablo iv.exe` (`"Diablo 4"`), or `es2-win64-shipping.exe` (`"EVERSPACE 2"`). Automatically cleans up orphan zero-app custom profiles.
+  - Excluded engine-coupled `Streamline` (`sl.*.dll`) middleware from default auto-updates to prevent `sl.interposer.dll` / `sl.deepdvc.dll` SDK version mismatches in Unreal Engine 5 games.
   - Bound per-game DLSS Preset overrides directly to the game's shipping `.exe` (`NvAPI_DRS_FindApplicationByName` `0xEEE566B2` & `NvAPI_DRS_CreateApplication` `0x4347A9DE`) so DLSS Manager targets the exact same `nvdrsdb.bin` driver profile used by the NVIDIA driver and NVIDIA App.
   - Added automatic DLSS Preset re-enforcement on **DLSS Manager startup** (`get_initial_state`) and **immediately before launching any game** (`launch_game_cmd`), ensuring that GeForce driver updates or NVIDIA App background optimizations do not permanently reset configured presets.
 
@@ -81,6 +131,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Star Citizen Integration (`LauncherType::Rsi` -> `"Star Citizen"`):**
   - Renamed launcher label from `"RSI Launcher"` to **`"Star Citizen"`** and embedded the official Star Citizen icon (`ui/assets/icons/starcitizen.png`) and hero cover artwork (`ui/assets/icons/starcitizen_cover.png`).
   - Automatic discovery of `StarCitizen` installations via `%APPDATA%\rsilauncher\logs\log.log` (`[Launcher::launch]` & path parsing) and across all drives and release channels (`LIVE`, `PTU`, `EPTU`, `TECH-PREVIEW`, `HOTFIX`, `4.0_PREVIEW`), fast targeted scanning of `Bin64\` + `EasyAntiCheat\` (skipping the 150+ GB `Data.p4k`, `user\`, and `logbackups\`), and direct launching via `RSI Launcher.exe`.
+- **Multi-Source Latest Stable DLL Manifest Resolver & Official `NVIDIA/DLSS` Integration (`src-tauri/src/repository.rs`):**
+  - Directly queries the official **`NVIDIA/DLSS`** GitHub repository (`https://github.com/NVIDIA/DLSS/releases/latest` -> `lib/Windows_x86_64/rel/nvngx_dlss.dll`, `nvngx_dlssd.dll`, `nvngx_dlssg.dll`) alongside `Recol/DLSS-Updater-DLLs` and `dlss-swapper-manifest-builder`, strictly filtering out developer/watermarked builds (`is_developer_build == false`, `!= 310.7.*`) and always selecting the highest official stable version.
+  - Added automatic in-memory `.zip` extraction (`PK\x03\x04`) alongside raw `.dll` (`MZ`) verification in `ensure_dll_cached`.
+  - Added **1-Click DLL Reinstall (`🔄 Reinstall` / `🔄 Reinstall All`)** per technology group in the Game Details Modal and in the Card Context Menu (`⋮`), preserving existing original game backups without overwriting them.
+- **Cloudflare Pages Game Compatibility & Settings Database (`src-tauri/src/game_db.rs` & `cloudflare-pages-gamedb/`):**
+  - Added an online + offline-cached Game Compatibility & Optimal Settings Database (`sync_game_database`, `apply_recommended_game_profile`) designed for hosting on **Cloudflare Pages Free Tier** (`/api/v1/games.json`).
+  - Displays per-game Anti-Cheat policies (`safe`, `signed_only`, `driver_override_only`, `blocked`), warning banners, explanations for unsupported technologies (e.g. why Star Citizen's FSR/TSR has no external DLL and `DLSS-G` is not supported), recommended in-game graphics settings, and a 1-click **`✨ Apply Optimal Preset`** button in the Game Details Modal.
 - **Cloudflare Pages Online Game Compatibility & Settings Database (`src-tauri/src/game_db.rs` & `DLSS-Manager-OnlineDB`):**
   - Offline-first online game profile database (`https://dlssdb.goover.dev/api/v1/games.json` with automatic fallback to `dlss-manager-onlinedb.pages.dev`, GitHub Raw, local sibling `DLSS-Manager-OnlineDB/api/v1/games.json`, and built-in seed profiles).
   - Annotates scanned games in the Game Details Modal (`☁️ Game Compatibility & Recommended Settings DB`) with Anti-Cheat policies (`safe`, `signed_only`, `driver_override_only`, `blocked`), unsupported technology explanations (e.g., why `Star Citizen` compiles FSR 2 / TSR into `StarCitizen.exe` & `Data.p4k`), recommended in-game graphics settings, and 1-click **✨ Apply Recommended Presets**.
@@ -129,6 +186,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     platformdirs, winloop, multidict, qh3, urllib3-future, certifi, tzdata).
 
 
+### Changed
+- **Dependency Upgrades & Whole-Codebase Optimization (`src-tauri/Cargo.toml`, `src-tauri/src/*.rs`, `.github/workflows/*.yml`, `ui/app.js`):**
+  - Upgraded all Rust dependencies to their latest releases: `reqwest 0.13.5`, `rusqlite 0.43.0`, `zip 9.8.1`, `sha2 0.11.1`, `dirs 7.0.0`, `libloading 0.9.1`, `winreg 0.56.0`, `windows-sys 0.61.2`, `tauri 2.12.7`, `tauri-build 2.7.6`, `tauri-plugin-opener 2.7.3`, `tauri-plugin-dialog 2.8.4`, `wry 0.57.3`, `tao 0.37.3`, `regex 1.13.2`, and removed unused dead dependencies (`toml`, `thiserror`, `log`, `once_cell`).
+  - Upgraded GitHub Actions workflows (`rust-ci.yml`, `update-version-badge.yml`) to `actions/checkout@v7`.
+  - Expanded `.gitignore` to exclude `*.code-workspace`, `.vscode/`, `cloudflare-pages-gamedb/`, installers/binaries (`*.exe`, `*.msi`, `*.nupkg`, `*.pdb`, `*.dll`), local SQLite databases, secrets/keys, and OS metadata (`Thumbs.db`, `Desktop.ini`, `.DS_Store`), and untracked `DLSS-Updater.code-workspace` and `.vscode/` from the Git index (`git rm --cached`).
+  - Replaced per-request `reqwest::Client::builder()` instantiations with a shared connection-pooled `shared_http_client()` (`std::sync::LazyLock<reqwest::Client>`).
+  - Pre-compiled all VDF, ACF, and RSI Launcher regular expressions in `src-tauri/src/scanner.rs` using `std::sync::LazyLock<Regex>`.
+  - Optimized Epic Games manifest verification (`is_verified_epic_install_in`) to read `C:\ProgramData\Epic\...\Manifests\*.item` once per scan/load pass instead of per directory.
+  - Preserved original game DLL backups during batch updates (`bulk_update_selected_games` now checks `!already_backed_up`).
+  - Protected **Star Citizen** (`driver_override_only`) against on-disk `Bin64\nvngx_dlss.dll` replacement because EasyAntiCheat (`EasyAntiCheat\Certificates\base.bin`) checks the exact SHA-256 hash of `Bin64\nvngx_dlss.dll` (`v310.2.1.0`) at Init Phase 3; DLSS 4 Transformer **Preset K** is instead applied safely via the NVIDIA Driver DRS Override on `"Squadron 42 - Star Citizen"`.
+
 ### Fixed
   - Restoring a game after an FSR 4 upgrade left it with no FSR at all. The
     upgrade replaced the game's original FidelityFX DLL without keeping a
@@ -173,6 +241,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     technology's colour, instead of one row for every DLL.
 
 
+### Changed
+- **Dependency Upgrades & Whole-Codebase Optimization (`src-tauri/Cargo.toml`, `src-tauri/src/*.rs`, `.github/workflows/*.yml`, `ui/app.js`):**
+  - Upgraded all Rust dependencies to their latest releases: `reqwest 0.13.5`, `rusqlite 0.43.0`, `zip 9.8.1`, `sha2 0.11.1`, `dirs 7.0.0`, `libloading 0.9.1`, `winreg 0.56.0`, `windows-sys 0.61.2`, `tauri 2.12.7`, `tauri-build 2.7.6`, `tauri-plugin-opener 2.7.3`, `tauri-plugin-dialog 2.8.4`, `wry 0.57.3`, `tao 0.37.3`, `regex 1.13.2`, and removed unused dead dependencies (`toml`, `thiserror`, `log`, `once_cell`).
+  - Upgraded GitHub Actions workflows (`rust-ci.yml`, `update-version-badge.yml`) to `actions/checkout@v7`.
+  - Expanded `.gitignore` to exclude `*.code-workspace`, `.vscode/`, `cloudflare-pages-gamedb/`, installers/binaries (`*.exe`, `*.msi`, `*.nupkg`, `*.pdb`, `*.dll`), local SQLite databases, secrets/keys, and OS metadata (`Thumbs.db`, `Desktop.ini`, `.DS_Store`), and untracked `DLSS-Updater.code-workspace` and `.vscode/` from the Git index (`git rm --cached`).
+  - Replaced per-request `reqwest::Client::builder()` instantiations with a shared connection-pooled `shared_http_client()` (`std::sync::LazyLock<reqwest::Client>`).
+  - Pre-compiled all VDF, ACF, and RSI Launcher regular expressions in `src-tauri/src/scanner.rs` using `std::sync::LazyLock<Regex>`.
+  - Optimized Epic Games manifest verification (`is_verified_epic_install_in`) to read `C:\ProgramData\Epic\...\Manifests\*.item` once per scan/load pass instead of per directory.
+  - Preserved original game DLL backups during batch updates (`bulk_update_selected_games` now checks `!already_backed_up`).
+  - Protected **Star Citizen** (`driver_override_only`) against on-disk `Bin64\nvngx_dlss.dll` replacement because EasyAntiCheat (`EasyAntiCheat\Certificates\base.bin`) checks the exact SHA-256 hash of `Bin64\nvngx_dlss.dll` (`v310.2.1.0`) at Init Phase 3; DLSS 4 Transformer **Preset K** is instead applied safely via the NVIDIA Driver DRS Override on `"Squadron 42 - Star Citizen"`.
+
 ### Fixed
   - Restoring one technology (XeSS, DLSS, FSR...) from a game's DLL groups
     window always failed with "No backups found for group", even when the
@@ -192,6 +271,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     the checkbox that only appears when you hover a card. Esc or Done leaves
     selection mode.
 
+
+### Changed
+- **Dependency Upgrades & Whole-Codebase Optimization (`src-tauri/Cargo.toml`, `src-tauri/src/*.rs`, `.github/workflows/*.yml`, `ui/app.js`):**
+  - Upgraded all Rust dependencies to their latest releases: `reqwest 0.13.5`, `rusqlite 0.43.0`, `zip 9.8.1`, `sha2 0.11.1`, `dirs 7.0.0`, `libloading 0.9.1`, `winreg 0.56.0`, `windows-sys 0.61.2`, `tauri 2.12.7`, `tauri-build 2.7.6`, `tauri-plugin-opener 2.7.3`, `tauri-plugin-dialog 2.8.4`, `wry 0.57.3`, `tao 0.37.3`, `regex 1.13.2`, and removed unused dead dependencies (`toml`, `thiserror`, `log`, `once_cell`).
+  - Upgraded GitHub Actions workflows (`rust-ci.yml`, `update-version-badge.yml`) to `actions/checkout@v7`.
+  - Expanded `.gitignore` to exclude `*.code-workspace`, `.vscode/`, `cloudflare-pages-gamedb/`, installers/binaries (`*.exe`, `*.msi`, `*.nupkg`, `*.pdb`, `*.dll`), local SQLite databases, secrets/keys, and OS metadata (`Thumbs.db`, `Desktop.ini`, `.DS_Store`), and untracked `DLSS-Updater.code-workspace` and `.vscode/` from the Git index (`git rm --cached`).
+  - Replaced per-request `reqwest::Client::builder()` instantiations with a shared connection-pooled `shared_http_client()` (`std::sync::LazyLock<reqwest::Client>`).
+  - Pre-compiled all VDF, ACF, and RSI Launcher regular expressions in `src-tauri/src/scanner.rs` using `std::sync::LazyLock<Regex>`.
+  - Optimized Epic Games manifest verification (`is_verified_epic_install_in`) to read `C:\ProgramData\Epic\...\Manifests\*.item` once per scan/load pass instead of per directory.
+  - Preserved original game DLL backups during batch updates (`bulk_update_selected_games` now checks `!already_backed_up`).
+  - Protected **Star Citizen** (`driver_override_only`) against on-disk `Bin64\nvngx_dlss.dll` replacement because EasyAntiCheat (`EasyAntiCheat\Certificates\base.bin`) checks the exact SHA-256 hash of `Bin64\nvngx_dlss.dll` (`v310.2.1.0`) at Init Phase 3; DLSS 4 Transformer **Preset K** is instead applied safely via the NVIDIA Driver DRS Override on `"Squadron 42 - Star Citizen"`.
 
 ### Fixed
   - Several icons never changed after the app started: the tick on a
@@ -226,6 +316,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ## [5.0.3] - Legacy (DLSS Updater)
+
+### Changed
+- **Dependency Upgrades & Whole-Codebase Optimization (`src-tauri/Cargo.toml`, `src-tauri/src/*.rs`, `.github/workflows/*.yml`, `ui/app.js`):**
+  - Upgraded all Rust dependencies to their latest releases: `reqwest 0.13.5`, `rusqlite 0.43.0`, `zip 9.8.1`, `sha2 0.11.1`, `dirs 7.0.0`, `libloading 0.9.1`, `winreg 0.56.0`, `windows-sys 0.61.2`, `tauri 2.12.7`, `tauri-build 2.7.6`, `tauri-plugin-opener 2.7.3`, `tauri-plugin-dialog 2.8.4`, `wry 0.57.3`, `tao 0.37.3`, `regex 1.13.2`, and removed unused dead dependencies (`toml`, `thiserror`, `log`, `once_cell`).
+  - Upgraded GitHub Actions workflows (`rust-ci.yml`, `update-version-badge.yml`) to `actions/checkout@v7`.
+  - Expanded `.gitignore` to exclude `*.code-workspace`, `.vscode/`, `cloudflare-pages-gamedb/`, installers/binaries (`*.exe`, `*.msi`, `*.nupkg`, `*.pdb`, `*.dll`), local SQLite databases, secrets/keys, and OS metadata (`Thumbs.db`, `Desktop.ini`, `.DS_Store`), and untracked `DLSS-Updater.code-workspace` and `.vscode/` from the Git index (`git rm --cached`).
+  - Replaced per-request `reqwest::Client::builder()` instantiations with a shared connection-pooled `shared_http_client()` (`std::sync::LazyLock<reqwest::Client>`).
+  - Pre-compiled all VDF, ACF, and RSI Launcher regular expressions in `src-tauri/src/scanner.rs` using `std::sync::LazyLock<Regex>`.
+  - Optimized Epic Games manifest verification (`is_verified_epic_install_in`) to read `C:\ProgramData\Epic\...\Manifests\*.item` once per scan/load pass instead of per directory.
+  - Preserved original game DLL backups during batch updates (`bulk_update_selected_games` now checks `!already_backed_up`).
+  - Protected **Star Citizen** (`driver_override_only`) against on-disk `Bin64\nvngx_dlss.dll` replacement because EasyAntiCheat (`EasyAntiCheat\Certificates\base.bin`) checks the exact SHA-256 hash of `Bin64\nvngx_dlss.dll` (`v310.2.1.0`) at Init Phase 3; DLSS 4 Transformer **Preset K** is instead applied safely via the NVIDIA Driver DRS Override on `"Squadron 42 - Star Citizen"`.
 
 ### Fixed
   - "scanned 3d ago" in the Games header, and the times shown against your
@@ -291,6 +392,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ## [5.0.1] - Legacy (DLSS Updater)
+
+### Changed
+- **Dependency Upgrades & Whole-Codebase Optimization (`src-tauri/Cargo.toml`, `src-tauri/src/*.rs`, `.github/workflows/*.yml`, `ui/app.js`):**
+  - Upgraded all Rust dependencies to their latest releases: `reqwest 0.13.5`, `rusqlite 0.43.0`, `zip 9.8.1`, `sha2 0.11.1`, `dirs 7.0.0`, `libloading 0.9.1`, `winreg 0.56.0`, `windows-sys 0.61.2`, `tauri 2.12.7`, `tauri-build 2.7.6`, `tauri-plugin-opener 2.7.3`, `tauri-plugin-dialog 2.8.4`, `wry 0.57.3`, `tao 0.37.3`, `regex 1.13.2`, and removed unused dead dependencies (`toml`, `thiserror`, `log`, `once_cell`).
+  - Upgraded GitHub Actions workflows (`rust-ci.yml`, `update-version-badge.yml`) to `actions/checkout@v7`.
+  - Expanded `.gitignore` to exclude `*.code-workspace`, `.vscode/`, `cloudflare-pages-gamedb/`, installers/binaries (`*.exe`, `*.msi`, `*.nupkg`, `*.pdb`, `*.dll`), local SQLite databases, secrets/keys, and OS metadata (`Thumbs.db`, `Desktop.ini`, `.DS_Store`), and untracked `DLSS-Updater.code-workspace` and `.vscode/` from the Git index (`git rm --cached`).
+  - Replaced per-request `reqwest::Client::builder()` instantiations with a shared connection-pooled `shared_http_client()` (`std::sync::LazyLock<reqwest::Client>`).
+  - Pre-compiled all VDF, ACF, and RSI Launcher regular expressions in `src-tauri/src/scanner.rs` using `std::sync::LazyLock<Regex>`.
+  - Optimized Epic Games manifest verification (`is_verified_epic_install_in`) to read `C:\ProgramData\Epic\...\Manifests\*.item` once per scan/load pass instead of per directory.
+  - Preserved original game DLL backups during batch updates (`bulk_update_selected_games` now checks `!already_backed_up`).
+  - Protected **Star Citizen** (`driver_override_only`) against on-disk `Bin64\nvngx_dlss.dll` replacement because EasyAntiCheat (`EasyAntiCheat\Certificates\base.bin`) checks the exact SHA-256 hash of `Bin64\nvngx_dlss.dll` (`v310.2.1.0`) at Init Phase 3; DLSS 4 Transformer **Preset K** is instead applied safely via the NVIDIA Driver DRS Override on `"Squadron 42 - Star Citizen"`.
 
 ### Fixed
   - Ignored games no longer count towards "needs update". Ignoring a game
@@ -2127,5 +2239,6 @@ Significant performance upgrades to backend initiations.
 Added a pre loading phase spinner.
 Header section overhaul, animations, a Games section etc.
 
-[Unreleased]: https://github.com/gOOvER/DLSS-Manager/compare/v1.0.0-beta.1...HEAD
+[Unreleased]: https://github.com/gOOvER/DLSS-Manager/compare/v1.0.0-beta.2...HEAD
+[1.0.0-beta.2]: https://github.com/gOOvER/DLSS-Manager/releases/tag/v1.0.0-beta.2
 [1.0.0-beta.1]: https://github.com/gOOvER/DLSS-Manager/releases/tag/v1.0.0-beta.1

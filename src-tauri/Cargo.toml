@@ -1,8 +1,8 @@
 [package]
 name = "dlss-manager"
-version = "1.0.0-beta.1"
+version = "1.0.0-beta.2"
 description = "High-performance DLSS, FSR, XeSS, DirectStorage, and Streamline DLL Manager for games"
-authors = ["gOOvER", "Recol (Deco)"]
+authors = ["gOOvER"]
 license = "AGPL-3.0-only"
 repository = "https://github.com/gOOvER/DLSS-Manager"
 edition = "2021"
@@ -22,30 +22,24 @@ tauri-plugin-dialog = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tokio = { version = "1", features = ["full"] }
-reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "stream"] }
-rusqlite = { version = "0.32", features = ["bundled"] }
+reqwest = { version = "0.13", default-features = false, features = ["json", "rustls", "stream"] }
+rusqlite = { version = "0.43", features = ["bundled"] }
 walkdir = "2"
 rayon = "1"
-sha2 = "0.10"
+sha2 = "0.11"
 hex = "0.4"
-zip = { version = "2", default-features = false, features = ["deflate"] }
-toml = "0.8"
+zip = { version = "9", default-features = false, features = ["deflate"] }
 chrono = { version = "0.4", features = ["serde"] }
-dirs = "5"
-libloading = "0.8"
+dirs = "7"
+libloading = "0.9"
 anyhow = "1"
-thiserror = "2"
-log = "0.4"
-once_cell = "1"
 regex = "1"
 
 [target.'cfg(windows)'.dependencies]
-winreg = "0.52"
-windows-sys = { version = "0.59", features = [
+winreg = "0.56"
+windows-sys = { version = "0.61", features = [
     "Win32_Foundation",
     "Win32_Storage_FileSystem",
-    "Win32_System_LibraryLoader",
-    "Win32_UI_Shell",
 ] }
 
 [profile.release]

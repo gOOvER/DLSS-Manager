@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0b111e"/>
+      <stop offset="55%" stop-color="#111a2e"/>
+      <stop offset="100%" stop-color="#0f2412"/>
+    </linearGradient>
+    <linearGradient id="nvGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#a3e635"/>
+      <stop offset="100%" stop-color="#76b900"/>
+    </linearGradient>
+    <linearGradient id="cyanGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#0284c7"/>
+    </linearGradient>
+  </defs>
+  <rect x="16" y="16" width="480" height="480" rx="108" fill="url(#bgGrad)" stroke="url(#nvGrad)" stroke-width="14"/>
+  <!-- D Letter -->
+  <path d="M96 144 H176 C228 144 260 180 260 256 C260 332 228 368 176 368 H96 Z M144 188 V324 H174 C202 324 214 300 214 256 C214 212 202 188 174 188 Z" fill="#f8fafc"/>
+  <!-- M Letter -->
+  <path d="M276 368 V144 H322 L354 246 L386 144 H432 V368 H390 V222 L362 312 H346 L318 222 V368 Z" fill="url(#nvGrad)"/>
+  <!-- AI Upscale Accent Bar -->
+  <rect x="96" y="396" width="210" height="14" rx="7" fill="url(#nvGrad)"/>
+  <rect x="322" y="396" width="110" height="14" rx="7" fill="url(#cyanGrad)"/>
+</svg>

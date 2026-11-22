@@ -1,435 +1,205 @@
 <div align="center">
+  <img src=".github/assets/social-banner.png" alt="DLSS Manager Banner" width="100%" />
 
-# DLSS Manager
+  # DLSS Manager
 
-**Update every DLSS / XeSS / FSR DLL across all the games on your system — from one place.**
+  **High-Performance Rust + Tauri 2 Universal Upscaler, Frame Generation & NVIDIA Driver DRS Preset Manager for Windows & Linux**
 
-[![CodeQL](https://github.com/gOOvER/DLSS-Manager/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/gOOvER/DLSS-Manager/actions?query=workflow%3ACodeQL)
-[![CodSpeed](https://img.shields.io/endpoint?url=https://codspeed.io/badge.json)](https://codspeed.io/gOOvER/DLSS-Manager?utm_source=badge)
-![Version](./version.svg)
-![Downloads](https://img.shields.io/badge/Downloads-0-blue)
-[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-donate-yellow.svg)](https://buymeacoffee.com/goover)
-
-![Python](https://img.shields.io/badge/Python-3.14_free--threaded-3776AB?logo=python&logoColor=white)
-![Flet](https://img.shields.io/badge/UI-Flet-00C4B3)
-![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux-555?logo=windows&logoColor=white)
-[![License](https://img.shields.io/badge/License-AGPL_v3-orange.svg)](LICENSE)
-
-
-
-![dlss_manager](https://github.com/user-attachments/assets/b7d7fb4d-e204-412d-8e92-61a7173abfaf)
-
-
-</div>
-
-> [!TIP]
-> **Quick start (Windows):** `winget install "DLSS Manager"` — then launch and hit scan.
-> Prefer Linux? Grab the [Flatpak](#linux). Full options are in [Installation](#installation).
-
----
-
-## Contents
-
-- [Overview](#overview)
-- [Features](#features)
-- [Bundled DLL Versions](#bundled-dll-versions)
-- [Installation](#installation)
-  - [Windows](#windows)
-  - [Linux](#linux)
-  - [Building from Source](#building-from-source)
-- [Blacklisted Games](#blacklisted-games)
-- [Anti-Cheat](#anti-cheat)
-- [Troubleshooting](#troubleshooting)
-- [Roadmap](#roadmap)
-- [License & Credits](#license--credits)
-
----
-
-## Overview
-
-DLSS Manager scans the games installed on your system, detects the upscaling and
-frame-generation DLLs they ship with, and replaces them with newer versions — with automatic backups so you can always roll back. It runs on **Windows and Linux** and
-understands games from every major launcher.
-
-<div align="center">
-<img width="1084" alt="DLSS Manager - Homepage" src="https://github.com/user-attachments/assets/489cefc9-cb4a-474c-9a36-15a45deb10c4" />
-
-</div>
-
-<div align="center">
-
-### ⭐ Star History
-
-<!-- star-history:start -->
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/star-history/star-history-dark.svg">
-  <img alt="Star history" src="assets/star-history/star-history-light.svg">
-</picture>
-<!-- star-history:end -->
-
+  [![Rust CI](https://github.com/gOOvER/DLSS-Manager/actions/workflows/rust-ci.yml/badge.svg)](https://github.com/gOOvER/DLSS-Manager/actions/workflows/rust-ci.yml)
+  [![GitHub Release](https://img.shields.io/github/v/release/gOOvER/DLSS-Manager?include_prereleases&label=Version&color=brightgreen&logo=github)](https://github.com/gOOvER/DLSS-Manager/releases/latest)
+  [![Rust & Tauri 2](https://img.shields.io/badge/Built%20with-Rust%20%2B%20Tauri%202-f74c00?logo=rust&logoColor=white)](#building-from-source)
+  [![Online-DB](https://img.shields.io/badge/Online--DB-dlssdb.goover.dev-76b900?logo=cloudflare&logoColor=white)](https://dlssdb.goover.dev)
+  [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux-0078D6?logo=windows&logoColor=white)](#installation)
+  [![License](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](LICENSE)
+  [![Contributors](https://img.shields.io/badge/Contributors-CONTRIBUTORS.md-a3e635?logo=github)](CONTRIBUTORS.md)
+  [![Support](https://img.shields.io/badge/Support-donate.goover.dev-ff69b4?logo=ko-fi&logoColor=white)](https://donate.goover.dev)
 </div>
 
 ---
 
-## Features
+## 📋 Contents
+
+- [Overview](#-overview)
+- [Key Features](#-key-features)
+- [Supported Game Launchers](#-supported-game-launchers)
+- [📊 DLSS Version, Preset & Hardware Reference Matrix](#-dlss-version-preset--hardware-reference-matrix)
+  - [1. NVIDIA DLSS Version History & Supported Presets](#1-nvidia-dlss-version-history--supported-presets-nvngx_dlssdll-nvngx_dlssddll-nvngx_dlssgdll)
+  - [2. NVIDIA DLSS Presets Breakdown](#2-nvidia-dlss-presets-breakdown)
+  - [3. All Supported Upscaler & Streaming Technologies](#3-all-supported-upscaler--streaming-technologies)
+- [☁️ Online Game Compatibility & Settings Database (`dlssdb.goover.dev`)](#️-online-game-compatibility--settings-database-dlssdbgooverdev)
+- [Installation](#-installation)
+- [Building from Source (Rust + Tauri 2)](#-building-from-source-rust--tauri-2)
+- [Contributors](#-contributors)
+- [License & Credits](#-license--credits)
+
+---
+
+## 🚀 Overview
+
+**DLSS Manager** (starting at `v1.0.0-beta.1`) is a complete ground-up **Rust + Tauri 2** desktop application that automatically discovers installed games across **9 game launchers**, inspects their **NVIDIA DLSS 4.5 / 5**, **Intel XeSS 2**, **NVIDIA Streamline**, and **Microsoft DirectStorage** binaries via zero-allocation Win32 PE `VS_FIXEDFILEINFO` parsing, updates them from official upstream sources with automatic rollback backups, and configures **Global & Per-Game NVIDIA Driver DRS Presets (`Preset J / K / L / M / F`)** directly via `nvapi64.dll`.
+
+---
+
+## ✨ Key Features
 
 <table>
   <tr>
     <td width="33%" valign="top">
-      <h3>🖥️ Cross-Platform</h3>
-      Runs on <strong>Windows &amp; Linux</strong> and detects games from every major launcher — Steam, Epic, GOG, Ubisoft, EA, Battle.net &amp; Xbox.
+      <h3>🦀 Native Rust + Tauri 2 Engine</h3>
+      Instant startup, low memory footprint, embedded <strong>SQLite (WAL + FTS5)</strong> database, connection-pooled async HTTP engine, and native Win32 PE version parser without loading untrusted DLLs into memory.
     </td>
     <td width="33%" valign="top">
-      <h3>🔄 Updates Everything</h3>
-      DLSS, Neural Rendering, Ray Reconstruction, Frame Generation, Streamline, XeSS, FSR &amp; DirectStorage — all at once, only the technologies you pick, or one binary at a time.
+      <h3>🎛️ Direct NVIDIA Driver DRS Presets</h3>
+      Configure global and per-game <strong>DLSS Super Resolution (Preset J / K / L / M)</strong>, <strong>Ray Reconstruction (Preset D / F)</strong>, and <strong>Frame Generation (Preset A / B / Latest)</strong> directly in the NVIDIA driver via <code>nvapi64.dll</code> — including automatic startup enforcement and clean profile deletion (<code>NvAPI_DRS_DeleteProfileSetting</code>).
     </td>
     <td width="33%" valign="top">
-      <h3>🎛️ DLSS Presets</h3>
-      Apply global or per-game SR / RR / FG preset overrides on Windows (NVIDIA), or per-title Proton launch options on Linux — DLSS SR/RR/FG overrides plus FSR&nbsp;4 &amp; XeSS DLL upgrades.
+      <h3>🟢 Official NVIDIA Upstream Only</h3>
+      Fetches DLSS 4.5 binaries exclusively from official NVIDIA upstream sources (<code>NVIDIA/DLSS</code> GitHub repository &amp; local official NVIDIA GeForce Driver NGX OTA model cache <code>C:\ProgramData\NVIDIA\NGX\models\</code>), preferring the full <strong>74.18 MB all-presets production build</strong> and blocking watermarked dev builds (<code>310.7.*</code>).
     </td>
   </tr>
   <tr>
     <td valign="top">
-      <h3>🖼️ Smart Game Images</h3>
-      Optional Steam Web API matching for near-perfect banners, plus custom banner &amp; name overrides that survive rescans.
+      <h3>☁️ Online Compatibility DB (<code>dlssdb.goover.dev</code>)</h3>
+      Syncs per-game anti-cheat rules, optimal DLSS presets, and recommended in-game settings from <a href="https://dlssdb.goover.dev">dlssdb.goover.dev</a> using your personal API key, with 1-click community reporting right from any game card.
     </td>
     <td valign="top">
-      <h3>💾 Safe by Default</h3>
-      Every binary is backed up before it's touched — restore any DLL in one click from the <strong>Backups</strong> view.
+      <h3>🖼️ Steam Web API &amp; Hashed Artwork</h3>
+      Automatically resolves 2025/2026 Steam SHA-1 hashed capsule &amp; hero artwork via Valve's <code>IStoreBrowseService/GetItems/v1</code> API and local <code>appcache\librarycache</code> inspection, plus built-in Star Citizen cover artwork.
     </td>
     <td valign="top">
-      <h3>🚫 Custom Blacklist</h3>
-      Skip (or force) any title with your own per-game blacklist, layered on top of the community list.
-    </td>
-  </tr>
-  <tr>
-    <td colspan="3" valign="top">
-      <h3>⬆️ Updates Itself</h3>
-      When a new release lands, the version badge beside the title becomes an update button. On <strong>Windows</strong> it downloads, verifies and installs the new version, then restarts itself. On <strong>Linux</strong> it downloads the Flatpak bundle — a sandboxed app can't install packages itself — though Flatpak users can simply take updates through <code>flatpak update</code> or their software centre instead.
+      <h3>🇩🇪 / 🇬🇧 Full Bilingual UI &amp; Backups</h3>
+      Switch between <strong>German (<code>🇩🇪 DE</code>)</strong> and <strong>English (<code>🇬🇧 EN</code>)</strong> in one click. Every original game DLL is backed up automatically before replacement and can be restored per-technology or per-game at any time.
     </td>
   </tr>
 </table>
 
-<details>
-<summary><h3>🖥️ Platform &amp; Launcher Support</h3></summary>
+---
 
-Cross-platform on **Windows and Linux**, with detection for the launchers below:
+## 🎮 Supported Game Launchers
 
-| Launcher | Windows | Linux | Notes |
-|---|:---:|:---:|---|
-| Steam | ✅ | ✅ | Includes Proton games on Linux |
-| Epic Games Launcher | ✅ | ✅ | |
-| GOG Galaxy | ✅ | ✅ | |
-| Ubisoft Connect | ✅ | ✅ | |
-| EA Play | ✅ | ✅ | |
-| Battle.net | ✅ | ✅ | Keep the launcher **open** before updating (not required for custom folders) |
-| Xbox Game Pass (PC) | ✅ | — | Windows only |
-| Custom folders | ✅ | ✅ | Point at any game location manually |
+DLSS Manager automatically detects libraries across all drives (`A:\` – `Z:\`) for **9 launchers**:
 
-**Linux specifics**
-
-- Scans Steam Proton prefixes (`~/.steam/steam/steamapps/compatdata/`)
-- Supports Wine prefixes (Lutris, standalone Wine)
-- Automatic Steam path detection
-- Enable the DLSS Debug Overlay
-
-</details>
-
-<details>
-<summary><h3>🔄 DLL Updating</h3></summary>
-
-- **DLSS** Super Resolution, plus **Ray Reconstruction**, **Frame Generation** and **Streamline** (Reflex Low Latency, DirectSR, NIS, etc.)
-- **DLSS 5 Neural Rendering** — runs alongside Super Resolution rather than replacing it (RTX 50 series only; the DLL is ~158&nbsp;MB, so expect a longer first download)
-- **XeSS / XeSS Frame Generation / XeLL**
-- **FSR** — Upscaling, Frame Generation, Ray Regeneration, plus an **FSR 4 upgrade** for DirectX 12 and Vulkan games that ship only FSR 3.1 (Radeon RX 6000 / RDNA 2 and newer; skipped on other GPUs, where FSR 4 cannot run)
-- **DirectStorage** (Windows only)
-- Update everything at once, or update individual binaries for a specific game
-- **Choose what "update everything" means** — the caret beside *Start Update* (and beside the Hub's *Update all*) opens a menu of technologies. Untick the ones you want left alone and the run skips them; the caret shows a count whenever the run is narrower than everything. The choice applies to **that run only** and then reverts to your saved preferences, so a one-off "only DLSS this time" never quietly becomes permanent — use *Make this my default* to write it to **Update Preferences** instead. Both menus share one scope, so narrowing on the Hub shows up on the Launchers bar and vice versa
-- **Update a hand-picked set** — hover any game card in the **Games** view to reveal its checkbox, tick the games you want, then hit *Update selected*. **Select all** takes every game visible in the current launcher tab, so "update just this launcher" is one click away. The selection carries across launcher tabs and filters, and the run reports one summary rather than a dialog per game
-
-</details>
-
-<details>
-<summary><h3>🎛️ DLSS Presets &amp; Proton Upscalers</h3></summary>
-
-- **Global presets (Windows, experimental)** — the *DLSS Settings* card on the home page applies preset overrides to every game via the NVIDIA driver base profile (the same mechanism as the NVIDIA App's global override). Shows the currently applied preset; takes effect at the next game launch.
-  - Super Resolution (SR): Default / Latest / Preset J / K / L / M
-  - Ray Reconstruction (RR): Default / Latest / Preset D (DLSS 4) / Preset F (DLSS 4.5 Gen 2)
-  - Frame Generation (FG): Default / Latest / Preset A / B
-  - ⚠️ Per-game overrides set in the NVIDIA App take priority — set its DLSS override to *Default/Off* to let this global setting apply.
-- **Per-game presets (Windows, NVIDIA only)** — the **DLSS Settings** action on any game (right-click a card, or its *⋮* menu) opens a per-game panel that overrides SR / RR / FG for just that title via its NVIDIA per-application driver profile — the same mechanism the NVIDIA App uses for per-game overrides. It takes priority over the global setting for that game and applies at the next launch. The action is hidden automatically on non-NVIDIA systems.
-  - The game's executable is detected automatically (NVIDIA driver lookup → folder heuristic → Steam manifest); when it can't be determined, a *Change executable* file picker lets you point at the correct `.exe`. Your executable and preset choices are remembered between sessions.
-  - The panel reads back the value the driver is actually applying and distinguishes NVIDIA's predefined value from your own override. *Reset to default* clears the override (reverting to the game's predefined value) in one click.
-- **Proton Upscalers (Linux only)** — the **Proton Upscalers** panel generates per-title Steam launch options (copy-to-clipboard; the same variables work in Heroic/Lutris environment settings):
-  - **DLSS (NVIDIA)** — SR presets (Latest / J / K / L / M) and RR presets (Latest / D / F) plus a Frame Generation override via DXVK-NVAPI, matching the Windows per-game dialog. Works on any Proton, including Valve's.
-  - **DLL upgrades (GE-Proton / Proton-CachyOS / Proton-EM)** — one-toggle `PROTON_DLSS_UPGRADE`, `PROTON_FSR4_UPGRADE` (RDNA3/RDNA4 aware) and `PROTON_XESS_UPGRADE` launch options with optional on-screen indicators. The panel reads each game's Proton build from Steam's compat-tool mapping and disables toggles that build doesn't support.
-  - GPU vendor is auto-detected (NVIDIA / AMD / Intel) to show the relevant sections, with RDNA3 mode recommended automatically on RX&nbsp;7000 GPUs.
-
-</details>
-
-<details>
-<summary><h3>🖼️ Game Images &amp; Custom Display</h3></summary>
-
-- **Steam Web API integration (optional)** — connect your free Steam API key for near-perfect game image matching.
-  - Auto-detects your Steam ID from the local installation
-  - Four-tier app ID resolution: Manifest → Steam API → Store Search → FTS5 fuzzy match
-  - One-click re-resolution to fix images from previous scans
-- **Custom display** — override any game's banner image and display name via the pencil icon on its card.
-  - Search the local Steam app list to find any game (no API key required; credentials improve results)
-  - Overrides are stored separately from scanner data, so a rescan can't revert them
-  - Reset to default at any time
-- **Card size** — the *⋮* menu in the **Games** header switches the grid between **Compact**, **Comfortable** and **Large**. Compact fits noticeably more of a large library on screen; the choice is remembered between sessions.
-
-</details>
-
-<details>
-<summary><h3>💾 Backups &amp; Safety</h3></summary>
-
-- Built-in backup system that snapshots game binaries before modifying them
-- Restore any modified DLL from the **Backups** view
-- Build your own per-game blacklist to skip titles for any reason
-
-</details>
+| Launcher | Detection Mechanism | Special Support |
+| :--- | :--- | :--- |
+| **Steam** | Registry + `libraryfolders.vdf` + `appmanifest_*.acf` + `loginusers.vdf` | Auto-detects `Steam64 ID` & resolves SHA-1 hashed artwork |
+| **Star Citizen (RSI Launcher)** | `%APPDATA%\rsilauncher\logs\log.log` + drive scan (`StarCitizen\LIVE`, `PTU`, `EPTU`, `TECH-PREVIEW`, `HOTFIX`) | Separate cards per channel, automatic `Squadron 42 - Star Citizen` NVIDIA DRS profile binding & custom cover |
+| **Battle.net** | `C:\ProgramData\Battle.net\Agent\product.db` Protobuf parser + Windows Uninstall Registry | Verifies active flavor executables (`_retail_`, `_classic_`, `_ptr_`, `_beta_`) and filters uninstalled ghost folders |
+| **Epic Games** | `C:\ProgramData\Epic\EpicGamesLauncher\Data\Manifests\*.item` | Verified against active Epic manifests |
+| **GOG Galaxy** | `HKLM\SOFTWARE\WOW6432Node\GOG.com\Games` Registry | Per-game install path & executable detection |
+| **EA App / Origin** | `C:\ProgramData\EA Desktop\InstallData` + Registry | Automatic install folder scanning |
+| **Ubisoft Connect** | `HKLM\SOFTWARE\WOW6432Node\Ubisoft\Launcher\Installs` | Automatic install folder scanning |
+| **Xbox / PC Game Pass** | `.GamingRoot` + `MicrosoftGame.config` across all drives | Resolves `Content\` subdirectories |
+| **Custom Folders** | User-configured directories in Settings | Supports both individual game folders and multi-game parent libraries |
 
 ---
 
-## Bundled DLL Versions
+## 📊 DLSS Version, Preset & Hardware Reference Matrix
 
-| Technology | Included version |
-|---|---|
-| DLSS Super Resolution | 4.5 (`310.9.16.0`) |
-| DLSS FG / RR | 4.5 (`310.9.16.0`) |
-| DLSS 5 Neural Rendering *(RTX 50 series)* | `310.8.0.0` |
-| Streamline (Reflex, DLSS SR/FG/RR, DirectSR, NIS) | `2.14.16.0` |
-| FSR Upscaling (DX12 / Vulkan) | 4.1.2 (`4.1.2.4555`) |
-| FSR Frame Generation (DX12 / Vulkan) | 4.0.2 (`4.0.2.4555`) |
-| FSR Ray Regeneration | 1.2.1 (`1.2.1.4555`) |
-| FSR Loader | DX12 `2.3.0.4555`, Vulkan `1.0.2.4555` |
-| FSR Radiance Caching *(preview, opt-in)* | 0.9.0 (`0.9.0.4555`) |
-| FSR (DX12 / Vulkan, SDK 1.1.4) | `1.0.1.41314` |
-| XeSS (DX12 / DX11) | 2.0.2 (`2.0.2.68`) |
-| XeSS Frame Generation | 1.3.1 (`1.3.1.78`) |
-| XeLL | `1.3.2.10` |
-| DirectStorage *(Windows)* | 1.3 (`1.3.2506.2501`) |
+This reference matrix is also built directly into the **DLSS Manager** UI (via the **📊 Version & Preset Reference** button on the Hub, inside the **Game Details / Preset Modal**, and on the **ℹ️ Info** page).
 
-> See the [Intel XeSS releases](https://github.com/intel/xess/releases) for per-game XeSS support details.
+### 1. NVIDIA DLSS Version History & Supported Presets (`nvngx_dlss.dll`, `nvngx_dlssd.dll`, `nvngx_dlssg.dll`)
+
+| DLL Version Range | Generation & Architecture | Super Resolution (SR) Presets | Ray Reconstruction (RR) | Frame Generation (FG) | Notes & Hardware Support |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **`v310.9.0 – 310.9.16+`** | **★ DLSS 4.5 (Transformer Gen 2)** | **Preset J, K ★, L, M** *(+ CNN A–E in 74.18 MB Full Build)* | **Preset D, F ★** | **Preset A, B** *(Dynamic MFG up to 6×)* | Full DLSS 4.5 release introducing **Preset L** (4K Performance/Ultra-Perf) and **Preset M** (DLAA/Max Quality). SR/RR: RTX 20+, FG: RTX 40+, MFG 3×–6×: RTX 50. |
+| **`v310.4.0 – 310.8.0`** | **DLSS 4.5 (Early Gen 2)** | **Preset J, K ★** *(No Preset L / M)* | **Preset D, F ★** | **Preset A, B** *(MFG 3× / 4×)* | Introduced refined Transformer Gen 2 weights & RR Preset F. *(⚠️ `v310.7.x` is a watermarked dev build and is automatically blocked).* |
+| **`v310.2.1 – 310.3.0`** | **DLSS 4.0 (Transformer Gen 1)** | **Preset J, K** + **CNN A–E** *(No DLSS 4.5 · No L/M)* | **Preset D, E** *(No Preset F)* | **Preset A, B** *(MFG 3× / 4×)* | Initial DLSS 4.0 releases (e.g. stock `v310.2.1.0` in Star Citizen). Supports Transformer Gen 1 (`J`/`K`) & CNN (`E`), but **not** DLSS 4.5 (`L`/`M`). |
+| **`v310.1.0`** | **DLSS 4.0 (Launch Build)** | **Preset J** + **CNN A–E** *(No Preset K / L / M)* | **Preset D** | **Preset A** | First DLSS 4.0 binary: includes only the initial Transformer model (`Preset J`), no `Preset K` yet. |
+| **`v3.7.0 – 3.8.10`** | **DLSS 3.7 / 3.8 (CNN Final)** | **Preset A, B, C, D, E ★, F** *(No Transformer J–M)* | **CNN (A–C)** | **DLSS 3.x FG** *(2× only)* | Final pure CNN generation. Introduced **Preset E** (best CNN profile). Does not support Transformer presets. |
+| **`v3.1.1 – 3.6.0`** | **DLSS 3.1 – 3.6 (CNN)** | **Preset A, B, C, D, F** *(No Preset E or J–M)* | **CNN (from 3.5+)** | **DLSS 3.x FG** *(Optical Flow)* | Introduced the DLSS preset system (`A–F`) in `v3.1.1` and Ray Reconstruction in `v3.5.0`. |
+| **`v2.0.0 – 2.5.1`** | **DLSS 2.x (Legacy CNN)** | *Fixed CNN model (no presets)* | — | — | Classic DLSS 2 Super Resolution on RTX 20/30/40/50. Can be upgraded directly to `v310.9.16.0` (DLSS 4.5). |
+
+### 2. NVIDIA DLSS Presets Breakdown
+
+| Preset | Technology | Architecture | Min. DLL Version | Optimal Mode | Description |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **`Preset K ★`** | DLSS Super Resolution | **Transformer Gen 2** | `v310.2.1+` *(Gen 2 in `310.4+`)* | **Quality / Balanced / DLAA** | **Recommended default for almost all games:** Sharpest fine details (HUD, text, distant geometry) with highest temporal stability and minimal shimmering. |
+| **`Preset J`** | DLSS Super Resolution | **Transformer Gen 1** | `v310.1.0+` | **Quality / Balanced** | First Transformer model: Very high motion clarity and minimal ghosting, slightly more prone to shimmering on fine meshes/fences than Preset K. |
+| **`Preset L`** | DLSS Super Resolution | **Transformer Gen 2 (DLSS 4.5)** | `v310.9.0+` | **4K Performance / Ultra-Perf.** | Specifically trained in DLSS 4.5 for aggressive scaling ratios (`2×` / `3×` in 4K Performance & Ultra-Performance modes). |
+| **`Preset M`** | DLSS Super Resolution | **Transformer Gen 2 (DLSS 4.5)** | `v310.9.0+` | **DLAA / Quality (RTX 40/50)** | Maximum image quality and anti-aliasing stability for DLAA & Quality modes in DLSS 4.5 (slightly higher Tensor compute cost). |
+| **`Preset E`** | DLSS Super Resolution | **CNN (Final)** | `v3.7.0+` *(included in 74 MB `310.9.16`)* | **Quality / Balanced / Perf.** | Best classic Convolutional Neural Network (CNN) profile. Lower GPU overhead on older cards and default fallback for games like Star Citizen (`r.TSR.UpscalingPreset=0`). |
+| **`Preset A–D / F`** | DLSS Super Resolution | **CNN (Legacy)** | `v3.1.1+` | **Legacy / Ultra-Perf. (F)** | Legacy CNN profiles from DLSS 3.1–3.6 (`C` = fast motion, `D` = stability, `F` = Ultra-Performance). Superseded by Presets `K` and `L`. |
+| **`RR · Preset F ★`** | DLSS Ray Reconstruction | **Transformer Gen 2** | `v310.4.0+` | **Ray Tracing / Path Tracing** | **Recommended for all Ray Reconstruction titles:** Cleaner reflections, shadows, and significantly reduced wire/fence ghosting compared to Preset D. |
+| **`RR · Preset D`** | DLSS Ray Reconstruction | **Transformer Gen 1** | `v310.1.0+` | **Ray Tracing / Path Tracing** | First-generation Transformer denoiser model for Ray Reconstruction from DLSS 4.0. |
+| **`FG · Latest / A / B`** | DLSS Frame Generation | **AI Frame Gen + Flip Metering** | `v310.1.0+` | **2× (RTX 40) / 3×–6× (RTX 50)** | Newest AI Frame Generation model (~30% lower VRAM usage, smoother frame pacing). Use `Preset B` if UI/crosshair artifacts occur. |
+
+### 3. All Supported Upscaler & Streaming Technologies
+
+| Technology Group | Latest Version | DLL Files Managed | Supported GPU Hardware |
+| :--- | :--- | :--- | :--- |
+| **DLSS Super Resolution (SR)** | `v310.9.16.0` (DLSS 4.5) | `nvngx_dlss.dll` | NVIDIA GeForce **RTX 20 / 30 / 40 / 50 Series** |
+| **DLSS Ray Reconstruction (RR)** | `v310.9.16.0` (DLSS 4.5) | `nvngx_dlssd.dll` | NVIDIA GeForce **RTX 20 / 30 / 40 / 50 Series** |
+| **DLSS Frame Generation (FG / MFG)** | `v310.9.16.0` (DLSS 4.5) | `nvngx_dlssg.dll` | **RTX 40 / 50** (2× FG) · **RTX 50 Blackwell** (3×–6× Multi Frame Gen) |
+| **DLSS 5 Neural Rendering (NR)** | `v310.8.0.0` | `nvngx_dlssnr.dll` | NVIDIA GeForce **RTX 50 Series (Blackwell)** |
+| **NVIDIA Streamline SDK** | `v2.14.16.0` | `sl.interposer.dll`, `sl.common.dll`, `sl.dlss.dll`, `sl.dlss_g.dll`, `sl.dlss_d.dll`, `sl.reflex.dll`, `sl.pcl.dll`, `sl.directsr.dll`, `sl.nis.dll` | NVIDIA GeForce **RTX 20 / 30 / 40 / 50 Series** (Reflex/PCL also GTX 900+) |
+| **AMD FSR 3.1 / FSR 4** | `v4.0.2` / `v3.1.5` | `amd_fidelityfx_dx12.dll`, `amd_fidelityfx_vk.dll`, `amd_fidelityfx_loader_dx12.dll`, `amd_fidelityfx_upscaler_dx12.dll`, `amd_fidelityfx_framegeneration_dx12.dll` | **FSR 3.1:** All GPUs (AMD, NVIDIA, Intel) · **FSR 4 AI Upscaler:** Radeon RX 9000 (RDNA 4) |
+| **Intel XeSS 2 (SR / FG / XeLL)** | `v2.0.2.68` | `libxess.dll`, `libxess_dx11.dll`, `libxess_fg.dll`, `libxell.dll` | **XeSS SR:** All GPUs (XMX on Intel Arc, DP4a on NVIDIA/AMD) · **XeSS-FG:** Intel Arc |
+| **Microsoft DirectStorage** | `v1.2.2504+` | `dstorage.dll`, `dstoragecore.dll` | **All DirectX 12 GPUs** (NVIDIA, AMD, Intel) + NVMe SSD |
 
 ---
 
-## Installation
+## ☁️ Online Game Compatibility & Settings Database (`dlssdb.goover.dev`)
+
+**DLSS Manager** integrates with the official online database at **[`https://dlssdb.goover.dev`](https://dlssdb.goover.dev)**:
+1. Create a free account at [`https://dlssdb.goover.dev`](https://dlssdb.goover.dev) and generate your personal API key (`dlss_live_...`).
+2. Enter your API key in **DLSS Manager → ⚙️ Settings → Game Compatibility & Settings Database** and click **🔄 Save Key & Sync DB**.
+3. Use the **📤 Report Game to Online-DB** button on any game card to share whether a game works (`✅ Works` / `❌ Doesn't Work`), recommended DLSS presets, and optimal in-game settings with the community.
+
+---
+
+## 📥 Installation
 
 ### Windows
+- **Standalone Portable Executable:** Run `dist\dlss-manager.exe` directly (zero installation required).
+- **Installer (`.msi` / NSIS `.exe`):** Download the latest release from [**GitHub Releases**](https://github.com/gOOvER/DLSS-Manager/releases/latest).
+- **Winget:**
+  ```powershell
+  winget install "DLSS Manager"
+  ```
 
-The **MSI installer** is the recommended way to install on Windows — it installs to
-Program Files with a proper Add/Remove Programs entry.
+---
 
-**Winget** (recommended)
-```sh
-winget install "DLSS Manager"
-```
+## 🛠️ Building from Source (Rust + Tauri 2)
 
-**Chocolatey** — install from the [Chocolatey package page](https://community.chocolatey.org/packages/dlss-manager/).
+### Prerequisites
+- **Rust Toolchain (`1.85+` / `stable-x86_64-pc-windows-msvc`)** via [`rustup`](https://rustup.rs/)
+- **Tauri CLI (`cargo-tauri v2.x`)**: `cargo install tauri-cli --version "^2.0.0"`
+- **Microsoft Visual Studio 2022 Build Tools** (Desktop development with C++) & **WebView2 Runtime**
 
-**Scoop** — via the [scoop-games](https://github.com/Calinou/scoop-games) bucket (manifest update [pending merge](https://github.com/Calinou/scoop-games/pull/1770)). Scoop extracts the MSI into a portable install, so nothing touches Program Files:
-```sh
-scoop bucket add games
-scoop install dlss-updater
-```
-
-**Direct download** — grab `DLSS.Manager.X.Y.Z.msi` from the [Releases](https://github.com/gOOvER/DLSS-Manager/releases) page and run it.
-
-**Updating**
-
-From 4.6.0 onwards the app updates itself. When a release is available the version badge
-beside the title becomes an update button; clicking it downloads the installer, verifies it
-against the SHA-256 digest GitHub publishes, installs it and restarts. Both the launch check
-and automatic downloading are configurable under **UI Preferences → Application Updates**.
-
-If you installed through a package manager you can keep using it instead — `winget upgrade`
-or `choco upgrade dlss-manager`. One exception: **Scoop** installs are portable, so let Scoop
-update them (`scoop update dlss-updater`). The in-app updater runs the MSI, which installs to
-Program Files and would leave you with two copies.
-
-### Linux
-
-The **Flatpak** is the recommended way to install on Linux.
-
-<details>
-<summary><strong>Install Flatpak (if you don't have it)</strong></summary>
-
-```sh
-# Ubuntu/Debian
-sudo apt install flatpak
-flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-
-# Fedora — pre-installed
-
-# Arch
-sudo pacman -S flatpak
-flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-```
-</details>
-
-**Install DLSS Manager**
-```sh
-# Download DLSS_Manager-X.Y.Z.flatpak from the Releases page, then:
-flatpak install --user DLSS_Manager-X.Y.Z.flatpak
-flatpak run io.github.goover.dlss-manager
-```
-
-**Updating**
-
-Bundles from 4.6.0 onwards register an update remote when you install them, so
-later releases arrive through your software centre or:
-```sh
-flatpak update --user io.github.goover.dlss-manager
-```
-
-If you installed an earlier bundle, add the remote once to get updates from then on:
-```sh
-flatpak remote-add --user --if-not-exists \
-    dlss-updater https://goover.github.io/dlss-manager-flatpak/dlss-manager.flatpakrepo
-```
-
-The repository is GPG signed, and both routes above set up verification for you — updates
-that aren't signed with the key below are refused. Nothing to configure; the key travels
-inside the bundle and in the `.flatpakrepo`. To check it yourself:
-
-```
-4AD3 8790 6BC2 7C4B 8BFC  B2D4 A613 C3A8 B1F1 B430
-```
-
-**Uninstall**
-```sh
-flatpak uninstall io.github.goover.dlss-manager
-```
-
-<details>
-<summary><strong>Custom game directories</strong></summary>
-
-The Flatpak has read-only access to common game locations by default: `~/`, `/mnt/`,
-`/media/`, and `/run/media/`.
-
-To grant access to additional directories:
-```sh
-flatpak override --user --filesystem=/path/to/games io.github.goover.dlss-manager
-```
-
-Or use [Flatseal](https://flathub.org/apps/com.github.tchx84.Flatseal) for a graphical
-permissions manager.
-</details>
-
-<details>
-<summary><strong>Linux notes</strong></summary>
-
-- **Steam Proton games:** auto-detected at `~/.steam/steam/steamapps/compatdata/`.
-- **Wine games:** scans `~/.wine/` and Lutris games at `~/Games/`.
-- **Custom paths:** use `flatpak override` or the in-app dialog to grant access outside the sandbox.
-- **Windows-only features:** DLSS Debug Overlay and DirectStorage updates are disabled on Linux (grayed out with tooltips).
-- **Logs:** stored at `~/.local/share/dlss-updater/dlss_updater.log`.
-- **libmpv issue:** if you hit a libmpv error, your distro likely doesn't bundle the library — see [issue #125](https://github.com/gOOvER/DLSS-Manager/issues/125) for guidance.
-</details>
-
-### Building from Source
-
-<details>
-<summary><strong>Prerequisites & build steps</strong></summary>
-
-**Prerequisites**
-- Python 3.14 or higher (free-threaded build recommended)
-- Git
-- [uv](https://github.com/astral-sh/uv) (Python package installer)
-
-**Windows**
-```sh
+### Build Commands
+```powershell
 git clone https://github.com/gOOvER/DLSS-Manager.git
-cd DLSS-Manager
-uv sync --frozen
+cd DLSS-Manager/src-tauri
 
-# Build the executable
-uv run pyinstaller DLSS_Manager.spec
+# Run unit & live hardware/scanner tests
+cargo test --release
 
-# …or build the MSI installer
-pwsh build_msi.ps1
+# Build standalone portable executable (no installer bundle)
+cargo tauri build --no-bundle
 
-# Run it
-.\dist\DLSS_Manager.exe
+# Copy standalone binary to dist/
+Copy-Item target\release\dlss-manager.exe ..\dist\dlss-manager.exe -Force
 ```
 
-**Linux**
-```sh
-git clone https://github.com/gOOvER/DLSS-Manager.git
-cd DLSS-Manager
-uv sync --frozen
-
-# Build the executable…
-uv run pyinstaller DLSS_Manager_Linux.spec
-# …or build the Flatpak
-./build_flatpak.sh
-
-# Run it
-./dist/DLSS_Manager
+To build the full Windows `.msi` and NSIS `.exe` installers, run:
+```powershell
+.\build_rust_installer.ps1
 ```
-</details>
 
 ---
 
-## Blacklisted Games
+## 👥 Contributors
 
-The list of unsupported (blacklisted) games is maintained as a CSV in a separate
-repository, so it can be updated independently of the application:
+See **[`CONTRIBUTORS.md`](CONTRIBUTORS.md)** for the full list of maintainers, upstream authors, and community contributors.
 
-➡️ [**DLSS-Updater-Blacklist**](https://github.com/Recol/DLSS-Updater-Whitelist/blob/main/whitelist.csv)
-
-Games are blacklisted when they:
-
-- Use their own version of DLSS for testing (e.g., 3DMark)
-- Replace the DLL on launch (e.g., Warframe)
-- Ship a DLSS version below 2.0 (non-updatable)
-- Have known compatibility issues with updated DLSS versions
-
-You can override the blacklist via the **Manage Blacklist** button in the GUI to skip
-(or force) games for any reason.
+- **Lead Developer & Maintainer (`DLSS Manager` `v1.0.0-beta.1+`):** **[gOOvER](https://github.com/gOOvER)**
+- **Original Upstream Author (`DLSS Updater` `<= v5.2.0`):** **[Recol (Deco)](https://github.com/Recol/DLSS-Updater)**
 
 ---
 
-## Anti-Cheat
+## 📄 License & Credits
 
-The tool does not globally block anti-cheat games, since some allow DLL replacement.
-Individual titles will be blacklisted as they're reported not to function.
+Licensed under the **GNU Affero General Public License v3.0 ([`AGPL-3.0-only`](LICENSE))**.
 
----
-
-## Troubleshooting
-
-Check the [Issues](https://github.com/gOOvER/DLSS-Manager/issues) section to see if your
-problem has already been reported. If not, open a new issue with as much detail as
-possible. Each release also ships detailed notes in `release_notes.txt` and on the
-[Releases](https://github.com/gOOvER/DLSS-Manager/releases) page.
-
----
-
-## Roadmap
-
-- Publishing on [Flathub](https://flathub.org) so Linux users can install straight from their software center ([#234](https://github.com/gOOvER/DLSS-Manager/issues/234)) — groundwork shipped in 4.3.1
-- Automation support with external software
-- Community-requested features — [open an issue](https://github.com/gOOvER/DLSS-Manager/issues) to suggest one
-
----
-
-## License & Credits
-
-Licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)**. See the [LICENSE](LICENSE) file
-for details.
-
-**Original Author & Upstream Project:** [Recol (Deco) — DLSS Updater](https://github.com/Recol/DLSS-Updater)
-for details.
-
-This project uses NVIDIA's **DLSS** (Deep Learning Super Sampling) — see NVIDIA's
-[DLSS page](https://www.nvidia.com/en-us/geforce/technologies/dlss/) for more — and
-Intel's **XeSS** (Xe Super Sampling) — see Intel's
-[XeSS page](https://www.intel.com/content/www/us/en/content-details/726651/intel-xe-super-sampling-xess-an-ai-based-upscaling-for-real-time-rendering.html?wapkw=xess).
-
-Special thanks to all contributors of the open-source libraries used here, including but
-not limited to pefile, psutil, PyInstaller and packaging. If any are uncredited and
-should be, please let the author know and credit will be applied.
+- **Changelog:** See **[`CHANGELOG.md`](CHANGELOG.md)** for full release history.
+- **Support Development:** **[`https://donate.goover.dev`](https://donate.goover.dev)**

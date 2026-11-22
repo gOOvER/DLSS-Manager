@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
+use std::sync::LazyLock;
+use std::time::Duration;
 
 use anyhow::{anyhow, Context, Result};
 use chrono::Utc;
@@ -11,11 +13,26 @@ use crate::database::{get_backups_dir, get_cache_dir};
 use crate::models::{AppConfig, BackupEntry, DllType, Game, GpuInfo, RemoteDllVersion};
 use crate::pe_version::{extract_dll_version, is_version_newer, preset_hint_for_dll};
 
-pub const GITHUB_DLL_REPO: &str = "Recol/DLSS-Updater-DLLs";
-pub const DLL_MANIFEST_URL: &str =
-    "https://raw.githubusercontent.com/Recol/DLSS-Updater-DLLs/main/manifest.json";
-pub const DLL_RAW_BASE: &str =
-    "https://raw.githubusercontent.com/Recol/DLSS-Updater-DLLs/main/dlls";
+/// Shared, connection-pooled HTTP client used across all repository, Steam API, and Online-DB requests.
+pub fn shared_http_client() -> &'static reqwest::Client {
+    static CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
+        reqwest::Client::builder()
+            .user_agent(concat!("DLSS-Manager/", env!("CARGO_PKG_VERSION")))
+            .pool_max_idle_per_host(8)
+            .tcp_keepalive(Duration::from_secs(30))
+            .timeout(Duration::from_secs(20))
+            .build()
+            .expect("Failed to initialize shared HTTP client")
+    });
+    &CLIENT
+}
+
+pub const DLSS_SWAPPER_MANIFEST_URL: &str =
+    "https://raw.githubusercontent.com/beeradmoore/dlss-swapper-manifest-builder/main/manifest.json";
+pub const NVIDIA_OFFICIAL_DLSS_RELEASE_API: &str =
+    "https://api.github.com/repos/NVIDIA/DLSS/releases/latest";
+pub const NVIDIA_OFFICIAL_DLSS_RAW_BASE: &str =
+    "https://raw.githubusercontent.com/NVIDIA/DLSS/main/lib/Windows_x86_64/rel";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ManifestEntry {
@@ -32,41 +49,431 @@ pub struct ManifestEntry {
 
 pub type ManifestMap = HashMap<String, ManifestEntry>;
 
-/// Fetches the latest `manifest.json` from `Recol/DLSS-Updater-DLLs` and caches it locally.
+fn is_safe_stable_version(version: &str) -> bool {
+    let trimmed = version.trim();
+    !trimmed.is_empty()
+        && !trimmed.starts_with("310.7")
+        && !trimmed.to_ascii_lowercase().contains("dev")
+        && !trimmed.to_ascii_lowercase().contains("alpha")
+}
+
+/// Scans the official local NVIDIA GeForce Driver NGX OTA model cache (`C:\ProgramData\NVIDIA\NGX\models\`)
+/// for the latest official NVIDIA-signed full-featured production binaries (`dlss`, `dlssd`, `dlssg`).
+fn find_best_local_nvidia_ngx_model(dll_name: &str) -> Option<(std::path::PathBuf, String, u64)> {
+    let subdir = match dll_name.to_ascii_lowercase().as_str() {
+        "nvngx_dlss.dll" => "dlss",
+        "nvngx_dlssd.dll" => "dlssd",
+        "nvngx_dlssg.dll" => "dlssg",
+        _ => return None,
+    };
+
+    let versions_root = Path::new(r"C:\ProgramData\NVIDIA\NGX\models")
+        .join(subdir)
+        .join("versions");
+    let entries = fs::read_dir(&versions_root).ok()?;
+
+    let mut best: Option<(std::path::PathBuf, String, u64)> = None;
+
+    for ver_dir in entries.flatten() {
+        let files_dir = ver_dir.path().join("files");
+        let Ok(files) = fs::read_dir(&files_dir) else {
+            continue;
+        };
+        for file_entry in files.flatten() {
+            let p = file_entry.path();
+            if !p.is_file() {
+                continue;
+            }
+            let ext = p
+                .extension()
+                .and_then(|e| e.to_str())
+                .unwrap_or_default()
+                .to_ascii_lowercase();
+            if ext != "bin" && ext != "dll" {
+                continue;
+            }
+            let Ok(meta) = fs::metadata(&p) else {
+                continue;
+            };
+            let fsize = meta.len();
+            if fsize < 65_536 {
+                continue;
+            }
+            let Some(ver) = extract_dll_version(&p) else {
+                continue;
+            };
+            if !is_safe_stable_version(&ver) {
+                continue;
+            }
+            let take = match &best {
+                None => true,
+                Some((_, best_ver, best_size)) => {
+                    is_version_newer(&ver, best_ver)
+                        || (!is_version_newer(best_ver, &ver) && fsize > *best_size)
+                }
+            };
+            if take {
+                best = Some((p, ver, fsize));
+            }
+        }
+    }
+
+    best
+}
+
+/// Parses the official DLSS Swapper manifest JSON (`beeradmoore/dlss-swapper-manifest-builder`)
+/// and merges any newer STABLE (`is_developer_build == false`) versions into `base_manifest`.
+/// When two builds share the exact same version (e.g. `310.9.16.0` trimmed SDK build vs full all-presets build),
+/// prefers the full all-presets package (`new_size > existing_size`).
+fn merge_dlss_swapper_stable_manifest(base_manifest: &mut ManifestMap, swapper_json: &serde_json::Value) {
+    let section_map = [
+        ("dlss", "nvngx_dlss.dll"),
+        ("dlss_g", "nvngx_dlssg.dll"),
+        ("dlss_d", "nvngx_dlssd.dll"),
+        ("xess", "libxess.dll"),
+        ("xess_dx11", "libxess_dx11.dll"),
+        ("xess_fg", "libxess_fg.dll"),
+        ("xell", "libxell.dll"),
+    ];
+
+    for (section_key, dll_filename) in section_map {
+        let Some(arr) = swapper_json.get(section_key).and_then(|v| v.as_array()) else {
+            continue;
+        };
+
+        for item in arr {
+            let is_dev = item
+                .get("is_developer_build")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            if is_dev {
+                continue;
+            }
+            let ver = item
+                .get("version")
+                .and_then(|v| v.as_str())
+                .unwrap_or_default();
+            if !is_safe_stable_version(ver) {
+                continue;
+            }
+            let dl_url = item
+                .get("download_url")
+                .and_then(|v| v.as_str())
+                .unwrap_or_default();
+            if !dl_url.starts_with("https://") {
+                continue;
+            }
+            let item_size = item.get("file_size").and_then(|v| v.as_u64());
+
+            let should_replace = match base_manifest.get(dll_filename) {
+                Some(existing) => {
+                    if is_version_newer(ver, &existing.version) {
+                        true
+                    } else if !is_version_newer(&existing.version, ver) {
+                        match (item_size, existing.size) {
+                            (Some(new_sz), Some(old_sz)) => new_sz > old_sz,
+                            (Some(_), None) => true,
+                            _ => false,
+                        }
+                    } else {
+                        false
+                    }
+                }
+                None => true,
+            };
+
+            if should_replace {
+                base_manifest.insert(
+                    dll_filename.to_string(),
+                    ManifestEntry {
+                        version: ver.to_string(),
+                        sha256: None,
+                        size: item_size,
+                        url: Some(dl_url.to_string()),
+                        date: None,
+                    },
+                );
+            }
+        }
+    }
+}
+
+/// Fetches the latest stable DLL manifest using exclusively official NVIDIA upstream sources
+/// (`NVIDIA/DLSS` GitHub repository & local NVIDIA NGX Driver Model cache) plus the
+/// `dlss-swapper-manifest-builder` stable feed (never using `Recol/DLSS-Updater-DLLs`).
 pub async fn fetch_or_load_manifest() -> Result<ManifestMap> {
     let cache_dir = get_cache_dir();
     let local_manifest_path = cache_dir.join("manifest.json");
+    let client = shared_http_client();
+    let req_timeout = Duration::from_secs(15);
 
-    let client = reqwest::Client::builder()
-        .user_agent("DLSS-Manager-Rust/1.0.0-beta.1")
-        .timeout(std::time::Duration::from_secs(15))
-        .build()?;
+    let mut merged: ManifestMap = if local_manifest_path.exists() {
+        let mut loaded = fs::read(&local_manifest_path)
+            .ok()
+            .and_then(|b| serde_json::from_slice::<ManifestMap>(&b).ok())
+            .unwrap_or_else(default_fallback_manifest);
+        for (dll_name, entry) in loaded.iter_mut() {
+            if entry
+                .url
+                .as_deref()
+                .map(|u| u.contains("Recol/DLSS-Updater-DLLs"))
+                .unwrap_or(false)
+            {
+                entry.url = Some(format!("{}/{}", NVIDIA_OFFICIAL_DLSS_RAW_BASE, dll_name));
+            }
+        }
+        loaded
+    } else {
+        default_fallback_manifest()
+    };
 
-    match client.get(DLL_MANIFEST_URL).send().await {
-        Ok(resp) if resp.status().is_success() => {
-            if let Ok(bytes) = resp.bytes().await {
-                if let Ok(parsed) = serde_json::from_slice::<ManifestMap>(&bytes) {
-                    let _ = fs::write(&local_manifest_path, &bytes);
-                    return Ok(parsed);
+    let mut updated_online = false;
+
+    // 1. Official NVIDIA DLSS SDK Repository (`https://github.com/NVIDIA/DLSS` -> `lib/Windows_x86_64/rel/`)
+    if let Ok(resp) = client
+        .get(NVIDIA_OFFICIAL_DLSS_RELEASE_API)
+        .timeout(req_timeout)
+        .send()
+        .await
+    {
+        if resp.status().is_success() {
+            if let Ok(json) = resp.json::<serde_json::Value>().await {
+                let raw_tag = json
+                    .get("tag_name")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or_default()
+                    .trim_start_matches('v')
+                    .trim();
+                if is_safe_stable_version(raw_tag) {
+                    let dot_count = raw_tag.chars().filter(|&c| c == '.').count();
+                    let normalized_ver = if dot_count == 2 {
+                        format!("{}.0", raw_tag)
+                    } else {
+                        raw_tag.to_string()
+                    };
+                    let published = json
+                        .get("published_at")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string());
+
+                    for dll_name in &["nvngx_dlss.dll", "nvngx_dlssd.dll", "nvngx_dlssg.dll"] {
+                        let use_nvidia_official = match merged.get(*dll_name) {
+                            Some(existing) => !is_version_newer(&existing.version, &normalized_ver),
+                            None => true,
+                        };
+                        if use_nvidia_official {
+                            merged.insert(
+                                (*dll_name).to_string(),
+                                ManifestEntry {
+                                    version: normalized_ver.clone(),
+                                    sha256: None,
+                                    size: None,
+                                    url: Some(format!("{}/{}", NVIDIA_OFFICIAL_DLSS_RAW_BASE, dll_name)),
+                                    date: published.clone(),
+                                },
+                            );
+                        }
+                    }
+                    updated_online = true;
                 }
             }
         }
-        _ => {}
     }
 
-    if local_manifest_path.exists() {
-        let bytes = fs::read(&local_manifest_path)?;
-        let parsed = serde_json::from_slice::<ManifestMap>(&bytes)?;
-        return Ok(parsed);
+    // 2. Official Local NVIDIA GeForce Driver NGX Model Repository (`C:\ProgramData\NVIDIA\NGX\models\`)
+    for dll_name in &["nvngx_dlss.dll", "nvngx_dlssd.dll", "nvngx_dlssg.dll"] {
+        if let Some((ngx_bin_path, ngx_ver, ngx_size)) = find_best_local_nvidia_ngx_model(dll_name) {
+            let should_sync = match merged.get(*dll_name) {
+                Some(existing) => {
+                    is_version_newer(&ngx_ver, &existing.version)
+                        || (!is_version_newer(&existing.version, &ngx_ver)
+                            && ngx_size >= existing.size.unwrap_or(0))
+                }
+                None => true,
+            };
+            if should_sync {
+                let cached_path = cache_dir.join(dll_name);
+                let needs_cache_update = if !cached_path.exists() {
+                    true
+                } else {
+                    let cached_ver = extract_dll_version(&cached_path).unwrap_or_default();
+                    let cached_size = fs::metadata(&cached_path).map(|m| m.len()).unwrap_or(0);
+                    is_version_newer(&ngx_ver, &cached_ver)
+                        || (!is_version_newer(&cached_ver, &ngx_ver) && ngx_size > cached_size)
+                };
+                if needs_cache_update {
+                    let _ = fs::copy(&ngx_bin_path, &cached_path);
+                }
+                merged.insert(
+                    (*dll_name).to_string(),
+                    ManifestEntry {
+                        version: ngx_ver,
+                        sha256: None,
+                        size: Some(ngx_size),
+                        url: Some(format!("{}/{}", NVIDIA_OFFICIAL_DLSS_RAW_BASE, dll_name)),
+                        date: None,
+                    },
+                );
+                updated_online = true;
+            }
+        }
     }
 
-    Ok(default_fallback_manifest())
+    // 3. Secondary upstream check (`beeradmoore/dlss-swapper-manifest-builder` — selects any newer stable retail release)
+    if let Ok(resp) = client
+        .get(DLSS_SWAPPER_MANIFEST_URL)
+        .timeout(req_timeout)
+        .send()
+        .await
+    {
+        if resp.status().is_success() {
+            if let Ok(json) = resp.json::<serde_json::Value>().await {
+                merge_dlss_swapper_stable_manifest(&mut merged, &json);
+                updated_online = true;
+            }
+        }
+    }
+
+    // 4. Official NVIDIA Streamline SDK (`https://github.com/NVIDIA-RTX/Streamline/releases/latest`)
+    if let Ok(resp) = client
+        .get("https://api.github.com/repos/NVIDIA-RTX/Streamline/releases/latest")
+        .header("User-Agent", "DLSS-Manager")
+        .timeout(req_timeout)
+        .send()
+        .await
+    {
+        if resp.status().is_success() {
+            if let Ok(sl_json) = resp.json::<serde_json::Value>().await {
+                let tag = sl_json
+                    .get("tag_name")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or_default()
+                    .trim_start_matches('v');
+                let zip_url = sl_json
+                    .get("assets")
+                    .and_then(|v| v.as_array())
+                    .and_then(|arr| {
+                        arr.iter().find_map(|a| {
+                            let name = a.get("name").and_then(|n| n.as_str()).unwrap_or_default();
+                            if name.starts_with("streamline-sdk-")
+                                && name.ends_with(".zip")
+                                && !name.contains("aarch64")
+                                && !name.contains("arm64")
+                            {
+                                a.get("browser_download_url")
+                                    .and_then(|u| u.as_str())
+                                    .map(|s| s.to_string())
+                            } else {
+                                None
+                            }
+                        })
+                    });
+                if let (false, Some(url)) = (tag.is_empty(), zip_url) {
+                    let sl_ver = format!("{}.0", tag);
+                    for sl_dll in &[
+                        "sl.interposer.dll",
+                        "sl.common.dll",
+                        "sl.dlss.dll",
+                        "sl.dlss_g.dll",
+                        "sl.dlss_d.dll",
+                        "sl.reflex.dll",
+                        "sl.pcl.dll",
+                        "sl.directsr.dll",
+                        "sl.nis.dll",
+                    ] {
+                        let should_set = merged
+                            .get(*sl_dll)
+                            .map(|e| is_version_newer(&sl_ver, &e.version) || e.url.is_none())
+                            .unwrap_or(true);
+                        if should_set {
+                            merged.insert(
+                                (*sl_dll).to_string(),
+                                ManifestEntry {
+                                    version: sl_ver.clone(),
+                                    sha256: None,
+                                    size: None,
+                                    url: Some(url.clone()),
+                                    date: None,
+                                },
+                            );
+                        }
+                    }
+                    updated_online = true;
+                }
+            }
+        }
+    }
+
+    // 5. Official Microsoft DirectStorage NuGet Package (`Microsoft.Direct3D.DirectStorage`)
+    if let Ok(resp) = client
+        .get("https://api.nuget.org/v3-flatcontainer/microsoft.direct3d.directstorage/index.json")
+        .timeout(req_timeout)
+        .send()
+        .await
+    {
+        if resp.status().is_success() {
+            if let Ok(ds_json) = resp.json::<serde_json::Value>().await {
+                if let Some(latest_ver) = ds_json
+                    .get("versions")
+                    .and_then(|v| v.as_array())
+                    .and_then(|arr| {
+                        arr.iter()
+                            .filter_map(|v| v.as_str())
+                            .filter(|v| !v.contains('-'))
+                            .last()
+                    })
+                {
+                    let nupkg_url = format!(
+                        "https://api.nuget.org/v3-flatcontainer/microsoft.direct3d.directstorage/{0}/microsoft.direct3d.directstorage.{0}.nupkg",
+                        latest_ver
+                    );
+                    for ds_dll in &["dstorage.dll", "dstoragecore.dll"] {
+                        let should_set = merged
+                            .get(*ds_dll)
+                            .map(|e| is_version_newer(latest_ver, &e.version) || e.url.is_none())
+                            .unwrap_or(true);
+                        if should_set {
+                            merged.insert(
+                                (*ds_dll).to_string(),
+                                ManifestEntry {
+                                    version: latest_ver.to_string(),
+                                    sha256: None,
+                                    size: None,
+                                    url: Some(nupkg_url.clone()),
+                                    date: None,
+                                },
+                            );
+                        }
+                    }
+                    updated_online = true;
+                }
+            }
+        }
+    }
+
+    if updated_online {
+        if let Ok(serialized) = serde_json::to_vec_pretty(&merged) {
+            let _ = fs::write(&local_manifest_path, serialized);
+        }
+    }
+
+    Ok(merged)
 }
 
 pub fn load_cached_manifest_sync() -> ManifestMap {
     let local_manifest_path = get_cache_dir().join("manifest.json");
     if let Ok(bytes) = fs::read(&local_manifest_path) {
-        if let Ok(parsed) = serde_json::from_slice::<ManifestMap>(&bytes) {
+        if let Ok(mut parsed) = serde_json::from_slice::<ManifestMap>(&bytes) {
+            for (dll_name, entry) in parsed.iter_mut() {
+                if entry
+                    .url
+                    .as_deref()
+                    .map(|u| u.contains("Recol/DLSS-Updater-DLLs"))
+                    .unwrap_or(false)
+                {
+                    entry.url = Some(format!("{}/{}", NVIDIA_OFFICIAL_DLSS_RAW_BASE, dll_name));
+                }
+            }
             return parsed;
         }
     }
@@ -76,21 +483,16 @@ pub fn load_cached_manifest_sync() -> ManifestMap {
 fn default_fallback_manifest() -> ManifestMap {
     let mut map = HashMap::new();
     let defaults = [
-        ("nvngx_dlss.dll", "310.3.0.0"),
-        ("nvngx_dlssg.dll", "310.3.0.0"),
-        ("nvngx_dlssd.dll", "310.3.0.0"),
+        ("nvngx_dlss.dll", "310.9.16.0"),
+        ("nvngx_dlssg.dll", "310.9.16.0"),
+        ("nvngx_dlssd.dll", "310.9.16.0"),
         ("nvngx_dlssnr.dll", "310.8.0.0"),
-        ("amd_fidelityfx_dx12.dll", "1.0.1.41314"),
-        ("amd_fidelityfx_vk.dll", "1.0.1.41314"),
-        ("amd_fidelityfx_loader_dx12.dll", "1.0.2.44888"),
-        ("amd_fidelityfx_upscaler_dx12.dll", "4.0.2.44888"),
-        ("amd_fidelityfx_framegeneration_dx12.dll", "3.1.5.44888"),
         ("libxess.dll", "2.0.2.68"),
         ("libxess_dx11.dll", "2.0.2.68"),
-        ("libxess_fg.dll", "1.2.2.118"),
+        ("libxess_fg.dll", "1.3.1.78"),
         ("libxell.dll", "1.2.1.13"),
-        ("dstorage.dll", "1.2.2504.401"),
-        ("dstoragecore.dll", "1.2.2504.401"),
+        ("dstorage.dll", "1.3.0"),
+        ("dstoragecore.dll", "1.3.0"),
         ("sl.interposer.dll", "2.7.30.0"),
         ("sl.common.dll", "2.7.30.0"),
         ("sl.dlss.dll", "2.7.30.0"),
@@ -128,12 +530,10 @@ pub fn resolve_dll_download_url(dll_name: &str, entry: &ManifestEntry) -> String
         .file_name()
         .map(|s| s.to_string_lossy().to_string())
         .unwrap_or_default();
-    let fallback = format!("{}/{}", DLL_RAW_BASE, safe_name);
+    let fallback = format!("{}/{}", NVIDIA_OFFICIAL_DLSS_RAW_BASE, safe_name);
 
     if let Some(url) = &entry.url {
-        if url.starts_with("https://github.com/Recol/DLSS-Updater-DLLs/")
-            || url.starts_with("https://raw.githubusercontent.com/Recol/DLSS-Updater-DLLs/")
-        {
+        if url.starts_with("https://") && !url.contains("Recol/DLSS-Updater-DLLs") {
             return url.clone();
         }
     }
@@ -285,7 +685,8 @@ pub fn annotate_games_with_config(
     games.retain(|g| !g.dlls.is_empty());
 }
 
-/// Downloads a DLL from the repository into `%LOCALAPPDATA%\Recol\DLSS-Updater\dll_cache\`
+/// Downloads a DLL from the official NVIDIA upstream / manifest into `%LOCALAPPDATA%\gOOvER\DLSS-Manager\dll_cache\`
+/// (or copies the official local NVIDIA GeForce Driver NGX OTA model binary when available)
 /// and verifies its SHA-256 checksum if present in the manifest.
 pub async fn ensure_dll_cached(dll_name: &str, manifest: &ManifestMap) -> Result<std::path::PathBuf> {
     let safe_name = Path::new(dll_name)
@@ -311,23 +712,44 @@ pub async fn ensure_dll_cached(dll_name: &str, manifest: &ManifestMap) -> Result
             date: None,
         });
 
-    // If cached and version is already up to date, return immediately
+    // Prefer the official local NVIDIA GeForce Driver NGX OTA model binary (`C:\ProgramData\NVIDIA\NGX\models\`)
+    // when its version is >= the manifest version (ensuring the full 74.1 MB all-presets NVIDIA binary is used)
+    if let Some((ngx_bin_path, ngx_ver, ngx_size)) = find_best_local_nvidia_ngx_model(&safe_name) {
+        if info.version.is_empty() || !is_version_newer(&info.version, &ngx_ver) {
+            let needs_copy = if !cache_path.exists() {
+                true
+            } else {
+                let cached_ver = extract_dll_version(&cache_path).unwrap_or_default();
+                let cached_size = fs::metadata(&cache_path).map(|m| m.len()).unwrap_or(0);
+                is_version_newer(&ngx_ver, &cached_ver)
+                    || (!is_version_newer(&cached_ver, &ngx_ver) && ngx_size > cached_size)
+            };
+            if needs_copy {
+                let _ = fs::copy(&ngx_bin_path, &cache_path);
+            }
+            if cache_path.exists() {
+                return Ok(cache_path);
+            }
+        }
+    }
+
+    // If cached, version is already up to date, and cached file size is not smaller than manifest's full package size, return immediately
     if cache_path.exists() {
         if let Some(local_ver) = extract_dll_version(&cache_path) {
-            if info.version.is_empty() || !is_version_newer(&info.version, &local_ver) {
+            let cached_size = fs::metadata(&cache_path).map(|m| m.len()).unwrap_or(0);
+            let size_ok = info.size.map(|sz| cached_size >= sz).unwrap_or(true);
+            if (info.version.is_empty() || !is_version_newer(&info.version, &local_ver)) && size_ok {
                 return Ok(cache_path);
             }
         }
     }
 
     let url = resolve_dll_download_url(&safe_name, &info);
-    let client = reqwest::Client::builder()
-        .user_agent("DLSS-Manager-Rust/1.0.0-beta.1")
-        .timeout(std::time::Duration::from_secs(300))
-        .build()?;
+    let client = shared_http_client();
 
     let resp = client
         .get(&url)
+        .timeout(Duration::from_secs(300))
         .send()
         .await
         .with_context(|| format!("Failed to download {}", url))?;
@@ -340,8 +762,34 @@ pub async fn ensure_dll_cached(dll_name: &str, manifest: &ManifestMap) -> Result
         ));
     }
 
-    let bytes = resp.bytes().await?;
-    if bytes.len() < 4096 || &bytes[0..2] != b"MZ" {
+    let raw_bytes = resp.bytes().await?;
+
+    // Support both raw PE `.dll` downloads (`MZ`) and `.zip` packages (`PK\x03\x04`, used by DLSS Swapper manifest)
+    let dll_bytes: Vec<u8> = if raw_bytes.len() >= 4 && &raw_bytes[0..4] == b"PK\x03\x04" {
+        let reader = std::io::Cursor::new(&raw_bytes);
+        let mut archive = zip::ZipArchive::new(reader)
+            .with_context(|| format!("Failed to open ZIP archive for {}", safe_name))?;
+        let mut extracted: Option<Vec<u8>> = None;
+        for idx in 0..archive.len() {
+            if let Ok(mut file) = archive.by_index(idx) {
+                let entry_name = file
+                    .name()
+                    .map(|n| n.to_ascii_lowercase())
+                    .unwrap_or_default();
+                if entry_name.ends_with(".dll") {
+                    let mut buf = Vec::with_capacity(file.size() as usize);
+                    std::io::Read::read_to_end(&mut file, &mut buf)?;
+                    extracted = Some(buf);
+                    break;
+                }
+            }
+        }
+        extracted.ok_or_else(|| anyhow!("ZIP archive for {} did not contain a .dll file", safe_name))?
+    } else {
+        raw_bytes.to_vec()
+    };
+
+    if dll_bytes.len() < 4096 || &dll_bytes[0..2] != b"MZ" {
         return Err(anyhow!(
             "Downloaded file for {} is not a valid PE binary",
             safe_name
@@ -350,7 +798,7 @@ pub async fn ensure_dll_cached(dll_name: &str, manifest: &ManifestMap) -> Result
 
     if let Some(expected_sha) = &info.sha256 {
         let mut hasher = Sha256::new();
-        hasher.update(&bytes);
+        hasher.update(&dll_bytes);
         let actual_sha = hex::encode(hasher.finalize());
         if !actual_sha.eq_ignore_ascii_case(expected_sha) {
             return Err(anyhow!(
@@ -363,7 +811,7 @@ pub async fn ensure_dll_cached(dll_name: &str, manifest: &ManifestMap) -> Result
     }
 
     let tmp_path = cache_path.with_extension("dll.part");
-    fs::write(&tmp_path, &bytes)?;
+    fs::write(&tmp_path, &dll_bytes)?;
     fs::rename(&tmp_path, &cache_path)?;
 
     Ok(cache_path)
@@ -417,6 +865,13 @@ pub async fn update_game_dll(
     };
 
     let cached_dll = ensure_dll_cached(&source_filename, manifest).await?;
+    if matches!(
+        dll_type,
+        DllType::Dlss | DllType::DlssD | DllType::DlssG | DllType::Streamline
+    ) {
+        crate::pe_version::verify_authenticode_signature(&cached_dll)
+            .map_err(|e| anyhow!("Digital signature check failed: {}", e))?;
+    }
     let new_version = extract_dll_version(&cached_dll).unwrap_or_else(|| "Latest".to_string());
     let old_version = extract_dll_version(target).unwrap_or_else(|| "Unknown".to_string());
 

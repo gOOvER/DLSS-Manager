@@ -33,15 +33,13 @@ const ALL_TECH_GROUPS = [
   { label: "DLSS 5", title: "DLSS 5 Neural Rendering" },
   { label: "Streamline", title: "NVIDIA Streamline" },
   { label: "DStorage", title: "Microsoft DirectStorage" },
-  { label: "FSR 3/4", title: "AMD FSR 3 / 4 (DX12)" },
-  { label: "FSR VK", title: "AMD FSR 3 / 4 (Vulkan)" },
   { label: "XeSS", title: "Intel XeSS" },
   { label: "XeSS-FG", title: "Intel XeSS Frame Gen" },
-  { label: "XeLL", title: "Intel XeLL" },
+  { label: "XeLL", title: "Intel Xe Low Latency" },
 ];
 
 let appState = {
-  version: "1.0.0-beta.1",
+  version: "1.0.0-beta.2",
   games: [],
   backups: [],
   catalog: [],
@@ -133,6 +131,10 @@ const I18N = {
     btn_save_sync_db: "🔄 Key speichern & DB synchronisieren",
     settings_nv_presets_title: "Globale NVIDIA DLSS-Presets (Treiber-DRS)",
     settings_nv_presets_sub: "Globale DLSS 4 / 4.5 Treiber-Presets (nvapi64.dll). Über das Kartenmenü (⋮) können Presets auch pro Spiel überschrieben werden.",
+    hub_nvapp_whitelist_title: "🛡️ NVIDIA App Override-Status (Treiber-DRS & Whitelist)",
+    settings_nvapp_whitelist_title: "NVIDIA App Override-Whitelist (für nicht unterstützte Spiele)",
+    btn_nvapp_whitelist: "🔓 Alle Spiele freischalten",
+    btn_restart_nv_services: "🔄 NVIDIA Dienst neu starten",
     settings_tech_scope_title: "Aktivierte Upscaler-Technologien",
     settings_tech_scope_sub: "Wähle aus, welche Technologiegruppen auf Updates geprüft und bei Massen-Updates berücksichtigt werden sollen.",
     settings_custom_folders_title: "Eigene Spieleordner",
@@ -144,7 +146,7 @@ const I18N = {
     settings_ignored_sub: "Verwalte vom Update ausgeschlossene Spiele oder füge Ordnernamen zur Blacklist hinzu.",
     blacklist_placeholder: "Spielname für Blacklist eingeben (z.B. Valorant)",
     btn_add_blacklist: "Zur Blacklist hinzufügen",
-    "info.subtitle": "Universeller Upscaler- & Frame-Generation-Manager für NVIDIA DLSS 4.5 / 5, AMD FSR 3.1 / 4, Intel XeSS 2, Streamline & DirectStorage.",
+    "info.subtitle": "Universeller Upscaler- & Frame-Generation-Manager für NVIDIA DLSS 4.5 / 5, Intel XeSS 2, NVIDIA Streamline & Microsoft DirectStorage.",
     "info.github_repo": "⭐ GitHub Repository",
     "info.releases": "📦 Releases & Changelog",
     "info.report_issue": "🐞 Fehler melden",
@@ -233,6 +235,10 @@ const I18N = {
     btn_save_sync_db: "🔄 Save Key & Sync DB",
     settings_nv_presets_title: "Global NVIDIA DLSS Presets (Driver DRS)",
     settings_nv_presets_sub: "Global DLSS 4 / 4.5 driver overrides (nvapi64.dll). You can also override presets per game from any game card menu (⋮).",
+    hub_nvapp_whitelist_title: "🛡️ NVIDIA App Override Status (Driver DRS & Whitelist)",
+    settings_nvapp_whitelist_title: "NVIDIA App Override Whitelist (Unlock Unsupported Games)",
+    btn_nvapp_whitelist: "🔓 Unlock All Games",
+    btn_restart_nv_services: "🔄 Restart NVIDIA Service",
     settings_tech_scope_title: "Enabled Upscaler Technologies",
     settings_tech_scope_sub: "Choose which technology groups should be checked for updates and included in batch updates.",
     settings_custom_folders_title: "Custom Game Folders",
@@ -244,7 +250,7 @@ const I18N = {
     settings_ignored_sub: "Manage games excluded from updates or add custom folder/title patterns to the blacklist.",
     blacklist_placeholder: "Enter game title to blacklist (e.g. Valorant)",
     btn_add_blacklist: "Add to Blacklist",
-    "info.subtitle": "Universal Upscaler & Frame Generation Manager for NVIDIA DLSS 4.5 / 5, AMD FSR 3.1 / 4, Intel XeSS 2, Streamline & DirectStorage.",
+    "info.subtitle": "Universal Upscaler & Frame Generation Manager for NVIDIA DLSS 4.5 / 5, Intel XeSS 2, NVIDIA Streamline & Microsoft DirectStorage.",
     "info.github_repo": "⭐ GitHub Repository",
     "info.releases": "📦 Releases & Changelog",
     "info.report_issue": "🐞 Report Issue",
@@ -535,28 +541,19 @@ function renderSteamApiStatus() {
   const sid = appState.config?.steam_id || "";
   const hasKey = key.trim().length > 0;
 
-  const k1 = document.getElementById("input-steam-api-key");
-  const s1 = document.getElementById("input-steam-id");
   const k2 = document.getElementById("settings-steam-api-key");
   const s2 = document.getElementById("settings-steam-id");
-  if (k1 && document.activeElement !== k1) k1.value = key;
-  if (s1 && document.activeElement !== s1) s1.value = sid;
   if (k2 && document.activeElement !== k2) k2.value = key;
   if (s2 && document.activeElement !== s2) s2.value = sid;
 
-  const pill1 = document.getElementById("steam-api-status-pill");
   const pill2 = document.getElementById("settings-steam-status-pill");
   const label = hasKey
     ? isDe()
       ? `● Verbunden${sid ? ` · ID ${sid}` : ""}`
       : `● Connected${sid ? ` · ID ${sid}` : ""}`
     : isDe()
-    ? "○ Nicht konfiguriert"
-    : "○ Not configured";
-  if (pill1) {
-    pill1.textContent = label;
-    pill1.classList.toggle("connected", hasKey);
-  }
+      ? "○ Nicht konfiguriert"
+      : "○ Not configured";
   if (pill2) {
     pill2.textContent = label;
     pill2.classList.toggle("connected", hasKey);
@@ -584,8 +581,8 @@ function renderSteamApiStatus() {
         ? `● API-Key aktiv · ${cnt} Profile geladen`
         : `● API Key Active · ${cnt} Profiles Loaded`
       : isDe()
-      ? `● ${cnt} Profile (Lokal / Seed-DB)`
-      : `● ${cnt} Profiles (Local / Seed DB)`;
+        ? `● ${cnt} Profile (Lokal / Seed-DB)`
+        : `● ${cnt} Profiles (Local / Seed DB)`;
   }
 }
 
@@ -658,11 +655,10 @@ window.openReportGameModal = function (gameId) {
       <div>
         <h2>${de ? "📤 Spiel an Online-DB melden" : "📤 Report Game to Online-DB"}</h2>
         <p class="muted" style="font-size:0.82rem;margin-top:2px">
-          ${
-            de
-              ? `Melde <strong>${escapeHtml(game.name)}</strong> an <code>dlssdb.goover.dev</code>. <strong>Pflichtangabe:</strong> Geht oder Geht nicht — alles andere ist optional.`
-              : `Report <strong>${escapeHtml(game.name)}</strong> to <code>dlssdb.goover.dev</code>. <strong>Required:</strong> Works or Doesn't Work — everything else is optional.`
-          }
+          ${de
+      ? `Melde <strong>${escapeHtml(game.name)}</strong> an <code>dlssdb.goover.dev</code>. <strong>Pflichtangabe:</strong> Geht oder Geht nicht — alles andere ist optional.`
+      : `Report <strong>${escapeHtml(game.name)}</strong> to <code>dlssdb.goover.dev</code>. <strong>Required:</strong> Works or Doesn't Work — everything else is optional.`
+    }
         </p>
       </div>
       <button class="btn-icon" onclick="closeSecondaryModal()">✕</button>
@@ -674,20 +670,18 @@ window.openReportGameModal = function (gameId) {
           <span><strong>${de ? "Spiel:" : "Game:"}</strong> ${escapeHtml(game.name)} (${escapeHtml(game.launcher_name)})</span>
           <span><strong>${de ? "Erkannte DLLs:" : "Detected DLLs:"}</strong> ${escapeHtml(techs.join(", ") || "DLSS")}</span>
         </div>
-        ${
-          game.anti_cheat
-            ? `<div style="margin-top:4px;color:#fcd34d">🛡️ ${de ? "Erkanntes Anti-Cheat:" : "Detected Anti-Cheat:"} ${escapeHtml(game.anti_cheat)}</div>`
-            : ""
-        }
+        ${game.anti_cheat
+      ? `<div style="margin-top:4px;color:#fcd34d">🛡️ ${de ? "Erkanntes Anti-Cheat:" : "Detected Anti-Cheat:"} ${escapeHtml(game.anti_cheat)}</div>`
+      : ""
+    }
       </div>
 
       <div>
         <label style="display:block;font-size:0.82rem;font-weight:700;margin-bottom:6px">
-          ${
-            de
-              ? `Status: Funktioniert das Spiel mit DLSS / Upscaler-Update? <span style="color:#a3e635">* (Muss)</span>`
-              : `Status: Does this game work with DLSS / Upscaler updates? <span style="color:#a3e635">* (Required)</span>`
-          }
+          ${de
+      ? `Status: Funktioniert das Spiel mit DLSS / Upscaler-Update? <span style="color:#a3e635">* (Muss)</span>`
+      : `Status: Does this game work with DLSS / Upscaler updates? <span style="color:#a3e635">* (Required)</span>`
+    }
         </label>
         <input type="hidden" id="modal-rep-works-status" value="works" />
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
@@ -755,7 +749,7 @@ window.openReportGameModal = function (gameId) {
 
     <div class="modal-footer" style="margin-top:16px;display:flex;justify-content:flex-end;gap:10px">
       <button class="btn btn-secondary" onclick="closeSecondaryModal()">${de ? "Abbrechen" : "Cancel"}</button>
-      <button class="btn btn-primary" onclick="submitModalGameReport('${escapeHtml(game.id)}')">
+      <button class="btn btn-primary" onclick="submitModalGameReport('${escapeJsStr(game.id)}')">
         ${de ? "📤 Jetzt an Datenbank melden" : "📤 Submit Report to Database"}
       </button>
     </div>
@@ -913,7 +907,7 @@ function renderInfoPage() {
         val: `${stats.game_db_count || 0} ${de ? "Profile (Cloudflare Pages + Lokal)" : "Profiles (Cloudflare Pages + Local)"}`,
       },
       { label: "Steam64 ID", val: appState.config?.steam_id || (de ? "Automatisch beim Scan erkannt" : "Auto-detected on scan") },
-      { label: de ? "AppData-Speicherpfad" : "AppData Storage Path", val: stats.app_data_dir || "%LOCALAPPDATA%\\Recol\\DLSS-Updater" },
+      { label: de ? "AppData-Speicherpfad" : "AppData Storage Path", val: stats.app_data_dir || "%LOCALAPPDATA%\\gOOvER\\DLSS-Manager" },
     ];
     diagGrid.innerHTML = items
       .map(
@@ -955,6 +949,18 @@ function renderInfoPage() {
       </div>`
       )
       .join("");
+  }
+
+  const refMatrixEl = document.getElementById("info-reference-matrix");
+  if (refMatrixEl) {
+    refMatrixEl.innerHTML = buildVersionReferenceTablesHtml();
+  }
+
+  const hubRefBtn = document.getElementById("btn-hub-version-ref");
+  if (hubRefBtn) {
+    hubRefBtn.textContent = isDe()
+      ? "📊 Versions- & Preset-Referenz"
+      : "📊 Version & Preset Reference";
   }
 }
 
@@ -1028,11 +1034,10 @@ function renderHubLaunchers() {
   const de = isDe();
   const entries = Object.entries(counts);
   if (entries.length === 0) {
-    grid.innerHTML = `<div class="muted">${
-      de
-        ? "Noch keine Spiele mit kompatiblen Upscaler-DLLs erkannt. Klicke links auf <strong>Spiele scannen</strong>."
-        : "No games with compatible upscaler DLLs detected yet. Click <strong>Scan Games</strong> on the left."
-    }</div>`;
+    grid.innerHTML = `<div class="muted">${de
+      ? "Noch keine Spiele mit kompatiblen Upscaler-DLLs erkannt. Klicke links auf <strong>Spiele scannen</strong>."
+      : "No games with compatible upscaler DLLs detected yet. Click <strong>Scan Games</strong> on the left."
+      }</div>`;
     return;
   }
 
@@ -1043,11 +1048,10 @@ function renderHubLaunchers() {
         <img src="assets/icons/${escapeHtml(info.icon)}" alt="${escapeHtml(name)}" />
         <div style="flex:1;min-width:0">
           <div style="font-weight:600">${escapeHtml(name)}</div>
-          <div class="muted">${info.count} ${de ? "Spiele" : "Games"} · ${
-        info.outdatedCount > 0
+          <div class="muted">${info.count} ${de ? "Spiele" : "Games"} · ${info.outdatedCount > 0
           ? `<span style="color:#fbbf24">${info.outdatedCount} ${de ? "Update verfügbar" : "need update"}</span>`
           : `<span style="color:#a3e635">${de ? "Alle aktuell" : "All up to date"}</span>`
-      }</div>
+        }</div>
         </div>
         <button class="btn btn-secondary btn-card-action" style="padding:5px 8px"
                 onclick="event.stopPropagation(); openLauncherDetailsModal('${escapeJsStr(name)}')"
@@ -1120,15 +1124,14 @@ function renderStatusChips() {
       <button class="status-chip ${!hiding ? "active" : ""}"
               onclick="toggleHideIgnoredChip()"
               title="${de ? "Sichtbarkeit ignorierter Spiele umschalten" : "Toggle visibility of ignored games"}">
-        👁️ ${
-          hiding
-            ? de
-              ? `Ignorierte zeigen (${ignoredCount})`
-              : `Show Ignored (${ignoredCount})`
-            : de
-            ? `Ignorierte sichtbar (${ignoredCount})`
-            : `Ignored Shown (${ignoredCount})`
-        }
+        👁️ ${hiding
+        ? de
+          ? `Ignorierte zeigen (${ignoredCount})`
+          : `Show Ignored (${ignoredCount})`
+        : de
+          ? `Ignorierte sichtbar (${ignoredCount})`
+          : `Ignored Shown (${ignoredCount})`
+      }
       </button>`;
   }
 
@@ -1223,8 +1226,8 @@ function renderBatchSelectionBar() {
         ? "✕ Auswahl beenden"
         : "✕ Exit Select"
       : de
-      ? "☑ Auswählen"
-      : "☑ Select";
+        ? "☑ Auswählen"
+        : "☑ Select";
   }
 
   if (appState.selectMode || count > 0) {
@@ -1308,11 +1311,10 @@ function renderGamesGrid() {
   const de = isDe();
 
   if (filtered.length === 0) {
-    grid.innerHTML = `<div class="muted">${
-      de
-        ? "Keine passenden Spiele für den aktiven Filter gefunden."
-        : "No matching games found for the active filter."
-    }</div>`;
+    grid.innerHTML = `<div class="muted">${de
+      ? "Keine passenden Spiele für den aktiven Filter gefunden."
+      : "No matching games found for the active filter."
+      }</div>`;
     return;
   }
 
@@ -1344,96 +1346,89 @@ function renderGamesGrid() {
           ? "Ignoriert"
           : "Ignored"
         : hasUpdate
-        ? de
-          ? "Update verfügbar"
-          : "Needs update"
-        : de
-        ? "Aktuell"
-        : "Up to date";
+          ? de
+            ? "Update verfügbar"
+            : "Needs update"
+          : de
+            ? "Aktuell"
+            : "Up to date";
       const statusDotClass = g.ignored ? "" : hasUpdate ? "outdated" : "current";
       const statusColor = g.ignored
         ? "#94a3b8"
         : hasUpdate
-        ? "#fbbf24"
-        : "#a3e635";
+          ? "#fbbf24"
+          : "#a3e635";
 
       const badgeText = g.ignored
         ? de
           ? `👁️ Ignoriert`
           : `👁️ Ignored`
         : hasUpdate
-        ? de
-          ? `⚡ ${counts.outdated}/${counts.total} veraltet`
-          : `⚡ ${counts.outdated}/${counts.total} outdated`
-        : de
-        ? `✓ Aktuell`
-        : `✓ Up to date`;
+          ? de
+            ? `⚡ ${counts.outdated}/${counts.total} veraltet`
+            : `⚡ ${counts.outdated}/${counts.total} outdated`
+          : de
+            ? `✓ Aktuell`
+            : `✓ Up to date`;
       const badgeClass = g.ignored
         ? ""
         : hasUpdate
-        ? "badge-outdated"
-        : "badge-current";
+          ? "badge-outdated"
+          : "badge-current";
+
+      const hasSrTech = (g.dlls || []).some((d) => d.type_label === "DLSS");
+      const hasRrTech = (g.dlls || []).some((d) => d.type_label === "DLSS-RR");
+      const hasFgTech = (g.dlls || []).some((d) => d.type_label === "DLSS-G");
 
       const activePresetParts = [];
-      if (g.dlss_sr_preset && g.dlss_sr_preset !== "Default") {
+      if (hasSrTech && g.dlss_sr_preset && g.dlss_sr_preset !== "Default") {
         activePresetParts.push(`SR: ${g.dlss_sr_preset}`);
       }
-      if (g.dlss_rr_preset && g.dlss_rr_preset !== "Default") {
+      if (hasRrTech && g.dlss_rr_preset && g.dlss_rr_preset !== "Default") {
         activePresetParts.push(`RR: ${g.dlss_rr_preset}`);
       }
-      if (g.dlss_fg_preset && g.dlss_fg_preset !== "Default") {
+      if (hasFgTech && g.dlss_fg_preset && g.dlss_fg_preset !== "Default") {
         activePresetParts.push(`FG: ${g.dlss_fg_preset}`);
       }
       const hasCustomPreset = activePresetParts.length > 0;
       const presetBadgeLabel =
         activePresetParts.length === 1
           ? activePresetParts[0].replace(/^SR:\s*/, "")
-          : activePresetParts.join(" · ");
+          : activePresetParts.map((p) => p.replace(/Preset\s+/i, "")).join(" · ");
       const presetBadgeTooltip = activePresetParts.join(" | ");
 
       return `
-      <div class="hero-game-card ${hasUpdate ? "needs-update" : ""} ${
-        g.ignored ? "is-ignored" : ""
-      } ${isSelected ? "is-selected" : ""}"
+      <div class="hero-game-card ${hasUpdate ? "needs-update" : ""} ${g.ignored ? "is-ignored" : ""
+        } ${isSelected ? "is-selected" : ""}"
            oncontextmenu="openCardContextMenu(event, '${g.id}')">
         <!-- Hero Banner -->
-        <div class="hero-card-banner" onclick="${
-          appState.selectMode
-            ? `toggleSelectGame(event, '${g.id}')`
-            : `openGameDllModal('${g.id}')`
+        <div class="hero-card-banner" onclick="${appState.selectMode
+          ? `toggleSelectGame(event, '${g.id}')`
+          : `openGameDllModal('${g.id}')`
         }" title="${escapeHtml(g.name)}\n${escapeHtml(g.path)}">
           <div class="hero-card-fallback-icon">
             <img src="assets/icons/${escapeHtml(g.launcher_icon)}" alt="" />
           </div>
           ${artTag}
           <div class="hero-top-badges">
-            <div style="display:flex;align-items:center;gap:6px;pointer-events:auto">
-              ${
-                appState.selectMode || isSelected
-                  ? `<label class="card-select-pill" onclick="event.stopPropagation()">
+            <div style="display:flex;align-items:center;gap:6px;pointer-events:auto;flex-shrink:0">
+              ${appState.selectMode || isSelected
+          ? `<label class="card-select-pill" onclick="event.stopPropagation()">
                        <input type="checkbox" ${isSelected ? "checked" : ""}
                               onchange="toggleSelectGame(event, '${g.id}')" />
                      </label>`
-                  : ""
-              }
+          : ""
+        }
               <span class="hero-launcher-pill">
                 <img src="assets/icons/${escapeHtml(g.launcher_icon)}" alt="" />
                 ${escapeHtml(g.launcher_name)}
               </span>
             </div>
             <div class="hero-top-right-group">
-              ${
-                hasCustomPreset
-                  ? `<span class="anticheat-badge" style="background:rgba(118,185,0,0.22);color:#a3e635;border-color:rgba(118,185,0,0.45)" title="${escapeHtml(presetBadgeTooltip)}">🎛️ ${escapeHtml(
-                      presetBadgeLabel
-                    )}</span>`
-                  : ""
-              }
-              ${
-                g.anti_cheat
-                  ? `<span class="anticheat-badge">🛡️ ${escapeHtml(g.anti_cheat)}</span>`
-                  : ""
-              }
+              ${g.anti_cheat
+          ? `<span class="anticheat-badge" style="overflow:hidden;text-overflow:ellipsis;max-width:140px" title="🛡️ ${escapeHtml(g.anti_cheat)}">🛡️ ${escapeHtml(g.anti_cheat)}</span>`
+          : ""
+        }
               <button class="card-menu-btn" onclick="openCardContextMenu(event, '${g.id}')" title="${de ? "Weitere Aktionen" : "More actions"}">⋮</button>
             </div>
           </div>
@@ -1445,7 +1440,15 @@ function renderGamesGrid() {
               ${statusDotClass ? `<span class="status-dot ${statusDotClass}"></span>` : ""}
               <span style="color:${statusColor};font-weight:600">${statusText}</span>
             </div>
-            <div class="hero-tech-line">${escapeHtml(techLine)}</div>
+            <div class="hero-tech-line">
+              <span style="overflow:hidden;text-overflow:ellipsis">${escapeHtml(techLine)}</span>
+              ${hasCustomPreset
+          ? `<span class="card-preset-pill" title="${escapeHtml(presetBadgeTooltip)}">🎛️ ${escapeHtml(
+            presetBadgeLabel
+          )}</span>`
+          : ""
+        }
+            </div>
           </div>
         </div>
 
@@ -1455,30 +1458,26 @@ function renderGamesGrid() {
             <span>${badgeText}</span>
           </button>
           <div class="footer-actions">
-            ${
-              g.has_backups
-                ? `<button class="btn btn-secondary btn-card-action" onclick="restoreAllGameBackups('${g.id}')" title="${
-                    de
-                      ? `Originale DLLs für ${escapeHtml(g.name)} wiederherstellen`
-                      : `Restore original DLLs for ${escapeHtml(g.name)}`
-                  }">
+            ${g.has_backups
+          ? `<button class="btn btn-secondary btn-card-action" onclick="restoreAllGameBackups('${g.id}')" title="${de
+            ? `Originale DLLs für ${escapeHtml(g.name)} wiederherstellen`
+            : `Restore original DLLs for ${escapeHtml(g.name)}`
+          }">
                      ⏪ ${de ? "Backup" : "Restore"}
                    </button>`
-                : ""
-            }
-            ${
-              hasUpdate
-                ? `<button class="btn btn-primary btn-card-action" id="btn-update-card-${g.id}" onclick="updateAllGameDlls('${g.id}')" title="${
-                    de
-                      ? `Alle veralteten Technologien in ${escapeHtml(g.name)} aktualisieren`
-                      : `Update all outdated technologies in ${escapeHtml(g.name)}`
-                  }">
+          : ""
+        }
+            ${hasUpdate
+          ? `<button class="btn btn-primary btn-card-action" id="btn-update-card-${g.id}" onclick="updateAllGameDlls('${g.id}')" title="${de
+            ? `Alle veralteten Technologien in ${escapeHtml(g.name)} aktualisieren`
+            : `Update all outdated technologies in ${escapeHtml(g.name)}`
+          }">
                      ⚡ Update
                    </button>`
-                : `<button class="btn btn-secondary btn-card-action" onclick="openGameDllModal('${g.id}')">
+          : `<button class="btn btn-secondary btn-card-action" onclick="openGameDllModal('${g.id}')">
                      Details
                    </button>`
-            }
+        }
           </div>
         </div>
       </div>`;
@@ -1500,23 +1499,31 @@ window.openCardContextMenu = function (event, gameId) {
   const isNvidia = (appState.gpu?.vendor || "").toUpperCase() === "NVIDIA";
   const de = isDe();
 
+  const acStatus = (game.db_profile?.anticheat_status || "").toLowerCase();
+  const isDrsOnlyGame =
+    acStatus === "driver_override_only" || acStatus === "drs_only" || acStatus === "blocked";
+
   menu.innerHTML = `
-    ${
-      counts.outdated > 0
-        ? `<button class="context-menu-item" onclick="closeCardContextMenu(); updateAllGameDlls('${game.id}')">
+    ${!isDrsOnlyGame && counts.outdated > 0
+      ? `<button class="context-menu-item" onclick="closeCardContextMenu(); updateAllGameDlls('${game.id}', false)">
              <span>⚡</span><span>${de ? `Veraltete DLLs aktualisieren (${counts.outdated})` : `Update Outdated DLLs (${counts.outdated})`}</span>
            </button>`
-        : ""
+      : ""
+    }
+    ${!isDrsOnlyGame
+      ? `<button class="context-menu-item" onclick="closeCardContextMenu(); updateAllGameDlls('${game.id}', true)">
+             <span>🔄</span><span>${de ? `Alle DLLs neu installieren (${counts.total})` : `Reinstall All DLLs (${counts.total})`}</span>
+           </button>`
+      : ""
     }
     <button class="context-menu-item" onclick="closeCardContextMenu(); openGameDllModal('${game.id}')">
       <span>🔍</span><span>${de ? "Technologien & Backups prüfen" : "Inspect Technologies & Backups"}</span>
     </button>
-    ${
-      isNvidia
-        ? `<button class="context-menu-item" onclick="closeCardContextMenu(); openGameDlssPresetsModal('${game.id}')">
+    ${isNvidia
+      ? `<button class="context-menu-item" onclick="closeCardContextMenu(); openGameDlssPresetsModal('${game.id}')">
              <span>🎛️</span><span>${de ? "DLSS Preset-Einstellungen (DRS)" : "DLSS Preset Settings (DRS)"}</span>
            </button>`
-        : ""
+      : ""
     }
     <button class="context-menu-item" onclick="closeCardContextMenu(); openEditDisplayModal('${game.id}')">
       <span>✏️</span><span>${de ? "Name & Cover-Bild bearbeiten" : "Edit Name & Cover Art"}</span>
@@ -1536,15 +1543,14 @@ window.openCardContextMenu = function (event, gameId) {
     </button>
     <div class="context-menu-divider"></div>
     <button class="context-menu-item" onclick="closeCardContextMenu(); toggleIgnoreGameNow('${game.id}')">
-      <span>👁️</span><span>${
-        game.ignored
-          ? de
-            ? "Nicht mehr ignorieren"
-            : "Unignore Game"
-          : de
-          ? "Spiel ignorieren"
-          : "Ignore Game"
-      }</span>
+      <span>👁️</span><span>${game.ignored
+      ? de
+        ? "Nicht mehr ignorieren"
+        : "Unignore Game"
+      : de
+        ? "Spiel ignorieren"
+        : "Ignore Game"
+    }</span>
     </button>
   `;
 
@@ -1604,6 +1610,12 @@ window.toggleIgnoreGameNow = async function (gameId) {
 function translateDbText(raw) {
   if (!raw || !isDe()) return raw || "";
   const exactMap = {
+    "EasyAntiCheat (base.bin) checks the exact file hash of Bin64\\nvngx_dlss.dll: Replacing the file on disk disables DLSS in-game ('GPU: DLSS Support = Unavailable'). Keep the original DLL in Bin64 and activate DLSS 4.5 (v310.9.16.0 · Preset K) via the NVIDIA Driver DRS Override above!":
+      "EasyAntiCheat (base.bin) prüft den exakten Datei-Hash von Bin64\\nvngx_dlss.dll: Ein Ersetzen der Datei auf der Festplatte deaktiviert DLSS im Spiel ('GPU: DLSS Support = Unavailable'). Belasse die Original-DLL in Bin64 und aktiviere DLSS 4.5 (v310.9.16.0 · Preset K) oben über den NVIDIA Treiber-DRS-Override!",
+    "EasyAntiCheat (EasyAntiCheat\\Certificates\\base.bin) verifies the exact file hash of Bin64\\nvngx_dlss.dll. Replacing the DLL on disk causes EAC to block it at launch ('GPU: DLSS Support = Unavailable'). Use the NVIDIA Driver DRS Override (Preset K) instead!":
+      "EasyAntiCheat (EasyAntiCheat\\Certificates\\base.bin) verifiziert den exakten Hash von Bin64\\nvngx_dlss.dll. Ein Überschreiben der Datei führt dazu, dass EAC das Laden beim Start blockiert ('GPU: DLSS Support = Unavailable'). Nutze stattdessen den NVIDIA Treiber-DRS-Override (Preset K)!",
+    "EasyAntiCheat monitors Bin64: Only official NVIDIA-signed nvngx_dlss.dll builds (full all-presets production build) and NVIDIA Driver DRS Presets (Preset K) are supported.":
+      "EasyAntiCheat überwacht Bin64: Nur offiziell NVIDIA-signierte nvngx_dlss.dll-Versionen (vollständiger 74,18 MB All-Presets-Build) sowie NVIDIA Treiber-DRS-Presets werden unterstützt.",
     "EasyAntiCheat monitors Bin64: Official NVIDIA-signed nvngx_dlss.dll updates and NVIDIA Driver DRS Presets (Preset J/K/L) work safely. Do not inject unsigned third-party wrapper DLLs.":
       "EasyAntiCheat überwacht Bin64: Offiziell NVIDIA-signierte nvngx_dlss.dll-Updates sowie NVIDIA Treiber-DRS-Presets (Preset J/K/L) funktionieren sicher. Keine unsignierten Drittanbieter-Wrapper-DLLs injizieren.",
     "AMD FSR 2 and CIG TSR are compiled directly into StarCitizen.exe & Data.p4k shaders (no external FSR DLL in Bin64).":
@@ -1616,7 +1628,12 @@ function translateDbText(raw) {
       "Upscaling: DLSS (Qualität oder Ausgeglichen bei 1440p/4K)",
     "NVIDIA DLSS Preset: Preset K (Transformer Gen 2 — sharper distant ship hulls & HUD MFD text)":
       "NVIDIA DLSS Preset: Preset K (Transformer Gen 2 — schärfere Schiffshüllen & HUD/MFD-Schrift)",
+    "NVIDIA DLSS Preset: Preset K (Transformer Gen 2 — sharper distant ship & HUD details)":
+      "NVIDIA DLSS Preset: Preset K (Transformer Gen 2 — schärfere Schiffshüllen & HUD-Details)",
     "Graphics Renderer: Vulkan": "Grafik-Renderer: Vulkan",
+    "Graphics Renderer: DirectX 11 or Vulkan (Beta)": "Grafik-Renderer: Vulkan",
+    "EasyAntiCheat (EasyAntiCheat\\Certificates\\base.bin) verifies the exact file hash of Bin64\\nvngx_dlss.dll (v310.2.1.0). Replacing the file on disk causes EAC to block it at launch ('GPU: DLSS Support = Unavailable').":
+      "EasyAntiCheat (EasyAntiCheat\\Certificates\\base.bin) prüft den exakten Datei-Hash von Bin64\\nvngx_dlss.dll (v310.2.1.0). Ein Überschreiben auf der Festplatte blockiert DLSS beim Spielstart ('GPU: DLSS Support = Unavailable').",
     "DirectStorage: Active (dstorage.dll & dstoragecore.dll for fast map & tile streaming)":
       "DirectStorage: Aktiv (dstorage.dll & dstoragecore.dll für schnelles Karten-Streaming)",
     "Overwatch 2 supports DLSS Super Resolution, AMD FSR 3 & Intel XeSS, but does not ship with NVIDIA DLSS Frame Generation (nvngx_dlssg.dll).":
@@ -1638,21 +1655,699 @@ function translateDbText(raw) {
     .replace(/\bQuality or Balanced\b/gi, "Qualität oder Ausgeglichen")
     .replace(/\bis not natively supported\b/gi, "wird nicht nativ unterstützt")
     .replace(/\bnot natively integrated\b/gi, "nicht nativ integriert")
-    .replace(/\bOnly official NVIDIA-signed\b/gi, "Nur offiziell NVIDIA-signierte");
+    .replace(/\bOnly official NVIDIA-signed\b/gi, "Nur offiziell NVIDIA-signierte")
+    .replace(/\bsharper distant ship & HUD details\b/gi, "schärfere Schiffshüllen & HUD-Details")
+    .replace(/\bDirectX 11 or Vulkan \(Beta\)\b/gi, "Vulkan");
+}
+
+const DLSS_PRESET_META = {
+  sr: {
+    Default: {
+      opt_de: "Standard (Default) — Vom Spiel gesteuert",
+      opt_en: "Default — Controlled by Game",
+      desc_de: "Nutzt das vom Spiel bzw. der DLL standardmäßig vorgesehene DLSS-Profil ohne Treiber-Eingriff.",
+      desc_en: "Uses the game's built-in default DLSS profile without driver override.",
+    },
+    Latest: {
+      opt_de: "Latest — Automatisch neuestes NVIDIA-Profil",
+      opt_en: "Latest — Automatically use newest NVIDIA profile",
+      desc_de: "Erzwingt über den NVIDIA-Treiber immer automatisch das jeweils neueste verfügbare DLSS-Transformer-Profil.",
+      desc_en: "Always forces the newest available DLSS Transformer profile via the NVIDIA driver.",
+    },
+    "Preset J": {
+      opt_de: "Preset J — DLSS 4 Transformer Gen 1 (Hohe Bewegungsschärfe)",
+      opt_en: "Preset J — DLSS 4 Transformer Gen 1 (High Motion Clarity)",
+      desc_de: "Erstes DLSS 4 Transformer-Modell: Sehr hohe Bewegungsschärfe und minimales Ghosting, kann bei feinen Gittern leicht schimmern.",
+      desc_en: "First-generation DLSS 4 Transformer model: Very sharp in motion with minimal ghosting, may show slight shimmer on fine meshes.",
+    },
+    "Preset K": {
+      opt_de: "Preset K — DLSS 4.5 Transformer Gen 2 (Empfohlen · Beste Bildruhe & Schärfe)",
+      opt_en: "Preset K — DLSS 4.5 Transformer Gen 2 (Recommended · Best Stability & Sharpness)",
+      desc_de: "Weiterentwickeltes Transformer-Modell (Gen 2): Beste Balance aus maximaler Detailschärfe (HUD/Schrift/Ferne) und höchster temporaler Bildruhe.",
+      desc_en: "Refined Transformer Gen 2 model: Best overall balance of fine detail sharpness (HUD/text/distance) and temporal stability.",
+    },
+    "Preset L": {
+      opt_de: "Preset L — DLSS 4.5 Transformer (Optimiert für Performance / Ultra-Perf.)",
+      opt_en: "Preset L — DLSS 4.5 Transformer (Optimized for Performance / Ultra-Perf.)",
+      desc_de: "Speziell für stärkere Skalierung (Performance- & Ultra-Performance-Modus bei 4K) abgestimmtes DLSS 4.5 Transformer-Profil.",
+      desc_en: "DLSS 4.5 Transformer profile specifically tuned for stronger scaling ratios (4K Performance / Ultra Performance modes).",
+    },
+    "Preset M": {
+      opt_de: "Preset M — DLSS 4.5 Transformer Max Quality (Optimiert für Quality / DLAA)",
+      opt_en: "Preset M — DLSS 4.5 Transformer Max Quality (Optimized for Quality / DLAA)",
+      desc_de: "Maximale Bildqualität für DLAA und Quality-Modus auf RTX 40/50 GPUs (nur in DLSS 4.5 ab v310.9.0+ verfügbar).",
+      desc_en: "Maximum image quality profile for DLAA and Quality modes on RTX 40/50 GPUs (only available in DLSS 4.5 v310.9.0+).",
+    },
+    "Preset E": {
+      opt_de: "Preset E — DLSS 3.7+ CNN (Bestes klassisches CNN-Modell)",
+      opt_en: "Preset E — DLSS 3.7+ CNN (Best Classic CNN Model)",
+      desc_de: "Bestes klassisches Convolutional-Neural-Network (CNN) Profil (Standard in DLSS 3.7/3.8 sowie als CNN-Fallback in v310.x).",
+      desc_en: "Best classic Convolutional Neural Network (CNN) profile (default in DLSS 3.7/3.8 and CNN fallback in v310.x).",
+    },
+    "Preset C": {
+      opt_de: "Preset C — DLSS 3.x CNN (Schnelle Bewegung)",
+      opt_en: "Preset C — DLSS 3.x CNN (Fast Motion)",
+      desc_de: "Klassisches CNN-Profil mit Fokus auf Bewegungsschärfe (DLSS 3.1–3.8).",
+      desc_en: "Classic CNN profile favoring motion clarity (DLSS 3.1–3.8).",
+    },
+    "Preset D": {
+      opt_de: "Preset D — DLSS 3.x CNN (Temporale Bildruhe)",
+      opt_en: "Preset D — DLSS 3.x CNN (Temporal Stability)",
+      desc_de: "Klassisches CNN-Profil mit Fokus auf temporale Stabilität (DLSS 3.1–3.8).",
+      desc_en: "Classic CNN profile favoring temporal stability (DLSS 3.1–3.8).",
+    },
+    "Preset F": {
+      opt_de: "Preset F — DLSS 3.x CNN (Ultra-Performance / DLAA)",
+      opt_en: "Preset F — DLSS 3.x CNN (Ultra-Performance / DLAA)",
+      desc_de: "Klassisches CNN-Profil für Ultra-Performance und DLAA (DLSS 3.1–3.8).",
+      desc_en: "Classic CNN profile for Ultra-Performance and DLAA (DLSS 3.1–3.8).",
+    },
+  },
+  rr: {
+    Default: {
+      opt_de: "Standard (Default) — Vom Spiel gesteuert",
+      opt_en: "Default — Controlled by Game",
+      desc_de: "Nutzt das Standard-Ray-Reconstruction-Profil des Spiels ohne Treiber-Eingriff.",
+      desc_en: "Uses the game's default Ray Reconstruction profile without driver override.",
+    },
+    Latest: {
+      opt_de: "Latest — Automatisch neuestes Ray-Reconstruction-Profil",
+      opt_en: "Latest — Automatically use newest Ray Reconstruction profile",
+      desc_de: "Erzwingt über den Treiber automatisch das neueste verfügbare Transformer-Denoiser-Modell.",
+      desc_en: "Forces the newest available Transformer denoiser model via the driver.",
+    },
+    "Preset D": {
+      opt_de: "Preset D — Transformer Ray Reconstruction (Gen 1)",
+      opt_en: "Preset D — Transformer Ray Reconstruction (Gen 1)",
+      desc_de: "Erstes Transformer-Denoiser-Modell für Raytracing und Pathtracing.",
+      desc_en: "First-generation Transformer denoiser model for Ray Tracing and Path Tracing.",
+    },
+    "Preset F": {
+      opt_de: "Preset F — DLSS 4.5 Transformer RR Gen 2 (Empfohlen · Minimales Rauschen & Ghosting)",
+      opt_en: "Preset F — DLSS 4.5 Transformer RR Gen 2 (Recommended · Minimal Noise & Ghosting)",
+      desc_de: "Neuestes Transformer-Denoiser-Modell (Gen 2): Deutlich ruhigere Reflexionen, Schatten und weniger Ghosting an Zäunen/Drähten.",
+      desc_en: "Newest Transformer Gen 2 denoiser: Significantly cleaner reflections, shadows, and reduced wire/fence ghosting.",
+    },
+  },
+  fg: {
+    Default: {
+      opt_de: "Standard (Default) — Vom Spiel gesteuert",
+      opt_en: "Default — Controlled by Game",
+      desc_de: "Nutzt das Standard-Frame-Generation-Profil des Spiels ohne Treiber-Eingriff.",
+      desc_en: "Uses the game's default Frame Generation profile without driver override.",
+    },
+    Latest: {
+      opt_de: "Latest — Neuestes Optical-Flow / Flip-Metering Modell (Empfohlen)",
+      opt_en: "Latest — Newest Optical-Flow / Flip-Metering Model (Recommended)",
+      desc_de: "Nutzt das neueste DLSS 4/4.5 Frame-Generation-Modell mit geringerem VRAM-Bedarf und gleichmäßigerem Frame-Pacing.",
+      desc_en: "Uses the newest DLSS 4/4.5 Frame Generation model with lower VRAM usage and smoother frame pacing.",
+    },
+    "Preset A": {
+      opt_de: "Preset A — Frame Generation Profil A (Standard)",
+      opt_en: "Preset A — Frame Generation Profile A (Standard)",
+      desc_de: "Standard-Profil für DLSS 3/4 Frame Generation.",
+      desc_en: "Standard profile for DLSS 3/4 Frame Generation.",
+    },
+    "Preset B": {
+      opt_de: "Preset B — Frame Generation Profil B (Alternativ bei HUD-Artefakten)",
+      opt_en: "Preset B — Frame Generation Profile B (Alternative for HUD Artifacts)",
+      desc_de: "Alternatives Frame-Generation-Profil, falls bei schnellen Kameraschwenks UI- oder Fadenkreuz-Artefakte auftreten.",
+      desc_en: "Alternative Frame Generation profile if UI or crosshair artifacts occur during fast camera pans.",
+    },
+  },
+};
+
+function parseVerParts(verStr) {
+  if (!verStr) return [310, 9, 16];
+  const nums = String(verStr)
+    .split(/[^0-9]+/)
+    .filter(Boolean)
+    .map((n) => parseInt(n, 10));
+  return [nums[0] || 0, nums[1] || 0, nums[2] || 0];
+}
+
+function getSupportedPresetsForDllVersion(cat, dllVersion) {
+  const [major, minor] = parseVerParts(dllVersion);
+  if (cat === "sr") {
+    if (major >= 310) {
+      if (minor >= 9) {
+        return ["Default", "Latest", "Preset J", "Preset K", "Preset L", "Preset M", "Preset E"];
+      }
+      if (minor >= 2) {
+        // v310.2.x – v310.8.x (e.g. Star Citizen stock 310.2.1.0): NO Preset L or M (DLSS 4.5 310.9+ only!)
+        return ["Default", "Latest", "Preset J", "Preset K", "Preset E"];
+      }
+      // v310.1.x: only Preset J + CNN
+      return ["Default", "Latest", "Preset J", "Preset E"];
+    }
+    if (major === 3 && minor >= 7) {
+      return ["Default", "Preset E", "Preset C", "Preset D", "Preset F"];
+    }
+    if (major === 3 && minor >= 1) {
+      return ["Default", "Preset C", "Preset D", "Preset F"];
+    }
+    return ["Default"];
+  }
+  if (cat === "rr") {
+    if (major >= 310) {
+      if (minor >= 4) {
+        return ["Default", "Latest", "Preset D", "Preset F"];
+      }
+      return ["Default", "Latest", "Preset D"];
+    }
+    return ["Default"];
+  }
+  if (cat === "fg") {
+    if (major >= 310) {
+      return ["Default", "Latest", "Preset A", "Preset B"];
+    }
+    return ["Default"];
+  }
+  return ["Default"];
+}
+
+function getPresetOptionLabel(cat, opt, recVal = null, dllVersion = null) {
+  const de = isDe();
+  const [major, minor] = parseVerParts(dllVersion);
+  const meta = DLSS_PRESET_META[cat]?.[opt];
+  let base = meta ? (de ? meta.opt_de : meta.opt_en) : opt;
+
+  // If the installed DLL is DLSS 4.0 (v310.2.x – v310.3.x, e.g. Star Citizen stock v310.2.1.0),
+  // Preset K is DLSS 4.0 Transformer Gen 1 — NOT DLSS 4.5!
+  if (cat === "sr" && opt === "Preset K" && major === 310 && minor < 4) {
+    base = de
+      ? "Preset K — DLSS 4.0 Transformer Gen 1 (Empfohlen für v310.2/310.3 · Kein DLSS 4.5)"
+      : "Preset K — DLSS 4.0 Transformer Gen 1 (Recommended for v310.2/310.3 · Not DLSS 4.5)";
+  }
+  return recVal === opt ? `★ ${base}` : base;
+}
+
+function getAllPresetsForCategory(cat) {
+  if (cat === "sr") {
+    return ["Default", "Latest", "Preset J", "Preset K", "Preset L", "Preset M", "Preset E", "Preset C", "Preset D", "Preset F"];
+  }
+  if (cat === "rr") return ["Default", "Latest", "Preset D", "Preset F"];
+  if (cat === "fg") return ["Default", "Latest", "Preset A", "Preset B"];
+  return ["Default"];
+}
+
+function getPresetMinDllHint(cat, opt, de) {
+  if (cat === "sr") {
+    if (opt === "Preset L" || opt === "Preset M") return de ? "Benötigt v310.9.0+ / DLSS 4.5" : "Requires v310.9.0+ / DLSS 4.5";
+    if (opt === "Preset K") return de ? "Benötigt v310.2.1+" : "Requires v310.2.1+";
+    if (opt === "Preset J" || opt === "Latest") return de ? "Benötigt v310.1.0+" : "Requires v310.1.0+";
+    if (opt === "Preset E") return de ? "Benötigt v3.7.0+" : "Requires v3.7.0+";
+    return de ? "Benötigt v3.1.1+" : "Requires v3.1.1+";
+  }
+  if (cat === "rr") {
+    if (opt === "Preset F") return de ? "Benötigt v310.4.0+" : "Requires v310.4.0+";
+    return de ? "Benötigt v310.1.0+" : "Requires v310.1.0+";
+  }
+  return de ? "Benötigt v310.1.0+" : "Requires v310.1.0+";
+}
+
+function buildPresetOptionsHtml(cat, selectedVal, recVal, dllVersion) {
+  const de = isDe();
+  const supported = getSupportedPresetsForDllVersion(cat, dllVersion);
+  const all = getAllPresetsForCategory(cat);
+  if (selectedVal && !all.includes(selectedVal)) all.push(selectedVal);
+  return all
+    .map((o) => {
+      const isSupported = supported.includes(o);
+      const label = getPresetOptionLabel(cat, o, recVal, dllVersion);
+      if (!isSupported) {
+        const hint = getPresetMinDllHint(cat, o, de);
+        return `<option value="${o}" disabled style="color:#6b7280" ${selectedVal === o ? "selected" : ""}>${escapeHtml(
+          `${label} [${de ? "Nicht unterstützt" : "Unsupported"} · ${hint}]`
+        )}</option>`;
+      }
+      return `<option value="${o}" ${selectedVal === o ? "selected" : ""}>${escapeHtml(label)}</option>`;
+    })
+    .join("");
+}
+
+function getPresetDescription(cat, opt, dllVersion = null) {
+  const de = isDe();
+  const [major, minor] = parseVerParts(dllVersion);
+  if (cat === "sr" && opt === "Preset K" && major === 310 && minor < 4) {
+    return de
+      ? `DLSS 4.0 Transformer-Modell (Gen 1) deiner aktuell installierten DLL (v${dllVersion}): Beste Schärfe & Bildruhe für v310.2/310.3. Hinweis: Die Original-DLL unterstützt noch KEIN DLSS 4.5 (Gen 2 / Preset L/M) — dafür oben auf v310.9.16 aktualisieren!`
+      : `DLSS 4.0 Transformer model (Gen 1) of your currently installed DLL (v${dllVersion}): Best sharpness & stability for v310.2/310.3. Note: Stock DLL does NOT support DLSS 4.5 (Gen 2 / Preset L/M) — update to v310.9.16 above for DLSS 4.5!`;
+  }
+  const meta = DLSS_PRESET_META[cat]?.[opt] || DLSS_PRESET_META[cat]?.Default;
+  return meta ? (de ? meta.desc_de : meta.desc_en) : "";
+}
+
+function buildDlssVersionMatrixTableHtml() {
+  const de = isDe();
+  return `
+    <div class="ref-table-wrap">
+      <table class="ref-matrix-table">
+        <thead>
+          <tr>
+            <th>${de ? "DLL-Version" : "DLL Version"}</th>
+            <th>${de ? "Generation & Architektur" : "Generation & Architecture"}</th>
+            <th>${de ? "Super Resolution (SR) Presets" : "Super Resolution (SR) Presets"}</th>
+            <th>${de ? "Ray Recon (RR)" : "Ray Recon (RR)"}</th>
+            <th>${de ? "Frame Gen (FG)" : "Frame Gen (FG)"}</th>
+            <th>${de ? "Hinweise & Hardware" : "Notes & Hardware"}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="ref-row-highlight">
+            <td><span class="ref-ver-pill">v310.9.0 – 310.9.16+</span></td>
+            <td><span class="ref-gen-badge ref-gen-dlss45">★ DLSS 4.5 (Transformer Gen 2)</span></td>
+            <td><strong>Preset J, K ★, L, M</strong><br/><span class="muted">${de
+      ? "+ CNN Preset A–E (im 74,18 MB Full-Build)"
+      : "+ CNN Preset A–E (in 74.18 MB Full Build)"
+    }</span></td>
+            <td><strong>Preset D, F ★</strong></td>
+            <td><strong>Preset A, B</strong><br/><span class="muted">${de ? "Dynamic MFG bis 6×" : "Dynamic MFG up to 6×"
+    }</span></td>
+            <td>${de
+      ? "Unterstützt alle neuen DLSS 4.5 Presets (J/K/L/M & RR Preset F). SR/RR ab RTX 20+, FG ab RTX 40+, MFG 3×–6× auf RTX 50."
+      : "Supports all DLSS 4.5 presets (J/K/L/M & RR Preset F). SR/RR on RTX 20+, FG on RTX 40+, MFG 3×–6× on RTX 50."
+    }</td>
+          </tr>
+          <tr>
+            <td><span class="ref-ver-pill">v310.4.0 – 310.8.0</span></td>
+            <td><span class="ref-gen-badge ref-gen-dlss45">DLSS 4.5 (Early Gen 2)</span></td>
+            <td><strong>Preset J, K ★</strong><br/><span class="muted">${de ? "Kein Preset L / M" : "No Preset L / M"
+    }</span></td>
+            <td><strong>Preset D, F ★</strong></td>
+            <td><strong>Preset A, B</strong><br/><span class="muted">MFG 3× / 4×</span></td>
+            <td>${de
+      ? "Einführung des überarbeiteten Transformer Gen 2 Modells. ⚠️ v310.7.x ist ein Dev-Build mit Wasserzeichen (wird blockiert)."
+      : "Introduced refined Transformer Gen 2 weights. ⚠️ v310.7.x is a watermarked dev build (automatically blocked)."
+    }</td>
+          </tr>
+          <tr>
+            <td><span class="ref-ver-pill">v310.2.1 – 310.3.0</span></td>
+            <td><span class="ref-gen-badge ref-gen-dlss40">DLSS 4.0 (Transformer Gen 1)</span></td>
+            <td><strong>Preset J, K</strong> + <strong>CNN A–E</strong><br/><span class="muted" style="color:#fbbf24">${de
+      ? "Kein DLSS 4.5 · Kein Preset L / M"
+      : "No DLSS 4.5 · No Preset L / M"
+    }</span></td>
+            <td><strong>Preset D, E</strong><br/><span class="muted">${de ? "Kein Preset F" : "No Preset F"
+    }</span></td>
+            <td><strong>Preset A, B</strong><br/><span class="muted">MFG 3× / 4×</span></td>
+            <td>${de
+      ? "Erste DLSS 4.0 Releases (z. B. Standard-DLL v310.2.1.0 in Star Citizen). Unterstützt Transformer Gen 1 (J/K) & CNN (E), aber noch kein DLSS 4.5 (L/M)."
+      : "Initial DLSS 4.0 releases (e.g. stock v310.2.1.0 in Star Citizen). Supports Transformer Gen 1 (J/K) & CNN (E), but no DLSS 4.5 (L/M)."
+    }</td>
+          </tr>
+          <tr>
+            <td><span class="ref-ver-pill">v310.1.0</span></td>
+            <td><span class="ref-gen-badge ref-gen-dlss40">DLSS 4.0 (Launch Build)</span></td>
+            <td><strong>Preset J</strong> + <strong>CNN A–E</strong><br/><span class="muted">${de ? "Noch kein Preset K / L / M" : "No Preset K / L / M yet"
+    }</span></td>
+            <td><strong>Preset D</strong></td>
+            <td><strong>Preset A</strong></td>
+            <td>${de
+      ? "Erster DLSS 4.0 Release: Enthält nur das erste Transformer-Modell (Preset J), noch kein Preset K."
+      : "Initial DLSS 4.0 launch binary: Only includes the first Transformer model (Preset J), no Preset K yet."
+    }</td>
+          </tr>
+          <tr>
+            <td><span class="ref-ver-pill">v3.7.0 – 3.8.10</span></td>
+            <td><span class="ref-gen-badge ref-gen-dlss3">DLSS 3.7 / 3.8 (CNN Final)</span></td>
+            <td><strong>Preset A, B, C, D, E ★, F</strong><br/><span class="muted" style="color:#fbbf24">${de ? "Kein Transformer (J/K/L/M)" : "No Transformer (J/K/L/M)"
+    }</span></td>
+            <td><strong>CNN (A–C)</strong></td>
+            <td><strong>DLSS 3.x FG</strong><br/><span class="muted">${de ? "Nur 2× (RTX 40/50)" : "2× only (RTX 40/50)"
+    }</span></td>
+            <td>${de
+      ? "Letzte reine CNN-Generation. Einführung von Preset E (bestes CNN-Profil). Unterstützt keine Transformer-Presets."
+      : "Final pure CNN generation. Introduced Preset E (best CNN profile). Does not support Transformer presets."
+    }</td>
+          </tr>
+          <tr>
+            <td><span class="ref-ver-pill">v3.1.1 – 3.6.0</span></td>
+            <td><span class="ref-gen-badge ref-gen-dlss3">DLSS 3.1 – 3.6 (CNN)</span></td>
+            <td><strong>Preset A, B, C, D, F</strong><br/><span class="muted">${de ? "Noch kein Preset E oder J–M" : "No Preset E or J–M"
+    }</span></td>
+            <td><strong>CNN (ab 3.5)</strong></td>
+            <td><strong>DLSS 3.x FG</strong><br/><span class="muted">Optical Flow</span></td>
+            <td>${de
+      ? "Einführung des Preset-Systems (A–F) ab v3.1.1 und Ray Reconstruction ab v3.5.0."
+      : "Introduced the DLSS preset system (A–F) in v3.1.1 and Ray Reconstruction in v3.5.0."
+    }</td>
+          </tr>
+          <tr>
+            <td><span class="ref-ver-pill">v2.0.0 – 2.5.1</span></td>
+            <td><span class="ref-gen-badge ref-gen-legacy">DLSS 2.x (Legacy CNN)</span></td>
+            <td><span class="muted">${de ? "Festes Modell (keine Presets)" : "Fixed model (no presets)"
+    }</span></td>
+            <td>—</td>
+            <td>—</td>
+            <td>${de
+      ? "Klassisches DLSS 2 Super Resolution auf RTX 20/30/40/50. Kann direkt auf v310.9.16 (DLSS 4.5) aktualisiert werden."
+      : "Classic DLSS 2 Super Resolution on RTX 20/30/40/50. Can be upgraded directly to v310.9.16 (DLSS 4.5)."
+    }</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>`;
+}
+
+function buildVersionReferenceTablesHtml() {
+  const de = isDe();
+  return `
+    <div class="ref-section-block">
+      <div class="ref-section-title">
+        <span>📊 ${de
+      ? "1. NVIDIA DLSS Versions-Historie & Unterstützte Presets (Was unterstützt welche Version?)"
+      : "1. NVIDIA DLSS Version History & Supported Presets (Which version supports what?)"
+    }</span>
+        <span class="muted" style="font-size:0.74rem;font-weight:500">${de
+      ? "Offizieller NVIDIA Upstream (NVIDIA/DLSS & NGX Driver Cache)"
+      : "Official NVIDIA Upstream (NVIDIA/DLSS & NGX Driver Cache)"
+    }</span>
+      </div>
+      ${buildDlssVersionMatrixTableHtml()}
+    </div>
+
+    <div class="ref-section-block">
+      <div class="ref-section-title">
+        <span>🎛️ ${de
+      ? "2. NVIDIA DLSS Presets im Detail — Architektur, Mindestversion & Einsatzzweck"
+      : "2. NVIDIA DLSS Presets Reference — Architecture, Minimum Version & Use Case"
+    }</span>
+      </div>
+      <div class="ref-table-wrap">
+        <table class="ref-matrix-table">
+          <thead>
+            <tr>
+              <th>Preset</th>
+              <th>${de ? "Technologie" : "Technology"}</th>
+              <th>${de ? "Architektur" : "Architecture"}</th>
+              <th>${de ? "Mindest-DLL" : "Min. DLL Version"}</th>
+              <th>${de ? "Optimaler Modus" : "Optimal Quality Mode"}</th>
+              <th>${de ? "Eigenschaften & Empfehlung" : "Characteristics & Recommendation"}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="ref-row-highlight">
+              <td><span class="ref-ver-pill">Preset K ★</span></td>
+              <td>DLSS Super Resolution</td>
+              <td><span class="ref-gen-badge ref-gen-dlss45">Transformer Gen 2</span></td>
+              <td><code>v310.2.1+</code><br/><span class="muted">${de ? "(Gen 2 ab 310.4+)" : "(Gen 2 in 310.4+)"}</span></td>
+              <td><strong>Quality / Balanced / DLAA</strong></td>
+              <td>${de
+      ? "★ Standard-Empfehlung für fast alle Spiele: Schärfste Details (HUD, Schrift, entfernte Objekte) bei höchster temporaler Bildruhe ohne Schimmern."
+      : "★ Recommended default for almost all games: Sharpest details (HUD, text, distant geometry) with highest temporal stability and minimal shimmering."
+    }</td>
+            </tr>
+            <tr>
+              <td><span class="ref-ver-pill">Preset J</span></td>
+              <td>DLSS Super Resolution</td>
+              <td><span class="ref-gen-badge ref-gen-dlss40">Transformer Gen 1</span></td>
+              <td><code>v310.1.0+</code></td>
+              <td><strong>Quality / Balanced</strong></td>
+              <td>${de
+      ? "Erstes Transformer-Modell: Extrem hohe Bewegungsschärfe und sehr wenig Ghosting, neigt auf feinen Gittern/Zäunen aber etwas eher zu Schimmern als Preset K."
+      : "First Transformer model: Very high motion clarity and minimal ghosting, but slightly more prone to shimmering on fine meshes/fences than Preset K."
+    }</td>
+            </tr>
+            <tr>
+              <td><span class="ref-ver-pill">Preset L</span></td>
+              <td>DLSS Super Resolution</td>
+              <td><span class="ref-gen-badge ref-gen-dlss45">Transformer Gen 2 (DLSS 4.5)</span></td>
+              <td><code>v310.9.0+</code></td>
+              <td><strong>Performance / Ultra-Perf. (4K)</strong></td>
+              <td>${de
+      ? "Speziell in DLSS 4.5 für starke Skalierungsfaktoren (2× / 3× im Performance- & Ultra-Performance-Modus bei 4K/UHD) trainiertes Transformer-Profil."
+      : "Specifically trained in DLSS 4.5 for aggressive scaling ratios (2× / 3× in 4K Performance & Ultra-Performance modes)."
+    }</td>
+            </tr>
+            <tr>
+              <td><span class="ref-ver-pill">Preset M</span></td>
+              <td>DLSS Super Resolution</td>
+              <td><span class="ref-gen-badge ref-gen-dlss45">Transformer Gen 2 (DLSS 4.5)</span></td>
+              <td><code>v310.9.0+</code></td>
+              <td><strong>DLAA / Quality (RTX 40/50)</strong></td>
+              <td>${de
+      ? "Maximale Bildqualität und feinste Kantenglättung für DLAA & Quality in DLSS 4.5 (etwas höherer Tensor-Rechenaufwand als Preset K)."
+      : "Maximum image quality and anti-aliasing stability for DLAA & Quality in DLSS 4.5 (slightly higher Tensor compute cost than Preset K)."
+    }</td>
+            </tr>
+            <tr>
+              <td><span class="ref-ver-pill">Preset E</span></td>
+              <td>DLSS Super Resolution</td>
+              <td><span class="ref-gen-badge ref-gen-dlss3">CNN (Final)</span></td>
+              <td><code>v3.7.0+</code><br/><span class="muted">${de ? "(im 74 MB 310.9.16)" : "(in 74 MB 310.9.16)"}</span></td>
+              <td><strong>Quality / Balanced / Perf.</strong></td>
+              <td>${de
+      ? "Bestes klassisches Convolutional-Neural-Network (CNN) Profil. Geringerer GPU-Aufwand auf älteren GPUs und Fallback für Spiele wie Star Citizen (r.TSR.UpscalingPreset=0)."
+      : "Best classic Convolutional Neural Network (CNN) profile. Lower GPU overhead on older cards and default fallback for games like Star Citizen (r.TSR.UpscalingPreset=0)."
+    }</td>
+            </tr>
+            <tr>
+              <td><span class="ref-ver-pill">Preset A – D / F</span></td>
+              <td>DLSS Super Resolution</td>
+              <td><span class="ref-gen-badge ref-gen-legacy">CNN (Legacy)</span></td>
+              <td><code>v3.1.1+</code></td>
+              <td><strong>Legacy / Ultra-Perf. (F)</strong></td>
+              <td>${de
+      ? "Ältere CNN-Profile aus DLSS 3.1–3.6 (C = schnelle Bewegung, D = Bildruhe, F = Ultra-Performance). Heute durch Preset K und L abgelöst."
+      : "Older CNN profiles from DLSS 3.1–3.6 (C = fast motion, D = stability, F = Ultra-Performance). Superseded today by Presets K and L."
+    }</td>
+            </tr>
+            <tr class="ref-row-highlight">
+              <td><span class="ref-ver-pill">RR · Preset F ★</span></td>
+              <td>DLSS Ray Reconstruction</td>
+              <td><span class="ref-gen-badge ref-gen-dlss45">Transformer Gen 2</span></td>
+              <td><code>v310.4.0+</code></td>
+              <td><strong>Raytracing / Pathtracing</strong></td>
+              <td>${de
+      ? "★ Empfohlen für alle Spiele mit Ray Reconstruction (z. B. Cyberpunk 2077, Alan Wake 2): Deutlich schärfere Reflexionen und weniger Ghosting als Preset D."
+      : "★ Recommended for all Ray Reconstruction games (e.g. Cyberpunk 2077, Alan Wake 2): Much cleaner reflections and less ghosting than Preset D."
+    }</td>
+            </tr>
+            <tr>
+              <td><span class="ref-ver-pill">RR · Preset D</span></td>
+              <td>DLSS Ray Reconstruction</td>
+              <td><span class="ref-gen-badge ref-gen-dlss40">Transformer Gen 1</span></td>
+              <td><code>v310.1.0+</code></td>
+              <td><strong>Raytracing / Pathtracing</strong></td>
+              <td>${de
+      ? "Erstes Transformer-Denoiser-Modell für Ray Reconstruction aus DLSS 4.0."
+      : "First-generation Transformer denoiser model for Ray Reconstruction from DLSS 4.0."
+    }</td>
+            </tr>
+            <tr class="ref-row-highlight">
+              <td><span class="ref-ver-pill">FG · Latest / A / B</span></td>
+              <td>DLSS Frame Generation</td>
+              <td><span class="ref-gen-badge ref-gen-dlss45">AI Frame Gen + Flip Metering</span></td>
+              <td><code>v310.1.0+</code></td>
+              <td><strong>2× (RTX 40) / 3×–6× (RTX 50)</strong></td>
+              <td>${de
+      ? "Neuestes KI-Frame-Generation-Modell (~30% weniger VRAM-Bedarf, höhere FPS). Preset B dient als Alternative, falls HUD-/Fadenkreuz-Artefakte auftreten."
+      : "Newest AI Frame Generation model (~30% lower VRAM usage, higher FPS). Preset B serves as an alternative if HUD/crosshair artifacts appear."
+    }</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="ref-section-block">
+      <div class="ref-section-title">
+        <span>🖥️ ${de
+      ? "3. Alle Upscaler- & Streaming-Technologien — DLL-Dateien & Hardware-Kompatibilität"
+      : "3. All Upscaler & Streaming Technologies — DLL Files & Hardware Compatibility"
+    }</span>
+      </div>
+      <div class="ref-table-wrap">
+        <table class="ref-matrix-table">
+          <thead>
+            <tr>
+              <th>${de ? "Technologie" : "Technology"}</th>
+              <th>${de ? "Aktuelle Version" : "Latest Version"}</th>
+              <th>${de ? "DLL-Dateien im Spielordner" : "DLL Files in Game Folder"}</th>
+              <th>${de ? "Unterstützte Grafikkarten (Hardware)" : "Supported Graphics Cards (Hardware)"}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>DLSS Super Resolution (SR)</strong></td>
+              <td><span class="ref-ver-pill">v310.9.16.0</span> (DLSS 4.5)</td>
+              <td><code>nvngx_dlss.dll</code></td>
+              <td>NVIDIA GeForce <strong>RTX 20, RTX 30, RTX 40, RTX 50</strong> (Turing, Ampere, Ada, Blackwell)</td>
+            </tr>
+            <tr>
+              <td><strong>DLSS Ray Reconstruction (RR)</strong></td>
+              <td><span class="ref-ver-pill">v310.9.16.0</span> (DLSS 4.5)</td>
+              <td><code>nvngx_dlssd.dll</code></td>
+              <td>NVIDIA GeForce <strong>RTX 20, RTX 30, RTX 40, RTX 50</strong></td>
+            </tr>
+            <tr>
+              <td><strong>DLSS Frame Generation (FG / MFG)</strong></td>
+              <td><span class="ref-ver-pill">v310.9.16.0</span> (DLSS 4.5)</td>
+              <td><code>nvngx_dlssg.dll</code></td>
+              <td><strong>RTX 40 & RTX 50</strong> (2× FG) · <strong>RTX 50 Blackwell</strong> (3×/4×/6× Multi Frame Gen)</td>
+            </tr>
+            <tr>
+              <td><strong>DLSS 5 Neural Rendering (NR)</strong></td>
+              <td><span class="ref-ver-pill">v310.8.0.0</span></td>
+              <td><code>nvngx_dlssnr.dll</code></td>
+              <td>NVIDIA GeForce <strong>RTX 50 Serie (Blackwell)</strong></td>
+            </tr>
+            <tr>
+              <td><strong>NVIDIA Streamline SDK</strong></td>
+              <td><span class="ref-ver-pill">v2.14.16.0</span></td>
+              <td><code>sl.interposer.dll</code>, <code>sl.common.dll</code>, <code>sl.dlss.dll</code>, <code>sl.dlss_g.dll</code>, <code>sl.dlss_d.dll</code>, <code>sl.reflex.dll</code>, <code>sl.pcl.dll</code></td>
+              <td>NVIDIA GeForce <strong>RTX 20 / 30 / 40 / 50</strong> (Reflex & PCL auch auf GTX 900/10/16)</td>
+            </tr>
+            <tr>
+              <td><strong>AMD FidelityFX Super Resolution 3.1 / 4</strong></td>
+              <td><span class="ref-ver-pill">v4.0.2 / v3.1.5</span></td>
+              <td><code>amd_fidelityfx_dx12.dll</code>, <code>amd_fidelityfx_vk.dll</code>, <code>amd_fidelityfx_upscaler_dx12.dll</code>, <code>amd_fidelityfx_framegeneration_dx12.dll</code></td>
+              <td><strong>FSR 3.1:</strong> Alle GPUs (AMD, NVIDIA, Intel) · <strong>FSR 4 KI-Upscaler:</strong> AMD Radeon RX 9000 (RDNA 4)</td>
+            </tr>
+            <tr>
+              <td><strong>Intel XeSS 2 (SR / FG / XeLL)</strong></td>
+              <td><span class="ref-ver-pill">v2.0.2.68</span></td>
+              <td><code>libxess.dll</code>, <code>libxess_dx11.dll</code>, <code>libxess_fg.dll</code>, <code>libxell.dll</code></td>
+              <td><strong>XeSS SR:</strong> Alle GPUs (XMX auf Intel Arc, DP4a auf NVIDIA/AMD) · <strong>XeSS-FG:</strong> Intel Arc</td>
+            </tr>
+            <tr>
+              <td><strong>Microsoft DirectStorage</strong></td>
+              <td><span class="ref-ver-pill">v1.2.2504+</span></td>
+              <td><code>dstorage.dll</code>, <code>dstoragecore.dll</code></td>
+              <td><strong>Alle DirectX-12-fähigen GPUs</strong> (NVIDIA, AMD, Intel) + NVMe SSD</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+window.openVersionReferenceModal = function () {
+  const backdrop = document.getElementById("secondary-modal-backdrop");
+  const modal = document.getElementById("secondary-modal-content");
+  if (!backdrop || !modal) return;
+  const de = isDe();
+
+  modal.innerHTML = `
+    <div class="modal-header">
+      <div class="modal-header-info">
+        <h3>📊 ${de
+      ? "Versions-, Preset- & Hardware-Referenzübersicht"
+      : "Version, Preset & Hardware Reference Matrix"
+    }</h3>
+        <div class="muted" style="font-size:0.78rem">
+          ${de
+      ? "Komplette tabellarische Übersicht: Welche DLL-Version unterstützt welche DLSS-Generation, welche Presets (A–M) und welche Grafikkarte?"
+      : "Complete tabular reference: Which DLL version supports which DLSS generation, presets (A–M), and GPU architecture?"
+    }
+        </div>
+      </div>
+      <button class="btn btn-secondary btn-card-action" onclick="closeSecondaryModal()">✕ ${de ? "Schließen" : "Close"
+    }</button>
+    </div>
+    <div class="modal-body" style="gap:16px">
+      ${buildVersionReferenceTablesHtml()}
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="closeSecondaryModal()">✓ ${de ? "Verstanden" : "Got it"
+    }</button>
+    </div>
+  `;
+
+  backdrop.style.display = "flex";
+};
+
+function buildPresetGuideHtml(hasSr, hasRr, hasFg) {
+  const de = isDe();
+  const items = [];
+  if (hasSr) {
+    for (const k of ["Preset K", "Preset J", "Preset L", "Preset M", "Latest", "Default"]) {
+      const m = DLSS_PRESET_META.sr[k];
+      items.push({
+        badge: `SR · ${k}`,
+        rec: k === "Preset K",
+        desc: de ? m.desc_de : m.desc_en,
+      });
+    }
+  }
+  if (hasRr) {
+    for (const k of ["Preset F", "Preset D"]) {
+      const m = DLSS_PRESET_META.rr[k];
+      items.push({
+        badge: `RR · ${k}`,
+        rec: k === "Preset F",
+        desc: de ? m.desc_de : m.desc_en,
+      });
+    }
+  }
+  if (hasFg) {
+    for (const k of ["Latest", "Preset A", "Preset B"]) {
+      const m = DLSS_PRESET_META.fg[k];
+      items.push({
+        badge: `FG · ${k}`,
+        rec: k === "Latest",
+        desc: de ? m.desc_de : m.desc_en,
+      });
+    }
+  }
+  return `
+    <details class="preset-guide-accordion">
+      <summary>
+        <span>📖 ${de
+      ? "Alle DLSS-Presets & Versions-Kompatibilität erklärt (Welche Version unterstützt was?)"
+      : "All DLSS Presets & Version Compatibility Explained (Which version supports what?)"
+    }</span>
+        <span style="font-size:0.72rem;opacity:0.85">${de ? "Tabelle & Übersicht öffnen ▾" : "Show table & guide ▾"}</span>
+      </summary>
+      <div class="preset-guide-list">
+        ${items
+      .map(
+        (it) => `
+          <div class="preset-guide-item" style="${it.rec ? "border-color:rgba(118,185,0,0.42);background:rgba(118,185,0,0.06)" : ""}">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:6px">
+              <strong style="color:${it.rec ? "#a3e635" : "var(--text-primary)"};font-size:0.76rem">${escapeHtml(it.badge)}</strong>
+              ${it.rec ? `<span class="preset-slot-rec">★ ${de ? "Empfohlen" : "Recommended"}</span>` : ""}
+            </div>
+            <span class="muted">${escapeHtml(it.desc)}</span>
+          </div>`
+      )
+      .join("")}
+      </div>
+      <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border-subtle);display:flex;flex-direction:column;gap:8px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+          <strong style="font-size:0.77rem;color:var(--text-primary)">📊 ${de
+      ? "DLSS DLL-Versionen & Unterstützte Presets (Referenztabelle)"
+      : "DLSS DLL Versions & Supported Presets (Reference Table)"
+    }</strong>
+          <button type="button" class="btn btn-secondary btn-card-action" onclick="openVersionReferenceModal()" style="padding:3px 9px;font-size:0.72rem">
+            📊 ${de ? "Komplette Referenz öffnen" : "Open Full Reference"}
+          </button>
+        </div>
+        ${buildDlssVersionMatrixTableHtml()}
+      </div>
+    </details>`;
 }
 
 window.quickSaveInlineGamePresets = async function (gameId, reset = false) {
   const game = appState.games.find((g) => g.id === gameId);
   if (!game) return;
-  const srPreset = reset
-    ? "Default"
-    : document.getElementById("inline-sr-preset")?.value || game.dlss_sr_preset || "Default";
-  const rrPreset = reset
-    ? "Default"
-    : document.getElementById("inline-rr-preset")?.value || game.dlss_rr_preset || "Default";
-  const fgPreset = reset
-    ? "Default"
-    : document.getElementById("inline-fg-preset")?.value || game.dlss_fg_preset || "Default";
+  const hasSrTech = (game.dlls || []).some((d) => d.type_label === "DLSS");
+  const hasRrTech = (game.dlls || []).some((d) => d.type_label === "DLSS-RR");
+  const hasFgTech = (game.dlls || []).some((d) => d.type_label === "DLSS-G");
+
+  const srPreset =
+    reset || !hasSrTech
+      ? "Default"
+      : document.getElementById("inline-sr-preset")?.value || game.dlss_sr_preset || "Default";
+  const rrPreset =
+    reset || !hasRrTech
+      ? "Default"
+      : document.getElementById("inline-rr-preset")?.value || game.dlss_rr_preset || "Default";
+  const fgPreset =
+    reset || !hasFgTech
+      ? "Default"
+      : document.getElementById("inline-fg-preset")?.value || game.dlss_fg_preset || "Default";
 
   try {
     const payload = await invoke("save_game_dlss_presets", {
@@ -1663,14 +2358,19 @@ window.quickSaveInlineGamePresets = async function (gameId, reset = false) {
       customExePath: game.custom_exe_path || null,
     });
     applyPayload(payload);
+    const activeParts = [];
+    if (hasSrTech) activeParts.push(`SR: ${srPreset}`);
+    if (hasRrTech) activeParts.push(`RR: ${rrPreset}`);
+    if (hasFgTech) activeParts.push(`FG: ${fgPreset}`);
+    const summaryStr = activeParts.join(" · ") || `SR: ${srPreset}`;
     showToast(
       reset
         ? isDe()
           ? "↺ DLSS-Presets auf Treiber-Standard zurückgesetzt."
           : "↺ Reset DLSS presets to Driver Default."
         : isDe()
-        ? `✓ NVIDIA Treiber-Presets aktiv (SR: ${srPreset} · RR: ${rrPreset} · FG: ${fgPreset})`
-        : `✓ Applied NVIDIA Driver Presets (SR: ${srPreset} · RR: ${rrPreset} · FG: ${fgPreset})`
+          ? `✓ NVIDIA Treiber-Presets aktiv (${summaryStr})`
+          : `✓ Applied NVIDIA Driver Presets (${summaryStr})`
     );
   } catch (e) {
     showToast(String(e), true);
@@ -1689,16 +2389,43 @@ window.openGameDllModal = function (gameId) {
   const de = isDe();
   const dbProf = game.db_profile;
 
-  const gameSr = game.dlss_sr_preset || "Default";
-  const gameRr = game.dlss_rr_preset || "Default";
-  const gameFg = game.dlss_fg_preset || "Default";
+  const hasSrTech = counts.groups.some((g) => g.typeLabel === "DLSS");
+  const hasRrTech = counts.groups.some((g) => g.typeLabel === "DLSS-RR");
+  const hasFgTech = counts.groups.some((g) => g.typeLabel === "DLSS-G");
+
+  const gameSr = hasSrTech ? game.dlss_sr_preset || "Default" : "Default";
+  const gameRr = hasRrTech ? game.dlss_rr_preset || "Default" : "Default";
+  const gameFg = hasFgTech ? game.dlss_fg_preset || "Default" : "Default";
   const globalSr = appState.config?.global_dlss_preset || "Default";
   const globalRr = appState.config?.global_dlss_rr_preset || "Default";
   const globalFg = appState.config?.global_dlss_fg_preset || "Default";
 
-  const effectiveSr = gameSr !== "Default" ? gameSr : globalSr !== "Default" ? `${globalSr} (Global)` : "Default";
-  const effectiveRr = gameRr !== "Default" ? gameRr : globalRr !== "Default" ? `${globalRr} (Global)` : "Default";
-  const effectiveFg = gameFg !== "Default" ? gameFg : globalFg !== "Default" ? `${globalFg} (Global)` : "Default";
+  const effectiveSr = !hasSrTech
+    ? "Default"
+    : gameSr !== "Default"
+      ? gameSr
+      : globalSr !== "Default"
+        ? `${globalSr} (Global)`
+        : "Default";
+  const effectiveRr = !hasRrTech
+    ? "Default"
+    : gameRr !== "Default"
+      ? gameRr
+      : globalRr !== "Default"
+        ? `${globalRr} (Global)`
+        : "Default";
+  const effectiveFg = !hasFgTech
+    ? "Default"
+    : gameFg !== "Default"
+      ? gameFg
+      : globalFg !== "Default"
+        ? `${globalFg} (Global)`
+        : "Default";
+
+  const isDrsOnlyGame =
+    (dbProf?.anticheat_status || "").toLowerCase() === "driver_override_only" ||
+    (dbProf?.anticheat_status || "").toLowerCase() === "drs_only" ||
+    (dbProf?.anticheat_status || "").toLowerCase() === "blocked";
 
   // 1. Installed Upscaler DLL Rows (with active preset badge right inside the row)
   const groupRows = counts.groups
@@ -1708,9 +2435,9 @@ window.openGameDllModal = function (gameId) {
         grp.dlls.length <= 2
           ? fullFileList
           : `${grp.dlls.length} ${de ? "Dateien" : "files"} (${grp.dlls
-              .slice(0, 2)
-              .map((d) => d.filename)
-              .join(", ")}, …)`;
+            .slice(0, 2)
+            .map((d) => d.filename)
+            .join(", ")}, …)`;
       const encodedType = escapeJsStr(grp.typeLabel);
 
       const techBackupsCount = appState.backups.filter(
@@ -1745,47 +2472,53 @@ window.openGameDllModal = function (gameId) {
           <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
             <span class="dll-badge">${escapeHtml(grp.typeLabel)}</span>
             <span class="dll-ver-text">v${escapeHtml(grp.version)}</span>
-            ${
-              grp.updateAvailable
-                ? `<span style="color:#76b900;font-weight:600;font-size:0.82rem">→ v${escapeHtml(grp.latestVersion)}</span>`
-                : !grp.technologyEnabled
-                ? `<span class="muted" style="font-size:0.74rem;margin-left:4px">${
-                    de ? "(Deaktiviert)" : "(Disabled)"
-                  }</span>`
-                : `<span class="muted" style="font-size:0.75rem;margin-left:2px">✓ ${de ? "Aktuell" : "Up to date"}</span>`
-            }
+            ${grp.updateAvailable
+          ? `<span style="color:#76b900;font-weight:600;font-size:0.82rem">→ v${escapeHtml(grp.latestVersion)}</span>`
+          : isDrsOnlyGame
+            ? `<span class="muted" style="font-size:0.74rem;margin-left:2px">🛡️ ${de ? "Original-DLL (EAC-geschützt)" : "Stock DLL (EAC Protected)"
+            }</span>`
+            : !grp.technologyEnabled
+              ? `<span class="muted" style="font-size:0.74rem;margin-left:4px">${de ? "(Deaktiviert)" : "(Disabled)"
+              }</span>`
+              : `<span class="muted" style="font-size:0.75rem;margin-left:2px">✓ ${de ? "Aktuell" : "Up to date"}</span>`
+        }
             ${activeTechPresetBadge}
-            ${
-              grp.badBuildWarning
-                ? `<span class="anticheat-badge" title="${escapeHtml(grp.badBuildWarning)}">⚠️ ${
-                    de ? "Wasserzeichen-Build" : "Watermark Build"
-                  }</span>`
-                : ""
-            }
+            ${grp.badBuildWarning
+          ? `<span class="anticheat-badge" title="${escapeHtml(grp.badBuildWarning)}">⚠️ ${de ? "Wasserzeichen-Build" : "Watermark Build"
+          }</span>`
+          : ""
+        }
           </div>
           <div class="dll-preset-sub" title="${escapeHtml(fullFileList)}">
             ${grp.presetLabel ? escapeHtml(grp.presetLabel) + " · " : ""}<code>${escapeHtml(shortFileList)}</code>
           </div>
         </div>
         <div class="dll-row-action" style="gap:6px">
-          ${
-            techBackupsCount > 0
-              ? `<button class="btn btn-secondary btn-card-action" onclick="restoreTechGroupForGame('${game.id}', '${encodedType}')" title="${
-                  de
-                    ? `Originale ${escapeHtml(grp.typeLabel)}-Dateien wiederherstellen`
-                    : `Restore original ${escapeHtml(grp.typeLabel)} files`
-                }">
+          ${techBackupsCount > 0
+          ? `<button class="btn btn-secondary btn-card-action" onclick="restoreTechGroupForGame('${game.id}', '${encodedType}')" title="${de
+            ? `Originale ${escapeHtml(grp.typeLabel)}-Dateien wiederherstellen`
+            : `Restore original ${escapeHtml(grp.typeLabel)} files`
+          }">
                    ⏪ ${de ? "Backup" : "Restore"}
                  </button>`
-              : ""
-          }
-          ${
-            grp.updateAvailable
-              ? `<button class="btn btn-primary btn-card-action" onclick="updateTechGroupForGame('${game.id}', '${encodedType}')">
+          : ""
+        }
+          ${isDrsOnlyGame
+          ? `<span class="compat-status-pill compat-warn" title="${de
+            ? "EasyAntiCheat prüft den Datei-Hash dieser DLL auf der Festplatte. Nutze das Treiber-DRS-Preset darunter!"
+            : "Anti-Cheat verifies the file hash of this DLL on disk. Use the Driver DRS Preset below!"
+          }">🛡️ ${de ? "Nur Treiber-DRS" : "Driver DRS Only"}</span>`
+          : grp.updateAvailable
+            ? `<button class="btn btn-primary btn-card-action" onclick="updateTechGroupForGame('${game.id}', '${encodedType}', false)">
                    ⚡ Update
                  </button>`
-              : `<span class="muted" style="font-size:0.76rem">${de ? "Aktuell" : "Current"}</span>`
-          }
+            : `<button class="btn btn-secondary btn-card-action" onclick="updateTechGroupForGame('${game.id}', '${encodedType}', true)" title="${de
+              ? `${escapeHtml(grp.typeLabel)}-DLLs neu installieren`
+              : `Reinstall ${escapeHtml(grp.typeLabel)} DLLs`
+            }">
+                   🔄 ${de ? "Neu installieren" : "Reinstall"}
+                 </button>`
+        }
         </div>
       </div>`;
     })
@@ -1797,9 +2530,16 @@ window.openGameDllModal = function (gameId) {
     ["DLSS", "DLSS-RR", "DLSS-G", "Streamline"].includes(g.typeLabel)
   );
   if (isNvidia && (hasDlssTech || dbProf?.recommended_sr_preset)) {
-    const srOptions = ["Default", "Latest", "Preset J", "Preset K", "Preset L", "Preset M"];
-    const rrOptions = ["Default", "Latest", "Preset D", "Preset F"];
-    const fgOptions = ["Default", "Latest", "Preset A", "Preset B"];
+    const srDllVer = counts.groups.find((g) => g.typeLabel === "DLSS")?.version || "310.9.16.0";
+    const rrDllVer = counts.groups.find((g) => g.typeLabel === "DLSS-RR")?.version || "310.9.16.0";
+    const fgDllVer = counts.groups.find((g) => g.typeLabel === "DLSS-G")?.version || "310.9.16.0";
+
+    const srOptions = getSupportedPresetsForDllVersion("sr", srDllVer);
+    const rrOptions = getSupportedPresetsForDllVersion("rr", rrDllVer);
+    const fgOptions = getSupportedPresetsForDllVersion("fg", fgDllVer);
+    if (!srOptions.includes(gameSr)) srOptions.push(gameSr);
+    if (!rrOptions.includes(gameRr)) rrOptions.push(gameRr);
+    if (!fgOptions.includes(gameFg)) fgOptions.push(gameFg);
 
     const recSr = dbProf?.recommended_sr_preset || null;
     const recRr = dbProf?.recommended_rr_preset || null;
@@ -1816,102 +2556,93 @@ window.openGameDllModal = function (gameId) {
     const statusBadge = isOptimalApplied
       ? `<span class="compat-status-pill compat-safe">✓ ${de ? "Optimales Preset aktiv" : "Optimal Preset Active"} (${escapeHtml(recSr || gameSr)})</span>`
       : hasAnyCustom
-      ? `<span class="compat-status-pill compat-safe">● ${de ? "Eigenes Preset aktiv" : "Custom Preset Active"}</span>`
-      : `<span class="default-preset-chip">○ ${de ? "Treiber-Standard (Default)" : "Driver Default"}</span>`;
+        ? `<span class="compat-status-pill compat-safe">● ${de ? "Eigenes Preset aktiv" : "Custom Preset Active"}</span>`
+        : `<span class="default-preset-chip">○ ${de ? "Treiber-Standard (Default)" : "Driver Default"}</span>`;
 
-    const formatOptLabel = (opt) =>
-      opt === "Default" ? (de ? "Standard (Default)" : "Default") : opt;
+    const liveDrsBadge = `<span id="live-drs-readback-badge" class="default-preset-chip" style="margin-left:6px">🔎 ${de ? "Treiber-DRS prüfen…" : "Checking Driver DRS…"}</span>`;
+
+    const slotCardsHtml = [];
+    if (hasSrTech || (!hasRrTech && !hasFgTech)) {
+      slotCardsHtml.push(`
+        <div class="preset-slot-card ${gameSr !== "Default" ? "is-active" : ""}">
+          <div class="preset-slot-top">
+            <span class="preset-slot-title">DLSS Super Resolution (SR) · <code style="font-size:0.72rem;opacity:0.85">v${escapeHtml(srDllVer)}</code></span>
+            ${recSr
+          ? `<span class="preset-slot-rec" title="${de ? "Empfohlenes Preset" : "Recommended Preset"}">★ ${de ? "Empfohlen:" : "Recommended:"} ${escapeHtml(recSr)}</span>`
+          : ""
+        }
+          </div>
+          <select id="inline-sr-preset" class="preset-slot-select" onchange="quickSaveInlineGamePresets('${game.id}', false)">
+            ${buildPresetOptionsHtml("sr", gameSr, recSr, srDllVer)}
+          </select>
+          <div class="preset-slot-desc">💡 ${escapeHtml(getPresetDescription("sr", gameSr, srDllVer))}</div>
+        </div>
+      `);
+    }
+    if (hasRrTech) {
+      slotCardsHtml.push(`
+        <div class="preset-slot-card ${gameRr !== "Default" ? "is-active" : ""}">
+          <div class="preset-slot-top">
+            <span class="preset-slot-title">DLSS Ray Reconstruction (RR) · <code style="font-size:0.72rem;opacity:0.85">v${escapeHtml(rrDllVer)}</code></span>
+            ${recRr
+          ? `<span class="preset-slot-rec" title="${de ? "Empfohlenes Preset" : "Recommended Preset"}">★ ${de ? "Empfohlen:" : "Recommended:"} ${escapeHtml(recRr)}</span>`
+          : ""
+        }
+          </div>
+          <select id="inline-rr-preset" class="preset-slot-select" onchange="quickSaveInlineGamePresets('${game.id}', false)">
+            ${buildPresetOptionsHtml("rr", gameRr, recRr, rrDllVer)}
+          </select>
+          <div class="preset-slot-desc">💡 ${escapeHtml(getPresetDescription("rr", gameRr, rrDllVer))}</div>
+        </div>
+      `);
+    }
+    if (hasFgTech) {
+      slotCardsHtml.push(`
+        <div class="preset-slot-card ${gameFg !== "Default" ? "is-active" : ""}">
+          <div class="preset-slot-top">
+            <span class="preset-slot-title">DLSS Frame Generation (FG) · <code style="font-size:0.72rem;opacity:0.85">v${escapeHtml(fgDllVer)}</code></span>
+            ${recFg
+          ? `<span class="preset-slot-rec" title="${de ? "Empfohlenes Preset" : "Recommended Preset"}">★ ${de ? "Empfohlen:" : "Recommended:"} ${escapeHtml(recFg)}</span>`
+          : ""
+        }
+          </div>
+          <select id="inline-fg-preset" class="preset-slot-select" onchange="quickSaveInlineGamePresets('${game.id}', false)">
+            ${buildPresetOptionsHtml("fg", gameFg, recFg, fgDllVer)}
+          </select>
+          <div class="preset-slot-desc">💡 ${escapeHtml(getPresetDescription("fg", gameFg, fgDllVer))}</div>
+        </div>
+      `);
+    }
 
     appliedPresetsPanel = `
       <div class="applied-presets-box ${hasAnyCustom ? "has-active-preset" : ""}">
-        <div class="compat-db-header">
+        <div class="compat-db-header" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-            <strong style="font-size:0.86rem">🎛️ ${
-              de ? "Angewendete NVIDIA DLSS Presets (Treiber-DRS)" : "Applied NVIDIA DLSS Presets (Driver DRS)"
-            }</strong>
+            <strong style="font-size:0.88rem">🎛️ ${de ? "Angewendete NVIDIA DLSS Presets (Treiber-DRS)" : "Applied NVIDIA DLSS Presets (Driver DRS)"
+      }</strong>
             ${statusBadge}
+            ${liveDrsBadge}
           </div>
           <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-            ${
-              hasRec && !isOptimalApplied
-                ? `<button class="btn btn-accent btn-card-action" onclick="applyRecommendedProfileNow('${game.id}')">
+            ${hasRec && !isOptimalApplied
+        ? `<button class="btn btn-accent btn-card-action" onclick="applyRecommendedProfileNow('${game.id}')">
                      ✨ ${de ? "Optimales Preset anwenden" : "Apply Optimal Preset"} (${escapeHtml(recSr || "Preset K")})
                    </button>`
-                : ""
-            }
-            ${
-              hasAnyCustom
-                ? `<button class="btn btn-secondary btn-card-action" onclick="quickSaveInlineGamePresets('${game.id}', true)" title="${
-                    de ? "Alle Presets auf Treiber-Standard zurücksetzen" : "Reset all presets to Driver Default"
-                  }">
-                     ↺ ${de ? "Standard" : "Reset"}
+        : ""
+      }
+            ${hasAnyCustom
+        ? `<button class="btn btn-secondary btn-card-action" onclick="quickSaveInlineGamePresets('${game.id}', true)" title="${de ? "Alle Presets auf Treiber-Standard zurücksetzen" : "Reset all presets to Driver Default"
+        }">
+                     ↺ ${de ? "Auf Standard zurücksetzen" : "Reset to Default"}
                    </button>`
-                : ""
-            }
+        : ""
+      }
           </div>
         </div>
         <div class="preset-slots-grid">
-          <div class="preset-slot-card ${gameSr !== "Default" ? "is-active" : ""}">
-            <div class="preset-slot-top">
-              <span class="preset-slot-title">Super Resolution (SR)</span>
-              ${
-                recSr
-                  ? `<span class="preset-slot-rec" title="${de ? "Empfohlenes Preset" : "Recommended Preset"}">★ ${escapeHtml(recSr)}</span>`
-                  : ""
-              }
-            </div>
-            <select id="inline-sr-preset" class="preset-slot-select" onchange="quickSaveInlineGamePresets('${game.id}', false)">
-              ${srOptions
-                .map(
-                  (o) =>
-                    `<option value="${o}" ${gameSr === o ? "selected" : ""}>${escapeHtml(
-                      formatOptLabel(o)
-                    )}${recSr === o ? (de ? " ★" : " ★") : ""}</option>`
-                )
-                .join("")}
-            </select>
-          </div>
-          <div class="preset-slot-card ${gameRr !== "Default" ? "is-active" : ""}">
-            <div class="preset-slot-top">
-              <span class="preset-slot-title">Ray Reconstruction (RR)</span>
-              ${
-                recRr
-                  ? `<span class="preset-slot-rec" title="${de ? "Empfohlenes Preset" : "Recommended Preset"}">★ ${escapeHtml(recRr)}</span>`
-                  : ""
-              }
-            </div>
-            <select id="inline-rr-preset" class="preset-slot-select" onchange="quickSaveInlineGamePresets('${game.id}', false)">
-              ${rrOptions
-                .map(
-                  (o) =>
-                    `<option value="${o}" ${gameRr === o ? "selected" : ""}>${escapeHtml(
-                      formatOptLabel(o)
-                    )}${recRr === o ? " ★" : ""}</option>`
-                )
-                .join("")}
-            </select>
-          </div>
-          <div class="preset-slot-card ${gameFg !== "Default" ? "is-active" : ""}">
-            <div class="preset-slot-top">
-              <span class="preset-slot-title">Frame Generation (FG)</span>
-              ${
-                recFg
-                  ? `<span class="preset-slot-rec" title="${de ? "Empfohlenes Preset" : "Recommended Preset"}">★ ${escapeHtml(recFg)}</span>`
-                  : ""
-              }
-            </div>
-            <select id="inline-fg-preset" class="preset-slot-select" onchange="quickSaveInlineGamePresets('${game.id}', false)">
-              ${fgOptions
-                .map(
-                  (o) =>
-                    `<option value="${o}" ${gameFg === o ? "selected" : ""}>${escapeHtml(
-                      formatOptLabel(o)
-                    )}${recFg === o ? " ★" : ""}</option>`
-                )
-                .join("")}
-            </select>
-          </div>
+          ${slotCardsHtml.join("")}
         </div>
+        ${buildPresetGuideHtml(hasSrTech || (!hasRrTech && !hasFgTech), hasRrTech, hasFgTech)}
       </div>
     `;
   }
@@ -1923,41 +2654,40 @@ window.openGameDllModal = function (gameId) {
     const statusMeta =
       status === "safe"
         ? {
-            label: de
-              ? "🟢 Sicher (Voller DLL-Tausch & DRS)"
-              : "🟢 Safe (Full DLL Swap & DRS)",
-            cls: "compat-safe",
-          }
+          label: de
+            ? "🟢 Sicher (Voller DLL-Tausch & DRS)"
+            : "🟢 Safe (Full DLL Swap & DRS)",
+          cls: "compat-safe",
+        }
         : status === "driver_override_only"
-        ? {
+          ? {
             label: de
               ? "🟠 Nur Treiber-DRS empfohlen"
               : "🟠 Driver DRS Override Recommended",
             cls: "compat-warn",
           }
-        : status === "blocked"
-        ? {
-            label: de
-              ? "🔴 Durch Anti-Cheat blockiert"
-              : "🔴 Blocked by Anti-Cheat",
-            cls: "compat-danger",
-          }
-        : {
-            label: de
-              ? "🟡 Nur signierte DLLs & Treiber-DRS"
-              : "🟡 Signed DLLs & Driver DRS Only",
-            cls: "compat-info",
-          };
+          : status === "blocked"
+            ? {
+              label: de
+                ? "🔴 Durch Anti-Cheat blockiert"
+                : "🔴 Blocked by Anti-Cheat",
+              cls: "compat-danger",
+            }
+            : {
+              label: de
+                ? "🟡 Nur signierte DLLs & Treiber-DRS"
+                : "🟡 Signed DLLs & Driver DRS Only",
+              cls: "compat-info",
+            };
 
     const warnBanner = dbProf?.warning_banner
       ? `<div class="compat-warning-banner">⚠️ ${escapeHtml(translateDbText(dbProf.warning_banner))}</div>`
       : game.anti_cheat
-      ? `<div class="compat-warning-banner">🛡️ <strong>${escapeHtml(game.anti_cheat)}:</strong> ${
-          de
-            ? "Nur offiziell signierte Upscaler-DLLs oder NVIDIA Treiber-DRS-Presets verwenden."
-            : "Only use official signed upscaler DLLs or NVIDIA Driver DRS Presets."
+        ? `<div class="compat-warning-banner">🛡️ <strong>${escapeHtml(game.anti_cheat)}:</strong> ${de
+          ? "Nur offiziell signierte Upscaler-DLLs oder NVIDIA Treiber-DRS-Presets verwenden."
+          : "Only use official signed upscaler DLLs or NVIDIA Driver DRS Presets."
         }</div>`
-      : "";
+        : "";
 
     const recSettingsPills = (dbProf?.recommended_settings || [])
       .map((s) => {
@@ -2002,37 +2732,32 @@ window.openGameDllModal = function (gameId) {
     dbCompatibilityPanel = `
       <div class="compat-db-box">
         <div class="compat-db-header">
-          <strong style="font-size:0.86rem">🎯 ${
-            de ? "Kompatibilität & In-Game Empfehlungen" : "Compatibility & In-Game Recommendations"
-          }</strong>
+          <strong style="font-size:0.86rem">🎯 ${de ? "Kompatibilität & In-Game Empfehlungen" : "Compatibility & In-Game Recommendations"
+      }</strong>
           <span class="compat-status-pill ${statusMeta.cls}">${statusMeta.label}</span>
         </div>
         ${warnBanner}
-        ${
-          recSettingsPills
-            ? `<div class="compat-settings-grid">${recSettingsPills}</div>`
-            : ""
-        }
-        ${
-          unsupportedList.length > 0
-            ? `<details class="compat-details-accordion">
+        ${recSettingsPills
+        ? `<div class="compat-settings-grid">${recSettingsPills}</div>`
+        : ""
+      }
+        ${unsupportedList.length > 0
+        ? `<details class="compat-details-accordion">
                  <summary>
                    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-                     <span>ℹ️ ${
-                       de ? "Nicht unterstützte Technologien:" : "Unsupported technologies:"
-                     }</span>
+                     <span>ℹ️ ${de ? "Nicht unterstützte Technologien:" : "Unsupported technologies:"
+        }</span>
                      ${unsupportedInlineTags}
                    </div>
-                   <span style="font-size:0.71rem;opacity:0.8">${
-                     de ? "Gründe anzeigen ▾" : "Show reasons ▾"
-                   }</span>
+                   <span style="font-size:0.71rem;opacity:0.8">${de ? "Gründe anzeigen ▾" : "Show reasons ▾"
+        }</span>
                  </summary>
                  <div class="compat-details-body">
                    ${unsupportedDetailsRows}
                  </div>
                </details>`
-            : ""
-        }
+        : ""
+      }
       </div>
     `;
   }
@@ -2051,11 +2776,10 @@ window.openGameDllModal = function (gameId) {
         <button class="btn btn-secondary btn-card-action" onclick="reportGamesToDbNow('${game.id}')" title="${de ? "Spiel & Status an dlssdb.goover.dev melden" : "Report Game & Detected Techs to dlssdb.goover.dev"}">📤</button>
         <button class="btn btn-secondary btn-card-action" onclick="openFolderInExplorer('${escapeJsStr(game.path)}')" title="${de ? "Spielordner öffnen" : "Open Game Folder"}">📂</button>
         <button class="btn btn-secondary btn-card-action" onclick="openEditDisplayModal('${game.id}')" title="${de ? "Name & Cover bearbeiten" : "Edit Name & Cover"}">✏️</button>
-        ${
-          isNvidia
-            ? `<button class="btn btn-secondary btn-card-action" onclick="openGameDlssPresetsModal('${game.id}')" title="${de ? "Erweiterte DLSS Preset- & EXE-Einstellungen" : "Advanced DLSS Preset & EXE Settings"}">🎛️</button>`
-            : ""
-        }
+        ${isNvidia
+      ? `<button class="btn btn-secondary btn-card-action" onclick="openGameDlssPresetsModal('${game.id}')" title="${de ? "Erweiterte DLSS Preset- & EXE-Einstellungen" : "Advanced DLSS Preset & EXE Settings"}">🎛️</button>`
+      : ""
+    }
         <button class="btn btn-secondary btn-card-action" onclick="launchGameNow('${game.id}')" title="${de ? "Spiel starten" : "Launch Game"}">🚀</button>
         <button class="btn btn-secondary btn-card-action" onclick="closeGameDllModal()">✕ ${de ? "Schließen" : "Close"}</button>
       </div>
@@ -2070,36 +2794,72 @@ window.openGameDllModal = function (gameId) {
       ${dbCompatibilityPanel}
     </div>
     <div class="modal-footer">
-      ${
-        game.has_backups
-          ? `<button class="btn btn-secondary" onclick="restoreAllGameBackups('${game.id}')">
+      ${game.has_backups
+      ? `<button class="btn btn-secondary" onclick="restoreAllGameBackups('${game.id}')">
                ⏪ ${de ? "Alle Backups wiederherstellen" : "Restore All Backups"}
              </button>`
-          : ""
-      }
-      ${
-        counts.outdated > 0
-          ? `<button class="btn btn-accent" onclick="updateAllGameDlls('${game.id}')">
+      : ""
+    }
+      ${!isDrsOnlyGame
+      ? `<button class="btn btn-secondary" onclick="updateAllGameDlls('${game.id}', true)">
+               🔄 ${de ? `Alle neu installieren (${counts.total})` : `Reinstall All (${counts.total})`}
+             </button>`
+      : ""
+    }
+      ${!isDrsOnlyGame && counts.outdated > 0
+      ? `<button class="btn btn-accent" onclick="updateAllGameDlls('${game.id}', false)">
                ⚡ ${de ? `Alle aktualisieren (${counts.outdated})` : `Update All (${counts.outdated})`}
              </button>`
-          : ""
-      }
+      : ""
+    }
     </div>
   `;
 
   backdrop.style.display = "flex";
+
+  const drsBadgeEl = document.getElementById("live-drs-readback-badge");
+  if (drsBadgeEl) {
+    const exeHint = game.custom_exe_path || (game.dlls && game.dlls[0] ? game.dlls[0].path : game.path);
+    invoke("read_live_drs_status_cmd", { exeName: exeHint })
+      .then((drs) => {
+        if (!drs || !drs.nvapi_available) {
+          drsBadgeEl.style.display = "none";
+          return;
+        }
+        if (drs.is_blocked_by_zero) {
+          drsBadgeEl.className = "compat-status-pill compat-warn";
+          drsBadgeEl.textContent = de
+            ? "⚠️ Treiber-DRS: Durch NVIDIA App blockiert (0)"
+            : "⚠️ Driver DRS: Blocked by NVIDIA App (0)";
+        } else if (drs.sr_override === 1 && drs.sr_preset) {
+          drsBadgeEl.className = "compat-status-pill compat-safe";
+          const fgPart = drs.fg_mode ? ` · FG ${drs.fg_mode}${drs.fg_multiplier ? ` ${drs.fg_multiplier}x` : ""}` : "";
+          drsBadgeEl.textContent = `${de ? "Treiber-Live" : "Driver Live"}: ${drs.sr_preset}${fgPart}`;
+        } else {
+          drsBadgeEl.className = "default-preset-chip";
+          drsBadgeEl.textContent = `${de ? "Treiber-Live" : "Driver Live"}: Default`;
+        }
+      })
+      .catch(() => {
+        drsBadgeEl.style.display = "none";
+      });
+  }
 };
 
-window.updateTechGroupForGame = async function (gameId, typeLabel) {
+window.updateTechGroupForGame = async function (gameId, typeLabel, forceReinstall = false) {
   const game = appState.games.find((g) => g.id === gameId);
   if (!game) return;
   const targetDlls = (game.dlls || []).filter(
-    (d) => d.type_label === typeLabel && d.update_available
+    (d) => d.type_label === typeLabel && (forceReinstall || d.update_available)
   );
   if (targetDlls.length === 0) return;
 
   try {
-    showToast(isDe() ? `Aktualisiere ${typeLabel} in ${game.name}...` : `Updating ${typeLabel} in ${game.name}...`);
+    showToast(
+      isDe()
+        ? `${forceReinstall ? "Installiere" : "Aktualisiere"} ${typeLabel} in ${game.name}${forceReinstall ? " neu..." : "..."}`
+        : `${forceReinstall ? "Reinstalling" : "Updating"} ${typeLabel} in ${game.name}...`
+    );
     let latestPayload = null;
     for (const d of targetDlls) {
       latestPayload = await invoke("update_single_game_dll", {
@@ -2108,7 +2868,11 @@ window.updateTechGroupForGame = async function (gameId, typeLabel) {
       });
     }
     if (latestPayload) applyPayload(latestPayload);
-    showToast(isDe() ? `✓ ${typeLabel} aktualisiert!` : `✓ ${typeLabel} updated!`);
+    showToast(
+      isDe()
+        ? `✓ ${typeLabel} ${forceReinstall ? "neu installiert" : "aktualisiert"}!`
+        : `✓ ${typeLabel} ${forceReinstall ? "reinstalled" : "updated"}!`
+    );
   } catch (e) {
     showToast(String(e), true);
   }
@@ -2160,22 +2924,20 @@ window.openEditDisplayModal = function (gameId) {
     <div class="modal-header">
       <div class="modal-header-info">
         <h3>✏️ ${de ? "Anzeige & Cover bearbeiten" : "Edit Display & Artwork"} — ${escapeHtml(game.name)}</h3>
-        <div class="muted" style="font-size:0.76rem">${
-          isSteamGame
-            ? de
-              ? "Suche im Steam-Store nach offiziellem Cover oder lege einen eigenen Anzeigenamen fest."
-              : "Search Steam for official cover art or set a custom display title."
-            : de
-            ? "Lege einen eigenen Anzeigenamen oder eine eigene Cover-Bild-URL fest."
-            : "Set a custom display title or custom cover image URL."
-        }</div>
+        <div class="muted" style="font-size:0.76rem">${isSteamGame
+      ? de
+        ? "Suche im Steam-Store nach offiziellem Cover oder lege einen eigenen Anzeigenamen fest."
+        : "Search Steam for official cover art or set a custom display title."
+      : de
+        ? "Lege einen eigenen Anzeigenamen oder eine eigene Cover-Bild-URL fest."
+        : "Set a custom display title or custom cover image URL."
+    }</div>
       </div>
       <button class="btn btn-secondary btn-card-action" onclick="closeSecondaryModal()">✕ ${de ? "Schließen" : "Close"}</button>
     </div>
     <div class="modal-body" style="gap:14px">
-      ${
-        isSteamGame
-          ? `<div class="preset-field">
+      ${isSteamGame
+      ? `<div class="preset-field">
                <label>${de ? "Im Steam-Store nach offiziellem Cover & App-ID suchen" : "Search Steam Store for Official Cover & App ID"}</label>
                <div style="display:flex;gap:8px">
                  <input type="text" id="edit-steam-query" class="toolbar-select" style="flex:1"
@@ -2184,16 +2946,15 @@ window.openEditDisplayModal = function (gameId) {
                </div>
              </div>
              <div id="steam-search-results" class="steam-search-grid"></div>`
-          : ""
-      }
+      : ""
+    }
 
       <div class="preset-field">
         <label>${de ? "Anzeigename" : "Display Name"}</label>
         <input type="text" id="edit-custom-name" class="toolbar-select" value="${escapeHtml(game.name)}" />
       </div>
-      ${
-        isSteamGame
-          ? `<div class="preset-select-grid">
+      ${isSteamGame
+      ? `<div class="preset-select-grid">
                <div class="preset-field">
                  <label>${de ? "Steam App-ID (für Hero- & Cover-Artwork)" : "Steam App ID (for Hero & Portrait Artwork)"}</label>
                  <input type="text" id="edit-custom-appid" class="toolbar-select" value="${escapeHtml(game.app_id || "")}" placeholder="z.B. 2357570" />
@@ -2203,12 +2964,12 @@ window.openEditDisplayModal = function (gameId) {
                  <input type="text" id="edit-custom-cover" class="toolbar-select" value="${escapeHtml(game.cover_url || "")}" placeholder="https://..." />
                </div>
              </div>`
-          : `<input type="hidden" id="edit-custom-appid" value="${escapeHtml(game.app_id || "")}" />
+      : `<input type="hidden" id="edit-custom-appid" value="${escapeHtml(game.app_id || "")}" />
              <div class="preset-field">
                <label>${de ? "Eigene Cover-Bild-URL (Optional)" : "Custom Cover Image URL (Optional)"}</label>
                <input type="text" id="edit-custom-cover" class="toolbar-select" value="${escapeHtml(game.cover_url || "")}" placeholder="https://..." />
              </div>`
-      }
+    }
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="resetDisplayOverrideNow('${game.id}')">${de ? "Auf Standard zurücksetzen" : "Reset to Default"}</button>
@@ -2234,11 +2995,10 @@ window.runSteamStoreSearch = async function () {
   try {
     const results = await invoke("search_steam_store", { query });
     if (!results || results.length === 0) {
-      container.innerHTML = `<div class="muted">${
-        de
-          ? `Keine Treffer im Steam-Store für „${escapeHtml(query)}“.`
-          : `No Steam Store matches found for "${escapeHtml(query)}".`
-      }</div>`;
+      container.innerHTML = `<div class="muted">${de
+        ? `Keine Treffer im Steam-Store für „${escapeHtml(query)}“.`
+        : `No Steam Store matches found for "${escapeHtml(query)}".`
+        }</div>`;
       return;
     }
     container.innerHTML = results
@@ -2306,72 +3066,107 @@ window.openGameDlssPresetsModal = function (gameId) {
   const modal = document.getElementById("secondary-modal-content");
   const de = isDe();
 
-  const sr = game.dlss_sr_preset || "Default";
-  const rr = game.dlss_rr_preset || "Default";
-  const fg = game.dlss_fg_preset || "Default";
+  const hasSrTech = (game.dlls || []).some((d) => d.type_label === "DLSS");
+  const hasRrTech = (game.dlls || []).some((d) => d.type_label === "DLSS-RR");
+  const hasFgTech = (game.dlls || []).some((d) => d.type_label === "DLSS-G");
+
+  const sr = hasSrTech ? game.dlss_sr_preset || "Default" : "Default";
+  const rr = hasRrTech ? game.dlss_rr_preset || "Default" : "Default";
+  const fg = hasFgTech ? game.dlss_fg_preset || "Default" : "Default";
   const exe = game.custom_exe_path || "";
 
-  const srOptions = ["Default", "Latest", "Preset J", "Preset K", "Preset L", "Preset M"];
-  const rrOptions = ["Default", "Latest", "Preset D", "Preset F"];
-  const fgOptions = ["Default", "Latest", "Preset A", "Preset B"];
+  const srDllVer = (game.dlls || []).find((d) => d.type_label === "DLSS")?.version || "310.9.16.0";
+  const rrDllVer = (game.dlls || []).find((d) => d.type_label === "DLSS-RR")?.version || "310.9.16.0";
+  const fgDllVer = (game.dlls || []).find((d) => d.type_label === "DLSS-G")?.version || "310.9.16.0";
+
+  const srOptions = getSupportedPresetsForDllVersion("sr", srDllVer);
+  const rrOptions = getSupportedPresetsForDllVersion("rr", rrDllVer);
+  const fgOptions = getSupportedPresetsForDllVersion("fg", fgDllVer);
+  if (!srOptions.includes(sr)) srOptions.push(sr);
+  if (!rrOptions.includes(rr)) rrOptions.push(rr);
+  if (!fgOptions.includes(fg)) fgOptions.push(fg);
+  const unusedLabel = de ? "Nicht im Spiel vorhanden" : "Not used by game";
 
   modal.innerHTML = `
     <div class="modal-header">
       <div class="modal-header-info">
         <h3>🎛️ NVIDIA DLSS Preset-Einstellungen — ${escapeHtml(game.name)}</h3>
-        <div class="muted" style="font-size:0.76rem">${
-          de
-            ? "Konfiguriere DLSS 4 / 4.5 Treiber-Presets über NVIDIA DRS (<code>nvapi64.dll</code>)."
-            : "Configure driver-level DLSS 4 / 4.5 presets via NVIDIA DRS (<code>nvapi64.dll</code>)."
-        }</div>
+        <div class="muted" style="font-size:0.76rem">${de
+      ? `Konfiguriere Treiber-Presets passend zur aktuell im Spiel installierten DLL-Version (<code>v${escapeHtml(srDllVer)}</code>) über NVIDIA DRS (<code>nvapi64.dll</code>).`
+      : `Configure driver presets matching the game's currently installed DLL version (<code>v${escapeHtml(srDllVer)}</code>) via NVIDIA DRS (<code>nvapi64.dll</code>).`
+    }</div>
       </div>
       <button class="btn btn-secondary btn-card-action" onclick="closeSecondaryModal()">✕ ${de ? "Schließen" : "Close"}</button>
     </div>
-    <div class="modal-body" style="gap:14px">
-      <div class="preset-select-grid">
-        <div class="preset-field">
-          <label>DLSS Super Resolution Preset</label>
-          <select id="game-sr-preset" class="toolbar-select">
-            ${srOptions
-              .map((o) => `<option value="${o}" ${sr === o ? "selected" : ""}>${o}</option>`)
-              .join("")}
-          </select>
+    <div class="modal-body" style="gap:16px">
+      <div class="preset-select-grid" style="grid-template-columns:1fr">
+        <div class="preset-field" style="${!hasSrTech ? "opacity:0.5" : ""}">
+          <label>DLSS Super Resolution (SR) Preset · <code>v${escapeHtml(srDllVer)}</code></label>
+          ${hasSrTech
+      ? `<select id="game-sr-preset" class="toolbar-select" onchange="document.getElementById('game-sr-desc').textContent = '💡 ' + getPresetDescription('sr', this.value, '${escapeJsStr(srDllVer)}')">
+                   ${buildPresetOptionsHtml("sr", sr, "Preset K", srDllVer)}
+                 </select>
+                 <div id="game-sr-desc" class="preset-slot-desc">💡 ${escapeHtml(getPresetDescription("sr", sr, srDllVer))}</div>`
+      : `<select id="game-sr-preset" class="toolbar-select" disabled><option value="Default">${unusedLabel}</option></select>`
+    }
         </div>
-        <div class="preset-field">
-          <label>DLSS Ray Reconstruction Preset</label>
-          <select id="game-rr-preset" class="toolbar-select">
-            ${rrOptions
-              .map((o) => `<option value="${o}" ${rr === o ? "selected" : ""}>${o}</option>`)
-              .join("")}
-          </select>
-        </div>
-        <div class="preset-field">
-          <label>DLSS Frame Generation Preset</label>
-          <select id="game-fg-preset" class="toolbar-select">
-            ${fgOptions
-              .map((o) => `<option value="${o}" ${fg === o ? "selected" : ""}>${o}</option>`)
-              .join("")}
-          </select>
-        </div>
+        ${hasRrTech
+      ? `<div class="preset-field">
+                 <label>DLSS Ray Reconstruction (RR) Preset · <code>v${escapeHtml(rrDllVer)}</code></label>
+                 <select id="game-rr-preset" class="toolbar-select" onchange="document.getElementById('game-rr-desc').textContent = '💡 ' + getPresetDescription('rr', this.value, '${escapeJsStr(rrDllVer)}')">
+                   ${buildPresetOptionsHtml("rr", rr, "Preset F", rrDllVer)}
+                 </select>
+                 <div id="game-rr-desc" class="preset-slot-desc">💡 ${escapeHtml(getPresetDescription("rr", rr, rrDllVer))}</div>
+               </div>`
+      : `<input type="hidden" id="game-rr-preset" value="Default" />`
+    }
+        ${hasFgTech
+      ? `<div class="preset-field">
+                 <label>DLSS Frame Generation (FG) Preset · <code>v${escapeHtml(fgDllVer)}</code></label>
+                 <select id="game-fg-preset" class="toolbar-select" onchange="document.getElementById('game-fg-desc').textContent = '💡 ' + getPresetDescription('fg', this.value, '${escapeJsStr(fgDllVer)}')">
+                   ${buildPresetOptionsHtml("fg", fg, "Latest", fgDllVer)}
+                 </select>
+                 <div id="game-fg-desc" class="preset-slot-desc">💡 ${escapeHtml(getPresetDescription("fg", fg, fgDllVer))}</div>
+               </div>
+               <div class="preset-select-grid" style="grid-template-columns:repeat(3,1fr);gap:10px">
+                 <div class="preset-field">
+                   <label>${de ? "DLSS-G MFG Modus (RTX 50)" : "DLSS-G MFG Mode (RTX 50)"}</label>
+                   <select id="game-fg-mode" class="toolbar-select">
+                     <option value="Default" ${!game.dlss_fg_mode || game.dlss_fg_mode === "Default" ? "selected" : ""}>Default</option>
+                     <option value="Fixed" ${game.dlss_fg_mode === "Fixed" ? "selected" : ""}>Fixed (2x–6x)</option>
+                     <option value="Dynamic" ${game.dlss_fg_mode === "Dynamic" ? "selected" : ""}>Dynamic (Auto-FPS)</option>
+                     <option value="Off" ${game.dlss_fg_mode === "Off" ? "selected" : ""}>Off</option>
+                   </select>
+                 </div>
+                 <div class="preset-field">
+                   <label>${de ? "MFG Multiplikator" : "MFG Multiplier"}</label>
+                   <select id="game-fg-mult" class="toolbar-select">
+                     ${[2, 3, 4, 5, 6].map((m) => `<option value="${m}" ${(game.dlss_fg_multiplier || 2) === m ? "selected" : ""}>${m}x</option>`).join("")}
+                   </select>
+                 </div>
+                 <div class="preset-field">
+                   <label>${de ? "Dynamic Ziel-FPS (0 = Auto)" : "Dynamic Target FPS (0 = Auto)"}</label>
+                   <input type="number" id="game-fg-target-fps" class="toolbar-select" min="0" max="1000" value="${game.dlss_fg_target_fps || 0}" />
+                 </div>
+               </div>`
+      : `<input type="hidden" id="game-fg-preset" value="Default" />`
+    }
       </div>
+      ${buildPresetGuideHtml(true, hasRrTech, hasFgTech)}
       <div class="preset-field">
-        <label>${
-          de
-            ? "Eigener Spiel-Executable-Pfad (.exe) (Optional — für Spielstart & DRS-Profilbindung)"
-            : "Custom Game Executable Path (Optional — used for Launch & DRS Profile)"
-        }</label>
-        <input type="text" id="game-custom-exe" class="toolbar-select" value="${escapeHtml(exe)}" placeholder="${
-    de ? `Automatisch erkannt in ${escapeHtml(game.path)}` : `Auto-detected in ${escapeHtml(game.path)}`
-  }" />
+        <label>${de
+      ? "Eigener Spiel-Executable-Pfad (.exe) (Optional — für Spielstart & DRS-Profilbindung)"
+      : "Custom Game Executable Path (Optional — used for Launch & DRS Profile)"
+    }</label>
+        <input type="text" id="game-custom-exe" class="toolbar-select" value="${escapeHtml(exe)}" placeholder="${de ? `Automatisch erkannt in ${escapeHtml(game.path)}` : `Auto-detected in ${escapeHtml(game.path)}`
+    }" />
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="saveGameDlssPresetsNow('${game.id}', true)">${
-    de ? "Auf Standard zurücksetzen" : "Reset to Default"
-  }</button>
-      <button class="btn btn-accent" onclick="saveGameDlssPresetsNow('${game.id}', false)">⚡ ${
-    de ? "Presets anwenden" : "Apply Presets"
-  }</button>
+      <button class="btn btn-secondary" onclick="saveGameDlssPresetsNow('${game.id}', true)">${de ? "Auf Standard zurücksetzen" : "Reset to Default"
+    }</button>
+      <button class="btn btn-accent" onclick="saveGameDlssPresetsNow('${game.id}', false)">⚡ ${de ? "Presets anwenden" : "Apply Presets"
+    }</button>
     </div>
   `;
 
@@ -2382,6 +3177,11 @@ window.saveGameDlssPresetsNow = async function (gameId, reset = false) {
   const srPreset = reset ? "Default" : document.getElementById("game-sr-preset")?.value || "Default";
   const rrPreset = reset ? "Default" : document.getElementById("game-rr-preset")?.value || "Default";
   const fgPreset = reset ? "Default" : document.getElementById("game-fg-preset")?.value || "Default";
+  const fgMode = reset ? "Default" : document.getElementById("game-fg-mode")?.value || null;
+  const fgMultRaw = document.getElementById("game-fg-mult")?.value;
+  const fgMultiplier = reset || !fgMultRaw ? null : parseInt(fgMultRaw, 10) || 2;
+  const fgFpsRaw = document.getElementById("game-fg-target-fps")?.value;
+  const fgTargetFps = reset || !fgFpsRaw ? null : parseInt(fgFpsRaw, 10) || null;
   const customExePath = reset ? null : document.getElementById("game-custom-exe")?.value || null;
 
   try {
@@ -2390,6 +3190,9 @@ window.saveGameDlssPresetsNow = async function (gameId, reset = false) {
       srPreset,
       rrPreset,
       fgPreset,
+      fgMode,
+      fgMultiplier,
+      fgTargetFps,
       customExePath,
     });
     closeSecondaryModal();
@@ -2400,8 +3203,8 @@ window.saveGameDlssPresetsNow = async function (gameId, reset = false) {
           ? "DLSS-Presets auf Standard zurückgesetzt."
           : "Reset game DLSS presets to Default."
         : isDe()
-        ? "✓ NVIDIA DLSS-Presets angewendet!"
-        : "✓ Applied NVIDIA DLSS presets!"
+          ? "✓ NVIDIA DLSS-Presets angewendet!"
+          : "✓ Applied NVIDIA DLSS presets!"
     );
   } catch (e) {
     showToast(String(e), true);
@@ -2432,33 +3235,31 @@ window.openBulkUpdateScopeModal = function () {
     <div class="modal-header">
       <div class="modal-header-info">
         <h3>🚀 ${de ? "Massen-Update für alle Spiele" : "Batch Update All Games"}</h3>
-        <div class="muted" style="font-size:0.76rem">${
-          de
-            ? "Wähle aus, welche Upscaler-Technologien in allen nicht-ignorierten Spielen aktualisiert werden sollen."
-            : "Select which upscaler technologies to update across all non-ignored games."
-        }</div>
+        <div class="muted" style="font-size:0.76rem">${de
+      ? "Wähle aus, welche Upscaler-Technologien in allen nicht-ignorierten Spielen aktualisiert werden sollen."
+      : "Select which upscaler technologies to update across all non-ignored games."
+    }</div>
       </div>
       <button class="btn btn-secondary btn-card-action" onclick="closeSecondaryModal()">✕ ${de ? "Schließen" : "Close"}</button>
     </div>
     <div class="modal-body" style="gap:12px">
       <div class="tech-scope-grid">
         ${relevantTechs
-          .map(
-            (t) => `
+      .map(
+        (t) => `
           <label class="tech-scope-item">
             <input type="checkbox" class="bulk-scope-cb" value="${escapeHtml(t.label)}"
                    ${enabledList.includes(t.label) ? "checked" : ""} />
             <span>${escapeHtml(t.label)}</span>
           </label>`
-          )
-          .join("")}
+      )
+      .join("")}
       </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeSecondaryModal()">${de ? "Abbrechen" : "Cancel"}</button>
-      <button class="btn btn-accent" onclick="executeScopedBulkUpdate()">🚀 ${
-        de ? "Massen-Update starten" : "Start Batch Update"
-      }</button>
+      <button class="btn btn-accent" onclick="executeScopedBulkUpdate()">🚀 ${de ? "Massen-Update starten" : "Start Batch Update"
+    }</button>
     </div>
   `;
 
@@ -2507,31 +3308,29 @@ window.openLogsModal = function () {
 
   const rows =
     logs.length === 0
-      ? `<div class="muted">${
-          de
-            ? "Noch keine Protokoll-Einträge in dieser Sitzung vorhanden."
-            : "No log events recorded in this session."
-        }</div>`
+      ? `<div class="muted">${de
+        ? "Noch keine Protokoll-Einträge in dieser Sitzung vorhanden."
+        : "No log events recorded in this session."
+      }</div>`
       : logs
-          .slice()
-          .reverse()
-          .map(
-            (l) => `
+        .slice()
+        .reverse()
+        .map(
+          (l) => `
           <div class="log-entry-row">
             <span class="muted" style="flex-shrink:0">${escapeHtml(l.timestamp)}</span>
             <span class="log-badge ${escapeHtml(l.level)}">${escapeHtml(l.level)}</span>
             <span style="word-break:break-word">${escapeHtml(l.message)}</span>
           </div>`
-          )
-          .join("");
+        )
+        .join("");
 
   modal.innerHTML = `
     <div class="modal-header">
       <div class="modal-header-info">
         <h3>📋 ${de ? "Aktivitäts-Protokoll (Logs)" : "Application Activity Logs"}</h3>
-        <div class="muted" style="font-size:0.76rem">${
-          de ? `${logs.length} Einträge in der aktuellen Sitzung` : `${logs.length} events recorded in current session`
-        }</div>
+        <div class="muted" style="font-size:0.76rem">${de ? `${logs.length} Einträge in der aktuellen Sitzung` : `${logs.length} events recorded in current session`
+    }</div>
       </div>
       <button class="btn btn-secondary btn-card-action" onclick="closeSecondaryModal()">✕ ${de ? "Schließen" : "Close"}</button>
     </div>
@@ -2575,37 +3374,33 @@ window.openLauncherDetailsModal = function (launcherName) {
   modal.innerHTML = `
     <div class="modal-header">
       <div class="modal-header-info">
-        <h3>📂 ${escapeHtml(launcherName)} — ${
-    de ? `Erkannte Spielpfade (${games.length})` : `Detected Game Paths (${games.length})`
-  }</h3>
+        <h3>📂 ${escapeHtml(launcherName)} — ${de ? `Erkannte Spielpfade (${games.length})` : `Detected Game Paths (${games.length})`
+    }</h3>
       </div>
       <button class="btn btn-secondary btn-card-action" onclick="closeSecondaryModal()">✕ ${de ? "Schließen" : "Close"}</button>
     </div>
     <div class="modal-body">
       ${games
-        .map(
-          (g) => `
+      .map(
+        (g) => `
         <div class="dll-row">
           <div class="dll-row-info">
             <div style="font-weight:600;font-size:0.88rem">${escapeHtml(g.name)}</div>
             <div class="dll-preset-sub" title="${escapeHtml(g.path)}"><code>${escapeHtml(g.path)}</code></div>
           </div>
           <div class="dll-row-action" style="gap:6px">
-            <button class="btn btn-secondary btn-card-action" onclick="openFolderInExplorer('${escapeJsStr(g.path)}')">📂 ${
-            de ? "Öffnen" : "Open"
+            <button class="btn btn-secondary btn-card-action" onclick="openFolderInExplorer('${escapeJsStr(g.path)}')">📂 ${de ? "Öffnen" : "Open"
           }</button>
-            <button class="btn btn-secondary btn-card-action" onclick="copyTextToClipboard('${escapeJsStr(g.path)}', '${
-            de ? "Pfad kopiert" : "Copied path"
+            <button class="btn btn-secondary btn-card-action" onclick="copyTextToClipboard('${escapeJsStr(g.path)}', '${de ? "Pfad kopiert" : "Copied path"
           }')">📋 ${de ? "Kopieren" : "Copy"}</button>
           </div>
         </div>`
-        )
-        .join("")}
+      )
+      .join("")}
     </div>
     <div class="modal-footer">
-      <button class="btn btn-primary" onclick="closeSecondaryModal(); selectLauncherFromHub('${escapeJsStr(launcherName)}')">${
-    de ? "In Spiele-Bibliothek anzeigen" : "View in Games Library"
-  }</button>
+      <button class="btn btn-primary" onclick="closeSecondaryModal(); selectLauncherFromHub('${escapeJsStr(launcherName)}')">${de ? "In Spiele-Bibliothek anzeigen" : "View in Games Library"
+    }</button>
     </div>
   `;
 
@@ -2619,11 +3414,10 @@ function renderBackups() {
   const list = document.getElementById("backups-list");
   const de = isDe();
   if (appState.backups.length === 0) {
-    list.innerHTML = `<div class="muted">${
-      de
-        ? "Noch keine Backups vorhanden. Backups werden automatisch vor jedem DLL-Update angelegt."
-        : "No backups recorded yet. Backups are created automatically before any DLL update."
-    }</div>`;
+    list.innerHTML = `<div class="muted">${de
+      ? "Noch keine Backups vorhanden. Backups werden automatisch vor jedem DLL-Update angelegt."
+      : "No backups recorded yet. Backups are created automatically before any DLL update."
+      }</div>`;
     return;
   }
 
@@ -2653,12 +3447,10 @@ function renderBackups() {
           <div class="muted" style="font-size:0.74rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(grp.gamePath)}</div>
         </div>
         <div class="backup-card-actions">
-          <button class="btn btn-secondary" onclick="openFolderInExplorer('${escapeJsStr(grp.gamePath)}')">📂 ${
-        de ? "Ordner" : "Folder"
-      }</button>
-          <button class="btn btn-primary" onclick="restoreAllGameBackups('${grp.gameId}')">⏪ ${
-        de ? "Original wiederherstellen" : "Restore Original"
-      }</button>
+          <button class="btn btn-secondary" onclick="openFolderInExplorer('${escapeJsStr(grp.gamePath)}')">📂 ${de ? "Ordner" : "Folder"
+        }</button>
+          <button class="btn btn-primary" onclick="restoreAllGameBackups('${grp.gameId}')">⏪ ${de ? "Original wiederherstellen" : "Restore Original"
+        }</button>
         </div>
       </div>`
     )
@@ -2677,9 +3469,8 @@ function renderCustomFolders() {
         <code>${escapeHtml(f)}</code>
         <div style="display:flex;gap:6px">
           <button class="btn btn-secondary" style="padding:4px 8px" onclick="openFolderInExplorer('${escapeJsStr(f)}')">📂</button>
-          <button class="btn btn-secondary" style="padding:4px 8px" onclick="removeCustomFolder(${idx})">${
-        de ? "Entfernen" : "Remove"
-      }</button>
+          <button class="btn btn-secondary" style="padding:4px 8px" onclick="removeCustomFolder(${idx})">${de ? "Entfernen" : "Remove"
+        }</button>
         </div>
       </div>`
     )
@@ -2721,22 +3512,20 @@ function renderIgnoredAndBlacklistedSettings() {
   const ignoredGames = appState.games.filter((g) => g.ignored);
   ignoredEl.innerHTML =
     ignoredGames.length === 0
-      ? `<div class="muted" style="font-size:0.78rem">${
-          de
-            ? "Aktuell sind keine Spiele ignoriert. Über das <code>⋮</code>-Menü einer Spielkarte kannst du Spiele ignorieren."
-            : "No games are currently ignored. Use a game card's <code>⋮</code> menu to ignore or unignore a game."
-        }</div>`
+      ? `<div class="muted" style="font-size:0.78rem">${de
+        ? "Aktuell sind keine Spiele ignoriert. Über das <code>⋮</code>-Menü einer Spielkarte kannst du Spiele ignorieren."
+        : "No games are currently ignored. Use a game card's <code>⋮</code> menu to ignore or unignore a game."
+      }</div>`
       : ignoredGames
-          .map(
-            (g) => `
+        .map(
+          (g) => `
           <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border-subtle)">
             <span><strong>${escapeHtml(g.name)}</strong> <span class="muted">(${escapeHtml(g.launcher_name)})</span></span>
-            <button class="btn btn-secondary" style="padding:4px 8px" onclick="toggleIgnoreGameNow('${g.id}')">${
-              de ? "Freigeben" : "Unignore"
+            <button class="btn btn-secondary" style="padding:4px 8px" onclick="toggleIgnoreGameNow('${g.id}')">${de ? "Freigeben" : "Unignore"
             }</button>
           </div>`
-          )
-          .join("");
+        )
+        .join("");
 
   const blacklisted = appState.config.blacklisted_games || [];
   blackEl.innerHTML = blacklisted
@@ -2744,9 +3533,8 @@ function renderIgnoredAndBlacklistedSettings() {
       (b, idx) => `
       <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border-subtle)">
         <code>${escapeHtml(b)}</code>
-        <button class="btn btn-secondary" style="padding:4px 8px" onclick="removeBlacklistEntry(${idx})">${
-        de ? "Entfernen" : "Remove"
-      }</button>
+        <button class="btn btn-secondary" style="padding:4px 8px" onclick="removeBlacklistEntry(${idx})">${de ? "Entfernen" : "Remove"
+        }</button>
       </div>`
     )
     .join("");
@@ -2760,25 +3548,32 @@ window.removeBlacklistEntry = async function (idx) {
   applyPayload(initial);
 };
 
-window.updateAllGameDlls = async function (gameId) {
+window.updateAllGameDlls = async function (gameId, forceReinstall = false) {
   const game = appState.games.find((g) => g.id === gameId);
   const gameTitle = game ? game.name : "Game";
   const btn = document.getElementById(`btn-update-card-${gameId}`);
-  if (btn) {
+  if (btn && !forceReinstall) {
     btn.disabled = true;
     btn.textContent = isDe() ? "⏳ Update..." : "⏳ Updating...";
   }
   try {
-    showToast(isDe() ? `Aktualisiere ${gameTitle}...` : `Updating ${gameTitle}...`);
-    const payload = await invoke("update_all_for_game", { gameId });
+    showToast(
+      isDe()
+        ? `${forceReinstall ? "Installiere DLLs neu für" : "Aktualisiere"} ${gameTitle}...`
+        : `${forceReinstall ? "Reinstalling DLLs for" : "Updating"} ${gameTitle}...`
+    );
+    const payload = await invoke("update_all_for_game", {
+      gameId,
+      forceReinstall,
+    });
     applyPayload(payload);
     showToast(
       isDe()
-        ? `✓ ${gameTitle} auf neueste DLLs aktualisiert!`
-        : `✓ ${gameTitle} updated to latest DLLs!`
+        ? `✓ ${gameTitle}: ${forceReinstall ? "DLLs neu installiert!" : "Auf neueste DLLs aktualisiert!"}`
+        : `✓ ${gameTitle} ${forceReinstall ? "DLLs reinstalled!" : "updated to latest DLLs!"}`
     );
   } catch (e) {
-    if (btn) {
+    if (btn && !forceReinstall) {
       btn.disabled = false;
       btn.textContent = "⚡ Update";
     }
@@ -3037,6 +3832,119 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   });
 
+  async function refreshNvidiaAppWhitelistStatus() {
+    const statusEl = document.getElementById("nvapp-whitelist-status");
+    const btnEl = document.getElementById("btn-nvapp-whitelist");
+    const hubCard = document.getElementById("hub-nvapp-whitelist-card");
+    const hubStatusEl = document.getElementById("hub-nvapp-whitelist-status");
+    const hubBtnEl = document.getElementById("btn-hub-nvapp-whitelist");
+    const adminBanner = document.getElementById("admin-warning-banner");
+    try {
+      const st = await invoke("get_nvidia_app_whitelist_status");
+      if (adminBanner) {
+        adminBanner.style.display = st.is_admin ? "none" : "flex";
+      }
+      const otaSuffix = st.ngx_ota_dlss_version
+        ? ` · NGX OTA: v${st.ngx_ota_dlss_version}`
+        : "";
+      let msg = "";
+      if (!st.applicable) {
+        msg = (isDe()
+          ? "NVIDIA App NvBackend nicht gefunden (nicht erforderlich)."
+          : "NVIDIA App NvBackend not found (not required).") + otaSuffix;
+        if (btnEl) btnEl.disabled = true;
+        if (hubCard) hubCard.style.display = "none";
+      } else if (st.blocked_flags === 0 && (st.ops_unsupported_count || 0) === 0) {
+        msg = (isDe()
+          ? "✅ Alle Spiele sind in der NVIDIA App für DLSS-Overrides & UI freigeschaltet."
+          : "✅ All games are unlocked for DLSS overrides & UI in NVIDIA App.") + otaSuffix;
+        if (btnEl) {
+          btnEl.disabled = true;
+          btnEl.textContent = isDe() ? "✅ Bereits freigeschaltet" : "✅ Already Unlocked";
+        }
+        if (hubCard) hubCard.style.display = "flex";
+        if (hubBtnEl) hubBtnEl.style.display = "none";
+      } else {
+        const preview = (st.blocked_apps || []).slice(0, 4).join(", ");
+        const opsCount = st.ops_unsupported_count || 0;
+        msg = (isDe()
+          ? `⚠️ ${st.blocked_flags} Sperr-Flags & ${opsCount} Ops-Sperren in NVIDIA App aktiv (z. B. ${preview || "Star Citizen"}).`
+          : `⚠️ ${st.blocked_flags} override block flags & ${opsCount} Ops locks active in NVIDIA App (e.g. ${preview || "Star Citizen"}).`) + otaSuffix;
+        if (btnEl) {
+          btnEl.disabled = false;
+          btnEl.textContent = isDe() ? "🔓 Alle Spiele freischalten" : "🔓 Unlock All Games";
+        }
+        if (hubCard) hubCard.style.display = "flex";
+        if (hubBtnEl) hubBtnEl.style.display = "inline-flex";
+      }
+      if (statusEl) statusEl.textContent = msg;
+      if (hubStatusEl) hubStatusEl.textContent = msg;
+    } catch (err) {
+      if (statusEl) statusEl.textContent = String(err);
+      if (hubStatusEl) hubStatusEl.textContent = String(err);
+    }
+  }
+
+  async function runUnlockNvidiaAppWhitelist(triggerBtn) {
+    try {
+      if (triggerBtn) triggerBtn.disabled = true;
+      await invoke("apply_nvidia_app_whitelist", { unlockOps: true });
+      await refreshNvidiaAppWhitelistStatus();
+      showToast(
+        isDe()
+          ? "NVIDIA App Whitelist & IsOpsSupported angewendet & blockierende DRS-Profilsperren bereinigt."
+          : "NVIDIA App whitelist & IsOpsSupported applied & blocking DRS profile overrides cleared."
+      );
+    } catch (err) {
+      showToast(String(err), true);
+    } finally {
+      if (triggerBtn) triggerBtn.disabled = false;
+    }
+  }
+
+  const btnRelaunchAdmin = document.getElementById("btn-relaunch-admin");
+  if (btnRelaunchAdmin) {
+    btnRelaunchAdmin.addEventListener("click", async () => {
+      try {
+        await invoke("relaunch_as_admin_cmd");
+      } catch (err) {
+        showToast(String(err), true);
+      }
+    });
+  }
+
+  async function runRestartNvidiaServices(triggerBtn) {
+    try {
+      if (triggerBtn) triggerBtn.disabled = true;
+      const msg = await invoke("restart_nvidia_services_cmd");
+      showToast(msg);
+    } catch (err) {
+      showToast(String(err), true);
+    } finally {
+      if (triggerBtn) triggerBtn.disabled = false;
+    }
+  }
+
+  const btnNvWhitelist = document.getElementById("btn-nvapp-whitelist");
+  if (btnNvWhitelist) {
+    btnNvWhitelist.addEventListener("click", () => runUnlockNvidiaAppWhitelist(btnNvWhitelist));
+  }
+  const btnHubNvWhitelist = document.getElementById("btn-hub-nvapp-whitelist");
+  if (btnHubNvWhitelist) {
+    btnHubNvWhitelist.addEventListener("click", () => runUnlockNvidiaAppWhitelist(btnHubNvWhitelist));
+  }
+
+  const btnRestartNv = document.getElementById("btn-restart-nv-services");
+  if (btnRestartNv) {
+    btnRestartNv.addEventListener("click", () => runRestartNvidiaServices(btnRestartNv));
+  }
+  const btnHubRestartNv = document.getElementById("btn-hub-restart-nv");
+  if (btnHubRestartNv) {
+    btnHubRestartNv.addEventListener("click", () => runRestartNvidiaServices(btnHubRestartNv));
+  }
+
+  refreshNvidiaAppWhitelistStatus();
+
   document.querySelectorAll("[data-url]").forEach((btn) => {
     btn.addEventListener("click", () => {
       openExternalUrl(btn.dataset.url);
@@ -3056,13 +3964,13 @@ document.addEventListener("DOMContentLoaded", async () => {
           renderHubTechStrip();
         }
       })
-      .catch(() => {});
+      .catch(() => { });
 
     invoke("sync_game_database", { customUrl: null })
       .then((payload) => {
         if (payload) applyPayload(payload);
       })
-      .catch(() => {});
+      .catch(() => { });
 
     invoke("check_app_update")
       .then((info) => {
@@ -3071,14 +3979,13 @@ document.addEventListener("DOMContentLoaded", async () => {
           const pill = document.getElementById("app-update-pill");
           if (pill) {
             pill.style.display = "inline-flex";
-            pill.innerHTML = `<span>⬆️ v${escapeHtml(info.latest_version)} ${
-              isDe() ? "verfügbar" : "Available"
-            }</span>`;
+            pill.innerHTML = `<span>⬆️ v${escapeHtml(info.latest_version)} ${isDe() ? "verfügbar" : "Available"
+              }</span>`;
             pill.onclick = () => openExternalUrl(info.release_url);
           }
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   } catch (e) {
     showToast("Failed to load initial state: " + e, true);
   }

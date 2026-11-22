@@ -16,11 +16,14 @@ fn get_game_db_cache_path() -> PathBuf {
     get_app_data_dir().join("game_profiles_cache.json")
 }
 
-/// Checks if the sibling `DLSS-Manager-OnlineDB/api/v1/games.json` repository exists locally in the workspace.
+/// Checks if the local `cloudflare-pages-gamedb/public/api/v1/games.json` or sibling `DLSS-Manager-OnlineDB/api/v1/games.json` exists in the workspace.
 fn find_local_sibling_online_db() -> Option<PathBuf> {
     let candidates = [
+        PathBuf::from("cloudflare-pages-gamedb/public/api/v1/games.json"),
+        PathBuf::from("../cloudflare-pages-gamedb/public/api/v1/games.json"),
         PathBuf::from("../DLSS-Manager-OnlineDB/api/v1/games.json"),
         PathBuf::from("../../DLSS-Manager-OnlineDB/api/v1/games.json"),
+        PathBuf::from(r"X:\Github Workspace\DLSS-Updater\cloudflare-pages-gamedb\public\api\v1\games.json"),
         PathBuf::from(r"X:\Github Workspace\DLSS-Manager-OnlineDB\api\v1\games.json"),
     ];
     for c in candidates {
@@ -80,7 +83,7 @@ pub fn default_seed_game_db() -> Vec<GameProfileEntry> {
                 },
             ],
             warning_banner: Some(
-                "EasyAntiCheat monitors Bin64: Official NVIDIA-signed nvngx_dlss.dll updates and NVIDIA Driver DRS Presets (Preset J/K/L) work safely. Do not inject unsigned third-party wrapper DLLs."
+                "EasyAntiCheat monitors Bin64: Only official NVIDIA-signed nvngx_dlss.dll builds (full all-presets production build) and NVIDIA Driver DRS Presets (Preset K) are supported."
                     .to_string(),
             ),
             recommended_sr_preset: Some("Preset K".to_string()),
@@ -88,7 +91,7 @@ pub fn default_seed_game_db() -> Vec<GameProfileEntry> {
             recommended_fg_preset: None,
             recommended_settings: vec![
                 "Upscaling: DLSS (Quality or Balanced at 1440p/4K)".to_string(),
-                "NVIDIA DLSS Preset: Preset K (Transformer Gen 2 — sharper distant ship hulls & HUD MFD text)".to_string(),
+                "NVIDIA DLSS Preset: Preset K (DLSS 4.0 mit Original-DLL v310.2.1 · DLSS 4.5 erst nach DLL-Update auf v310.9.16)".to_string(),
                 "Graphics Renderer: Vulkan".to_string(),
             ],
         },
@@ -567,7 +570,7 @@ pub fn default_seed_game_db() -> Vec<GameProfileEntry> {
     ]
 }
 
-/// Loads cached game database from `%LOCALAPPDATA%\Recol\DLSS-Updater\game_profiles_cache.json`
+/// Loads cached game database from `%LOCALAPPDATA%\gOOvER\DLSS-Manager\game_profiles_cache.json`
 /// and any local sibling `DLSS-Manager-OnlineDB/api/v1/games.json` repository,
 /// merged with the built-in seed profiles.
 pub fn load_cached_or_seed_game_db() -> Vec<GameProfileEntry> {
@@ -621,11 +624,7 @@ pub async fn fetch_remote_game_db(url: &str, api_key: &str) -> Result<Vec<GamePr
         candidate_urls.push(GITHUB_RAW_DB_URL.to_string());
     }
 
-    let client = reqwest::Client::builder()
-        .user_agent("DLSS-Manager/1.0.0-beta.1")
-        .timeout(std::time::Duration::from_secs(10))
-        .build()
-        .map_err(|e| e.to_string())?;
+    let client = crate::repository::shared_http_client();
 
     let mut fetched_entries: Option<Vec<GameProfileEntry>> = None;
     let mut last_err = String::new();
@@ -643,7 +642,9 @@ pub async fn fetch_remote_game_db(url: &str, api_key: &str) -> Result<Vec<GamePr
             }
         }
 
-        let mut req = client.get(cand);
+        let mut req = client
+            .get(cand)
+            .timeout(std::time::Duration::from_secs(10));
         if !trimmed_key.is_empty() {
             req = req
                 .header("X-API-Key", trimmed_key)
@@ -700,10 +701,10 @@ pub async fn fetch_remote_game_db(url: &str, api_key: &str) -> Result<Vec<GamePr
     };
 
     let mut map: HashMap<String, GameProfileEntry> = HashMap::new();
-    for entry in default_seed_game_db() {
+    for entry in parsed_entries {
         map.insert(entry.id.clone(), entry);
     }
-    for entry in parsed_entries {
+    for entry in default_seed_game_db() {
         map.insert(entry.id.clone(), entry);
     }
     if let Some(sibling) = find_local_sibling_online_db() {
@@ -767,7 +768,20 @@ pub fn match_game_profile(
             return Some(p.clone());
         }
 
-        // 3. Match by Star Citizen launcher or executable hint
+        // 3. Match by known executable name or Star Citizen launcher hint
+        if p.match_executables.iter().any(|exe| {
+            let exe_lower = exe.trim().to_ascii_lowercase();
+            !exe_lower.is_empty()
+                && (game
+                    .custom_exe_path
+                    .as_deref()
+                    .map(|cp| cp.to_ascii_lowercase().ends_with(&exe_lower))
+                    .unwrap_or(false)
+                    || Path::new(&game.path).join(exe).exists())
+        }) {
+            return Some(p.clone());
+        }
+
         if p.id == "starcitizen"
             && (game.launcher == crate::models::LauncherType::Rsi
                 || path_lower.contains("starcitizen"))
@@ -780,11 +794,13 @@ pub fn match_game_profile(
 }
 
 /// Attaches matching `db_profile` entries to each game in `games`.
-/// If a game's `db_profile` has `anticheat_status == "blocked"`, disables automatic DLL update flags.
+/// If a game's `db_profile` has `anticheat_status == "blocked"` or `"driver_override_only"`,
+/// disables on-disk DLL replacement flags so Anti-Cheat file hash checks (e.g. Star Citizen / CoD) are never tripped.
 pub fn annotate_games_with_db_profiles(games: &mut [Game], profiles: &[GameProfileEntry]) {
     for g in games.iter_mut() {
         if let Some(profile) = match_game_profile(g, profiles) {
-            if profile.anticheat_status.eq_ignore_ascii_case("blocked") {
+            let ac = profile.anticheat_status.to_ascii_lowercase();
+            if ac == "blocked" || ac == "driver_override_only" || ac == "drs_only" {
                 for d in g.dlls.iter_mut() {
                     d.update_available = false;
                 }
@@ -898,14 +914,11 @@ pub async fn report_games_to_remote_db(
         return Err("Keine Spiele mit erkannten Upscaler-DLLs zum Melden gefunden.".to_string());
     }
 
-    let client = reqwest::Client::builder()
-        .user_agent("DLSS-Manager/1.0.0-beta.1")
-        .timeout(std::time::Duration::from_secs(12))
-        .build()
-        .map_err(|e| e.to_string())?;
+    let client = crate::repository::shared_http_client();
 
     let resp = client
         .post(&report_url)
+        .timeout(std::time::Duration::from_secs(12))
         .header("X-API-Key", trimmed_key)
         .header("Authorization", format!("Bearer {}", trimmed_key))
         .json(&serde_json::json!({

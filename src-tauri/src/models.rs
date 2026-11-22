@@ -68,19 +68,6 @@ impl DllType {
             "nvngx_dlssg.dll" => Some(Self::DlssG),
             "nvngx_dlssd.dll" => Some(Self::DlssD),
             "nvngx_dlssnr.dll" => Some(Self::DlssNr),
-            "amd_fidelityfx_dx12.dll"
-            | "amd_fidelityfx_loader_dx12.dll"
-            | "amd_fidelityfx_upscaler_dx12.dll"
-            | "amd_fidelityfx_framegeneration_dx12.dll"
-            | "amd_fidelityfx_denoiser_dx12.dll"
-            | "amd_fidelityfx_radiancecache_dx12.dll" => Some(Self::Fsr3),
-            "amd_fidelityfx_vk.dll"
-            | "amd_fidelityfx_loader_vk.dll"
-            | "amd_fidelityfx_upscaler_vk.dll"
-            | "amd_fidelityfx_framegeneration_vk.dll" => Some(Self::FsrVk),
-            "ffx_fsr2_api_x64.dll"
-            | "ffx_fsr2_api_dx12_x64.dll"
-            | "ffx_fsr2_api_vk_x64.dll" => Some(Self::Fsr),
             "libxess.dll" | "libxess_dx11.dll" => Some(Self::Xess),
             "libxess_fg.dll" => Some(Self::XessFg),
             "libxell.dll" => Some(Self::Xell),
@@ -185,9 +172,6 @@ pub fn default_enabled_techs() -> Vec<String> {
         "DLSS 5".to_string(),
         "Streamline".to_string(),
         "DStorage".to_string(),
-        "FSR 3/4".to_string(),
-        "FSR VK".to_string(),
-        "FSR 2".to_string(),
         "XeSS".to_string(),
         "XeSS-FG".to_string(),
         "XeLL".to_string(),
@@ -204,6 +188,12 @@ pub struct GameOverride {
     pub dlss_sr_preset: Option<String>,
     pub dlss_rr_preset: Option<String>,
     pub dlss_fg_preset: Option<String>,
+    #[serde(default)]
+    pub dlss_fg_mode: Option<String>,
+    #[serde(default)]
+    pub dlss_fg_multiplier: Option<u32>,
+    #[serde(default)]
+    pub dlss_fg_target_fps: Option<u32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -286,6 +276,12 @@ pub struct Game {
     pub dlss_rr_preset: Option<String>,
     #[serde(default)]
     pub dlss_fg_preset: Option<String>,
+    #[serde(default)]
+    pub dlss_fg_mode: Option<String>,
+    #[serde(default)]
+    pub dlss_fg_multiplier: Option<u32>,
+    #[serde(default)]
+    pub dlss_fg_target_fps: Option<u32>,
     #[serde(default)]
     pub db_profile: Option<GameProfileEntry>,
 }

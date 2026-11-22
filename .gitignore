@@ -1,21 +1,92 @@
+# =============================================================================
 # Rust & Tauri Build Artifacts
+# =============================================================================
 target/
 dist/
 src-tauri/target/
 src-tauri/gen/
 src-tauri/WixTools/
+**/*.rs.bk
 
-# Logs & Temporary Files
-*.log
-*.key
+# =============================================================================
+# Packaged Installers, Binaries & Archives
+# =============================================================================
+*.exe
+*.msi
+*.nupkg
+*.pdb
+*.dll
+*.zip
+tools/CHECKSUM
 
-# IDE & Editor Configs
+# =============================================================================
+# IDE, Editor, Workspace & AI Assistant Configs
+# =============================================================================
+*.code-workspace
+.vscode/
 .idea/
+.vs/
+.fleet/
+.zed/
+.cursor/
 .claude/
+.gemini/
+.agent/
+.agents/
 *CLAUDE.md
 .mcp.json
+*.suo
+*.user
+*.sln.docstates
 
+# =============================================================================
+# Separate Online-DB Subfolder, Node & Cloudflare Wrangler
+# =============================================================================
+cloudflare-pages-gamedb/
+node_modules/
+.wrangler/
+.dev.vars*
+
+# =============================================================================
+# Environment Variables, Secrets, Keys & Certificates
+# =============================================================================
+.env
+.env.*
+*.key
+*.pem
+*.pfx
+*.p12
+*.cer
+
+# =============================================================================
+# Logs, Local Databases, Caches & Temporary Files
+# =============================================================================
+*.log
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+*~
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# =============================================================================
+# OS Metadata Files (Windows / macOS / Linux)
+# =============================================================================
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# =============================================================================
 # Linux / Flatpak Build Artifacts
+# =============================================================================
 .flatpak-builder/
 build-dir/
 repo/

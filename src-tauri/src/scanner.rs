@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::LazyLock;
 
 use chrono::Utc;
 use rayon::prelude::*;
@@ -11,6 +12,27 @@ use walkdir::{DirEntry, WalkDir};
 use crate::database::{import_legacy_configured_paths, load_legacy_db_game_roots};
 use crate::models::{DetectedDll, DllType, Game, LauncherType};
 use crate::pe_version::{extract_dll_version, preset_hint_for_dll};
+
+static RE_STEAM_ID: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r#""(7656119\d{10})""#).unwrap());
+static RE_STEAM_RECENT_ID: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r#"(?is)"(7656119\d{10})"\s*\{[^}]*"MostRecent"\s*"1""#).unwrap()
+});
+static RE_VDF_PATH: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r#"(?i)"path"\s+"([^"]+)""#).unwrap());
+static RE_ACF_APPID: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r#"(?i)"appid"\s+"(\d+)""#).unwrap());
+static RE_ACF_NAME: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r#"(?i)"name"\s+"([^"]+)""#).unwrap());
+static RE_ACF_INSTALLDIR: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r#"(?i)"installdir"\s+"([^"]+)""#).unwrap());
+static RE_RSI_LAUNCH: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"\[Launcher::launch\]\s+Launching Star Citizen\s+([A-Za-z0-9_-]+)\s+from\s+\(([^)]+)\)")
+        .unwrap()
+});
+static RE_RSI_PATH: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r#"([A-Za-z]:\\(?:\\\\|[^\\\r\n:*?<>|"]+[\\]+)*StarCitizen)"#).unwrap()
+});
 
 #[derive(Debug, Clone)]
 struct DiscoveredGameRoot {
@@ -213,6 +235,9 @@ pub fn scan_all_games(
                 dlss_sr_preset: None,
                 dlss_rr_preset: None,
                 dlss_fg_preset: None,
+                dlss_fg_mode: None,
+                dlss_fg_multiplier: None,
+                dlss_fg_target_fps: None,
                 db_profile: None,
             }
         })
@@ -247,10 +272,11 @@ pub fn scan_all_games(
 
     // Only keep games that actually contain at least one upscaler DLL and a valid game executable (.exe)
     // and are not uninstalled Epic Games leftover folders (`.egstore` without an active Epic manifest).
+    let verified_epic = get_verified_epic_install_paths();
     games.retain(|g| {
         let p = Path::new(&g.path);
         if (g.launcher == LauncherType::Epic || p.join(".egstore").is_dir())
-            && !is_verified_epic_install(p)
+            && !is_verified_epic_install_in(p, &verified_epic)
         {
             return false;
         }
@@ -662,6 +688,11 @@ pub fn prettify_game_name(raw_name: &str, full_path: &Path) -> (String, Option<S
 
 /// Finds the primary game executable (`.exe`) inside a game directory for launching or NVAPI DRS profile binding.
 pub fn find_primary_game_executable(root: &Path) -> Option<PathBuf> {
+    let sc_exe = root.join("Bin64").join("StarCitizen.exe");
+    if sc_exe.exists() {
+        return Some(sc_exe);
+    }
+
     let ignore_substrings = [
         "unins",
         "crash",
@@ -803,16 +834,13 @@ pub fn detect_steam_id_from_vdf() -> Option<String> {
     steam_roots.push(PathBuf::from("C:\\Program Files (x86)\\Steam"));
     steam_roots.push(PathBuf::from("D:\\Steam"));
 
-    let id_re = Regex::new(r#""(7656119\d{10})""#).ok()?;
-    let recent_re = Regex::new(r#"(?is)"(7656119\d{10})"\s*\{[^}]*"MostRecent"\s*"1""#).ok()?;
-
     for root in steam_roots {
         let vdf_path = root.join("config").join("loginusers.vdf");
         if let Ok(content) = fs::read_to_string(&vdf_path) {
-            if let Some(cap) = recent_re.captures(&content) {
+            if let Some(cap) = RE_STEAM_RECENT_ID.captures(&content) {
                 return Some(cap[1].to_string());
             }
-            if let Some(cap) = id_re.captures(&content) {
+            if let Some(cap) = RE_STEAM_ID.captures(&content) {
                 return Some(cap[1].to_string());
             }
         }
@@ -968,7 +996,6 @@ fn discover_steam_games(drives: &[char]) -> Vec<DiscoveredGameRoot> {
     }
 
     let mut steamapps_dirs: Vec<PathBuf> = Vec::new();
-    let path_re = Regex::new(r#"(?i)"path"\s+"([^"]+)""#).ok();
 
     for root in steam_roots {
         let root_str = root.to_string_lossy().replace('/', "\\");
@@ -992,8 +1019,8 @@ fn discover_steam_games(drives: &[char]) -> Vec<DiscoveredGameRoot> {
             sa.join("libraryfolders.vdf"),
             root.join("config").join("libraryfolders.vdf"),
         ] {
-            if let (Ok(content), Some(re)) = (fs::read_to_string(vdf), &path_re) {
-                for cap in re.captures_iter(&content) {
+            if let Ok(content) = fs::read_to_string(vdf) {
+                for cap in RE_VDF_PATH.captures_iter(&content) {
                     let lib_path = cap[1].replace("\\\\", "\\");
                     let lib_sa = PathBuf::from(&lib_path).join("steamapps");
                     if lib_sa.exists() {
@@ -1005,10 +1032,6 @@ fn discover_steam_games(drives: &[char]) -> Vec<DiscoveredGameRoot> {
             }
         }
     }
-
-    let appid_re = Regex::new(r#"(?i)"appid"\s+"(\d+)""#).unwrap();
-    let name_re = Regex::new(r#"(?i)"name"\s+"([^"]+)""#).unwrap();
-    let installdir_re = Regex::new(r#"(?i)"installdir"\s+"([^"]+)""#).unwrap();
 
     for sa_dir in steamapps_dirs {
         let mut found_acf_in_library = false;
@@ -1023,11 +1046,11 @@ fn discover_steam_games(drives: &[char]) -> Vec<DiscoveredGameRoot> {
                 let Ok(acf) = fs::read_to_string(entry.path()) else {
                     continue;
                 };
-                let app_id = appid_re.captures(&acf).map(|c| c[1].to_string());
-                let Some(name) = name_re.captures(&acf).map(|c| c[1].to_string()) else {
+                let app_id = RE_ACF_APPID.captures(&acf).map(|c| c[1].to_string());
+                let Some(name) = RE_ACF_NAME.captures(&acf).map(|c| c[1].to_string()) else {
                     continue;
                 };
-                let Some(installdir) = installdir_re.captures(&acf).map(|c| c[1].to_string())
+                let Some(installdir) = RE_ACF_INSTALLDIR.captures(&acf).map(|c| c[1].to_string())
                 else {
                     continue;
                 };
@@ -1154,14 +1177,19 @@ pub fn get_verified_epic_install_paths() -> HashSet<String> {
     verified
 }
 
-/// Checks if `path` is an actively installed Epic Games directory according to Epic Games Launcher manifests.
-pub fn is_verified_epic_install(path: &Path) -> bool {
+/// Checks if `path` is in a pre-fetched `verified_set` of Epic Games install directories.
+pub fn is_verified_epic_install_in(path: &Path, verified_set: &HashSet<String>) -> bool {
     let norm = path
         .to_string_lossy()
         .replace('/', "\\")
         .trim_end_matches('\\')
         .to_ascii_lowercase();
-    get_verified_epic_install_paths().contains(&norm)
+    verified_set.contains(&norm)
+}
+
+/// Checks if `path` is an actively installed Epic Games directory according to Epic Games Launcher manifests.
+pub fn is_verified_epic_install(path: &Path) -> bool {
+    is_verified_epic_install_in(path, &get_verified_epic_install_paths())
 }
 
 fn discover_epic_games(_drives: &[char]) -> Vec<DiscoveredGameRoot> {
@@ -1606,26 +1634,18 @@ fn discover_rsi_star_citizen(drives: &[char]) -> Vec<DiscoveredGameRoot> {
     if let Some(appdata) = dirs::config_dir() {
         let rsi_log = appdata.join("rsilauncher").join("logs").join("log.log");
         if let Ok(log_text) = fs::read_to_string(&rsi_log) {
-            if let Ok(launch_re) = Regex::new(
-                r"\[Launcher::launch\]\s+Launching Star Citizen\s+([A-Za-z0-9_-]+)\s+from\s+\(([^)]+)\)",
-            ) {
-                for cap in launch_re.captures_iter(&log_text) {
-                    let chan = cap[1].trim().to_string();
-                    let raw_path = cap[2].trim().replace("\\\\", "\\");
-                    let p = PathBuf::from(&raw_path);
-                    if let Some(parent) = p.parent() {
-                        base_dirs.push(parent.to_path_buf());
-                    }
-                    direct_channel_dirs.push((chan, p));
+            for cap in RE_RSI_LAUNCH.captures_iter(&log_text) {
+                let chan = cap[1].trim().to_string();
+                let raw_path = cap[2].trim().replace("\\\\", "\\");
+                let p = PathBuf::from(&raw_path);
+                if let Some(parent) = p.parent() {
+                    base_dirs.push(parent.to_path_buf());
                 }
+                direct_channel_dirs.push((chan, p));
             }
-            if let Ok(re) =
-                Regex::new(r#"([A-Za-z]:\\(?:\\\\|[^\\\r\n:*?<>|"]+[\\]+)*StarCitizen)"#)
-            {
-                for cap in re.captures_iter(&log_text) {
-                    let cleaned = cap[1].replace("\\\\", "\\");
-                    base_dirs.push(PathBuf::from(cleaned));
-                }
+            for cap in RE_RSI_PATH.captures_iter(&log_text) {
+                let cleaned = cap[1].replace("\\\\", "\\");
+                base_dirs.push(PathBuf::from(cleaned));
             }
         }
     }
@@ -1797,6 +1817,8 @@ fn discover_generic_game_dirs(drives: &[char]) -> Vec<DiscoveredGameRoot> {
         "webscripte",
     ];
 
+    let verified_epic = get_verified_epic_install_paths();
+
     for &d in drives {
         for folder_name in &[
             "Games",
@@ -1858,7 +1880,7 @@ fn discover_generic_game_dirs(drives: &[char]) -> Vec<DiscoveredGameRoot> {
 
                 // Check if this top-level folder looks like a game installation
                 let has_egstore = path.join(".egstore").is_dir();
-                if has_egstore && !is_verified_epic_install(&path) {
+                if has_egstore && !is_verified_epic_install_in(&path, &verified_epic) {
                     continue;
                 }
                 let has_game_subdir = path.join("bin").is_dir()

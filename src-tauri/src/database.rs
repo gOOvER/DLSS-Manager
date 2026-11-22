@@ -7,13 +7,55 @@ use rusqlite::{params, Connection};
 
 use crate::models::{AppConfig, BackupEntry, Game, GameOverride};
 
-/// Returns the shared `%LOCALAPPDATA%\Recol\DLSS-Updater` directory (preserving compatibility
-/// with existing backups, caches, and user configurations).
+/// Returns the application data directory `%LOCALAPPDATA%\gOOvER\DLSS-Manager`,
+/// automatically migrating user config, database, backups, and caches once from
+/// legacy `%LOCALAPPDATA%\Recol\DLSS-Updater` if present.
 pub fn get_app_data_dir() -> PathBuf {
     let base = dirs::data_local_dir().unwrap_or_else(|| PathBuf::from("."));
-    let dir = base.join("Recol").join("DLSS-Updater");
+    let dir = base.join("gOOvER").join("DLSS-Manager");
     let _ = fs::create_dir_all(&dir);
+
+    let legacy_dir = base.join("Recol").join("DLSS-Updater");
+    let marker = dir.join("dlss_manager_config.json");
+    if !marker.exists() && legacy_dir.is_dir() {
+        for file_name in &[
+            "dlss_manager_config.json",
+            "dlss_manager_v2.db",
+            "dlss_manager_v2.db-shm",
+            "dlss_manager_v2.db-wal",
+            "game_profiles_cache.json",
+            "scan_cache.json",
+        ] {
+            let src = legacy_dir.join(file_name);
+            let dst = dir.join(file_name);
+            if src.is_file() && !dst.exists() {
+                let _ = fs::copy(&src, &dst);
+            }
+        }
+        for sub_dir in &["backups", "dll_cache", "steam_images"] {
+            let src_sub = legacy_dir.join(sub_dir);
+            let dst_sub = dir.join(sub_dir);
+            if src_sub.is_dir() {
+                let _ = copy_dir_recursive(&src_sub, &dst_sub);
+            }
+        }
+    }
+
     dir
+}
+
+fn copy_dir_recursive(src: &std::path::Path, dst: &std::path::Path) -> std::io::Result<()> {
+    fs::create_dir_all(dst)?;
+    for entry in fs::read_dir(src)? {
+        let entry = entry?;
+        let target = dst.join(entry.file_name());
+        if entry.path().is_dir() {
+            copy_dir_recursive(&entry.path(), &target)?;
+        } else if !target.exists() {
+            let _ = fs::copy(entry.path(), target);
+        }
+    }
+    Ok(())
 }
 
 pub fn get_cache_dir() -> PathBuf {
@@ -103,10 +145,11 @@ pub fn load_legacy_db_game_roots() -> Vec<(String, String, String, Option<String
         }) else {
             continue;
         };
+        let verified_epic = crate::scanner::get_verified_epic_install_paths();
         for r in rows.flatten() {
             let p = PathBuf::from(&r.1);
             let is_epic = r.2.to_ascii_lowercase().contains("epic") || p.join(".egstore").is_dir();
-            if is_epic && !crate::scanner::is_verified_epic_install(&p) {
+            if is_epic && !crate::scanner::is_verified_epic_install_in(&p, &verified_epic) {
                 continue;
             }
             if p.exists() && crate::scanner::has_valid_game_executable(&p) {
@@ -276,15 +319,30 @@ impl Database {
             Ok(s)
         })?;
 
+        let verified_epic = crate::scanner::get_verified_epic_install_paths();
         let mut games = Vec::new();
         for r in rows.flatten() {
-            if let Ok(g) = serde_json::from_str::<Game>(&r) {
+            if let Ok(mut g) = serde_json::from_str::<Game>(&r) {
                 let p = std::path::Path::new(&g.path);
                 let is_epic = g.launcher == crate::models::LauncherType::Epic || p.join(".egstore").is_dir();
-                if is_epic && !crate::scanner::is_verified_epic_install(p) {
+                if is_epic && !crate::scanner::is_verified_epic_install_in(p, &verified_epic) {
                     continue;
                 }
                 if p.exists() && crate::scanner::has_valid_game_executable(p) {
+                    // Refresh live on-disk DLL versions so game patches or external restores are reflected immediately
+                    g.dlls.retain_mut(|d| {
+                        let dll_path = std::path::Path::new(&d.path);
+                        if !dll_path.exists() {
+                            return false;
+                        }
+                        if let Some(live_ver) = crate::pe_version::extract_dll_version(dll_path) {
+                            if !live_ver.is_empty() && live_ver != "0.0.0.0" {
+                                d.preset_label = crate::pe_version::preset_hint_for_dll(d.dll_type, &live_ver);
+                                d.version = live_ver;
+                            }
+                        }
+                        true
+                    });
                     games.push(g);
                 }
             }
@@ -469,14 +527,61 @@ impl Database {
                 if ov.custom_exe_path.is_some() {
                     g.custom_exe_path = ov.custom_exe_path.clone();
                 }
-                if ov.dlss_sr_preset.is_some() {
-                    g.dlss_sr_preset = ov.dlss_sr_preset.clone();
+                let has_sr = g
+                    .dlls
+                    .iter()
+                    .any(|d| d.dll_type == crate::models::DllType::Dlss);
+                let has_rr = g
+                    .dlls
+                    .iter()
+                    .any(|d| d.dll_type == crate::models::DllType::DlssD);
+                let has_fg = g
+                    .dlls
+                    .iter()
+                    .any(|d| d.dll_type == crate::models::DllType::DlssG);
+
+                g.dlss_sr_preset = if has_sr {
+                    ov.dlss_sr_preset.clone()
+                } else {
+                    None
+                };
+                g.dlss_rr_preset = if has_rr {
+                    ov.dlss_rr_preset.clone()
+                } else {
+                    None
+                };
+                g.dlss_fg_preset = if has_fg {
+                    ov.dlss_fg_preset.clone()
+                } else {
+                    None
+                };
+                g.dlss_fg_mode = if has_fg { ov.dlss_fg_mode.clone() } else { None };
+                g.dlss_fg_multiplier = if has_fg { ov.dlss_fg_multiplier } else { None };
+                g.dlss_fg_target_fps = if has_fg { ov.dlss_fg_target_fps } else { None };
+            } else {
+                let has_sr = g
+                    .dlls
+                    .iter()
+                    .any(|d| d.dll_type == crate::models::DllType::Dlss);
+                let has_rr = g
+                    .dlls
+                    .iter()
+                    .any(|d| d.dll_type == crate::models::DllType::DlssD);
+                let has_fg = g
+                    .dlls
+                    .iter()
+                    .any(|d| d.dll_type == crate::models::DllType::DlssG);
+                if !has_sr {
+                    g.dlss_sr_preset = None;
                 }
-                if ov.dlss_rr_preset.is_some() {
-                    g.dlss_rr_preset = ov.dlss_rr_preset.clone();
+                if !has_rr {
+                    g.dlss_rr_preset = None;
                 }
-                if ov.dlss_fg_preset.is_some() {
-                    g.dlss_fg_preset = ov.dlss_fg_preset.clone();
+                if !has_fg {
+                    g.dlss_fg_preset = None;
+                    g.dlss_fg_mode = None;
+                    g.dlss_fg_multiplier = None;
+                    g.dlss_fg_target_fps = None;
                 }
             }
             let name_lower = g.name.to_ascii_lowercase();

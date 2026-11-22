@@ -2,6 +2,7 @@ pub mod database;
 pub mod game_db;
 pub mod gpu_nvapi;
 pub mod models;
+pub mod nvapp_whitelist;
 pub mod pe_version;
 pub mod repository;
 pub mod scanner;
@@ -186,7 +187,7 @@ async fn get_initial_state(state: State<'_, AppState>) -> Result<InitialPayload,
         .unwrap_or_default();
     config.dlss_indicator_enabled = get_dlss_indicator_state();
 
-    let (mut games, backups) = {
+    let (games, backups) = {
         let db = state.db.lock().map_err(|e| e.to_string())?;
         let mut g = db.load_games().unwrap_or_default();
         db.apply_overrides_and_config(&mut g, &config);
@@ -218,18 +219,31 @@ async fn get_initial_state(state: State<'_, AppState>) -> Result<InitialPayload,
                         find_primary_game_executable(Path::new(&g.path))
                             .map(|p| p.to_string_lossy().to_string())
                     });
-                let sr = g
-                    .dlss_sr_preset
-                    .as_deref()
-                    .unwrap_or(&config.global_dlss_preset);
-                let rr = g
-                    .dlss_rr_preset
-                    .as_deref()
-                    .unwrap_or(&config.global_dlss_rr_preset);
-                let fg = g
-                    .dlss_fg_preset
-                    .as_deref()
-                    .unwrap_or(&config.global_dlss_fg_preset);
+                let has_sr = g.dlls.iter().any(|d| d.dll_type == DllType::Dlss);
+                let has_rr = g.dlls.iter().any(|d| d.dll_type == DllType::DlssD);
+                let has_fg = g.dlls.iter().any(|d| d.dll_type == DllType::DlssG);
+
+                let sr = if has_sr {
+                    g.dlss_sr_preset
+                        .as_deref()
+                        .unwrap_or(&config.global_dlss_preset)
+                } else {
+                    "Default"
+                };
+                let rr = if has_rr {
+                    g.dlss_rr_preset
+                        .as_deref()
+                        .unwrap_or(&config.global_dlss_rr_preset)
+                } else {
+                    "Default"
+                };
+                let fg = if has_fg {
+                    g.dlss_fg_preset
+                        .as_deref()
+                        .unwrap_or(&config.global_dlss_fg_preset)
+                } else {
+                    "Default"
+                };
                 let _ = apply_nvapi_dlss_presets(
                     Some(&g.name),
                     resolved_exe.as_deref(),
@@ -238,6 +252,46 @@ async fn get_initial_state(state: State<'_, AppState>) -> Result<InitialPayload,
                     fg,
                 );
                 enforced_games += 1;
+            }
+        }
+        // Also clear NVIDIA App's blocking `0` per-game DRS overrides on games that inherit
+        // Global presets (e.g. "Squadron 42 - Star Citizen" when not overridden per-game).
+        let inherit_exes: Vec<String> = games
+            .iter()
+            .filter(|g| {
+                g.dlss_sr_preset.is_none()
+                    && g.dlss_rr_preset.is_none()
+                    && g.dlss_fg_preset.is_none()
+            })
+            .filter_map(|g| {
+                g.custom_exe_path
+                    .clone()
+                    .filter(|s| !s.trim().is_empty())
+                    .or_else(|| {
+                        find_primary_game_executable(Path::new(&g.path))
+                            .map(|p| p.to_string_lossy().to_string())
+                    })
+            })
+            .collect();
+        if !inherit_exes.is_empty() {
+            let _ = gpu_nvapi::clear_game_dlss_profile_blocks(&inherit_exes);
+        }
+        // Auto-maintain NVIDIA App whitelist on startup if the user has previously unlocked it
+        let wl_status = nvapp_whitelist::get_nvidia_app_whitelist_status();
+        if wl_status.has_backup
+            && (wl_status.blocked_flags > 0 || wl_status.ops_unsupported_count > 0)
+        {
+            if let Ok((flags, apps)) = nvapp_whitelist::apply_nvidia_app_whitelist(true) {
+                if flags > 0 {
+                    push_log(
+                        &state,
+                        "INFO",
+                        format!(
+                            "Auto-restored NVIDIA App whitelist ({} flags across {} apps).",
+                            flags, apps
+                        ),
+                    );
+                }
             }
         }
         if enforced_games > 0 {
@@ -425,7 +479,16 @@ async fn update_single_game_dll(
         .cloned()
         .ok_or_else(|| format!("Game not found: {}", game_id))?;
 
-    let (new_ver, backup_vec) = update_game_dll(&game, &dll_path, &manifest, config.auto_backup)
+    let existing_backups = {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        db.load_backups().unwrap_or_default()
+    };
+    let already_backed_up = existing_backups
+        .iter()
+        .any(|b| b.original_dll_path.eq_ignore_ascii_case(&dll_path) && !b.added_by_updater);
+    let should_create_backup = config.auto_backup && !already_backed_up;
+
+    let (new_ver, backup_vec) = update_game_dll(&game, &dll_path, &manifest, should_create_backup)
         .await
         .map_err(|e| {
             push_log(&state, "ERROR", format!("Failed updating {} in {}: {}", dll_path, game.name, e));
@@ -457,6 +520,7 @@ async fn update_single_game_dll(
 #[tauri::command]
 async fn update_all_for_game(
     game_id: String,
+    force_reinstall: Option<bool>,
     state: State<'_, AppState>,
 ) -> Result<InitialPayload, String> {
     let config = state
@@ -475,11 +539,12 @@ async fn update_all_for_game(
         .map(|g| g.clone())
         .unwrap_or_else(|_| detect_gpu_info());
 
-    let mut games = {
+    let (mut games, existing_backups) = {
         let db = state.db.lock().map_err(|e| e.to_string())?;
         let mut g = db.load_games().map_err(|e| e.to_string())?;
         db.apply_overrides_and_config(&mut g, &config);
-        g
+        let b = db.load_backups().unwrap_or_default();
+        (g, b)
     };
     annotate_games_with_config(&mut games, &manifest, &gpu, &config);
 
@@ -489,13 +554,30 @@ async fn update_all_for_game(
         .cloned()
         .ok_or_else(|| format!("Game not found: {}", game_id))?;
 
+    let any_outdated = game
+        .dlls
+        .iter()
+        .any(|d| d.update_available && d.gpu_supported && gpu.supports_dll_type(d.dll_type));
+    let reinstall_all = force_reinstall.unwrap_or(false) || !any_outdated;
+
     let mut new_backups = Vec::new();
     let mut last_error: Option<String> = None;
     let mut updated_count = 0usize;
 
     for dll in &game.dlls {
-        if dll.update_available && dll.gpu_supported && gpu.supports_dll_type(dll.dll_type) {
-            match update_game_dll(&game, &dll.path, &manifest, config.auto_backup).await {
+        let eligible = if reinstall_all {
+            dll.gpu_supported && dll.technology_enabled && gpu.supports_dll_type(dll.dll_type)
+        } else {
+            dll.update_available && dll.gpu_supported && gpu.supports_dll_type(dll.dll_type)
+        };
+
+        if eligible {
+            let already_backed_up = existing_backups
+                .iter()
+                .any(|b| b.original_dll_path.eq_ignore_ascii_case(&dll.path) && !b.added_by_updater);
+            let should_backup = config.auto_backup && !already_backed_up;
+
+            match update_game_dll(&game, &dll.path, &manifest, should_backup).await {
                 Ok((_ver, b_vec)) => {
                     updated_count += 1;
                     new_backups.extend(b_vec);
@@ -563,11 +645,12 @@ async fn bulk_update_selected_games(
         .map(|g| g.clone())
         .unwrap_or_else(|_| detect_gpu_info());
 
-    let mut games = {
+    let (mut games, existing_backups) = {
         let db = state.db.lock().map_err(|e| e.to_string())?;
         let mut g = db.load_games().map_err(|e| e.to_string())?;
         db.apply_overrides_and_config(&mut g, &config);
-        g
+        let b = db.load_backups().unwrap_or_default();
+        (g, b)
     };
     annotate_games_with_config(&mut games, &manifest, &gpu, &config);
 
@@ -610,8 +693,13 @@ async fn bulk_update_selected_games(
         let g_clone = game.clone();
         let mut any_ok = false;
         for dll_path in outdated {
+            let already_backed_up = existing_backups
+                .iter()
+                .any(|b| b.original_dll_path.eq_ignore_ascii_case(&dll_path) && !b.added_by_updater);
+            let should_backup = config.auto_backup && !already_backed_up;
+
             if let Ok((_ver, b_vec)) =
-                update_game_dll(&g_clone, &dll_path, &manifest, config.auto_backup).await
+                update_game_dll(&g_clone, &dll_path, &manifest, should_backup).await
             {
                 any_ok = true;
                 updated_dlls_count += 1;
@@ -1143,13 +1231,13 @@ async fn search_steam_store(query: String) -> Result<Vec<SteamSearchResult>, Str
         encoded
     );
 
-    let client = reqwest::Client::builder()
-        .user_agent("DLSS-Manager-Rust/1.0.0-beta.1")
+    let client = repository::shared_http_client();
+    let resp = client
+        .get(&url)
         .timeout(std::time::Duration::from_secs(10))
-        .build()
+        .send()
+        .await
         .map_err(|e| e.to_string())?;
-
-    let resp = client.get(&url).send().await.map_err(|e| e.to_string())?;
     let json: serde_json::Value = resp.json().await.map_err(|e| e.to_string())?;
 
     let mut out = Vec::new();
@@ -1347,17 +1435,14 @@ async fn save_game_display_override(
                 })
                 .unwrap_or(true);
             if needs_api_resolve {
-                if let Ok(client) = reqwest::Client::builder()
-                    .user_agent("DLSS-Manager/1.0.0-beta.1")
-                    .timeout(std::time::Duration::from_secs(8))
-                    .build()
-                {
-                    clean_cover_url = Some(
-                        fetch_steam_artwork_via_api(&client, aid, &config.steam_api_key).await,
-                    );
-                } else {
-                    clean_cover_url = Some(crate::scanner::resolve_steam_cover_url(aid));
-                }
+                clean_cover_url = Some(
+                    fetch_steam_artwork_via_api(
+                        repository::shared_http_client(),
+                        aid,
+                        &config.steam_api_key,
+                    )
+                    .await,
+                );
             }
         }
     }
@@ -1441,6 +1526,9 @@ async fn save_game_dlss_presets(
     sr_preset: String,
     rr_preset: String,
     fg_preset: String,
+    fg_mode: Option<String>,
+    fg_multiplier: Option<u32>,
+    fg_target_fps: Option<u32>,
     custom_exe_path: Option<String>,
     state: State<'_, AppState>,
 ) -> Result<InitialPayload, String> {
@@ -1460,25 +1548,56 @@ async fn save_game_dlss_presets(
         .map(|g| g.clone())
         .unwrap_or_else(|_| detect_gpu_info());
 
-    let (games, backups, game_name_opt, game_path_opt) = {
+    let (games, backups, game_name_opt, game_path_opt, eff_sr, eff_rr, eff_fg) = {
         let db = state.db.lock().map_err(|e| e.to_string())?;
+        let g_list = db.load_games().unwrap_or_default();
+        let matched_game = g_list.iter().find(|g| g.id == game_id);
+        let has_sr = matched_game
+            .map(|g| g.dlls.iter().any(|d| d.dll_type == DllType::Dlss))
+            .unwrap_or(true);
+        let has_rr = matched_game
+            .map(|g| g.dlls.iter().any(|d| d.dll_type == DllType::DlssD))
+            .unwrap_or(false);
+        let has_fg = matched_game
+            .map(|g| g.dlls.iter().any(|d| d.dll_type == DllType::DlssG))
+            .unwrap_or(false);
+
+        let clean_sr = if has_sr {
+            sr_preset.clone()
+        } else {
+            "Default".to_string()
+        };
+        let clean_rr = if has_rr {
+            rr_preset.clone()
+        } else {
+            "Default".to_string()
+        };
+        let clean_fg = if has_fg {
+            fg_preset.clone()
+        } else {
+            "Default".to_string()
+        };
+
         let mut overrides = db.load_overrides().unwrap_or_default();
         let mut ov = overrides.remove(&game_id).unwrap_or(GameOverride {
             game_id: game_id.clone(),
             ..Default::default()
         });
-        ov.dlss_sr_preset = Some(sr_preset.clone());
-        ov.dlss_rr_preset = Some(rr_preset.clone());
-        ov.dlss_fg_preset = Some(fg_preset.clone());
+        ov.dlss_sr_preset = Some(clean_sr.clone());
+        ov.dlss_rr_preset = Some(clean_rr.clone());
+        ov.dlss_fg_preset = Some(clean_fg.clone());
+        if has_fg {
+            ov.dlss_fg_mode = fg_mode.clone().filter(|s| !s.trim().is_empty() && s != "Default");
+            ov.dlss_fg_multiplier = fg_multiplier;
+            ov.dlss_fg_target_fps = fg_target_fps;
+        }
         ov.custom_exe_path = custom_exe_path.clone().filter(|s| !s.trim().is_empty());
         db.save_override(&ov).map_err(|e| e.to_string())?;
 
-        let g_list = db.load_games().unwrap_or_default();
-        let matched_game = g_list.iter().find(|g| g.id == game_id);
         let gname = matched_game.map(|g| g.name.clone());
         let gpath = matched_game.map(|g| g.path.clone());
         let b_list = db.load_backups().unwrap_or_default();
-        (g_list, b_list, gname, gpath)
+        (g_list, b_list, gname, gpath, clean_sr, clean_rr, clean_fg)
     };
 
     if gpu.vendor.eq_ignore_ascii_case("NVIDIA") {
@@ -1494,11 +1613,20 @@ async fn save_game_dlss_presets(
         let msg = apply_nvapi_dlss_presets(
             game_name_opt.as_deref(),
             resolved_exe.as_deref(),
-            &sr_preset,
-            &rr_preset,
-            &fg_preset,
+            &eff_sr,
+            &eff_rr,
+            &eff_fg,
         )
         .unwrap_or_else(|e| e);
+        if let Some(ref mode_val) = fg_mode {
+            let _ = gpu_nvapi::apply_nvapi_dlssg_mfg(
+                game_name_opt.as_deref(),
+                resolved_exe.as_deref(),
+                mode_val,
+                fg_multiplier.unwrap_or(2),
+                fg_target_fps,
+            );
+        }
         push_log(
             &state,
             "INFO",
@@ -1514,6 +1642,88 @@ async fn save_game_dlss_presets(
 }
 
 #[tauri::command]
+async fn get_nvidia_app_whitelist_status() -> Result<nvapp_whitelist::NvAppWhitelistStatus, String> {
+    Ok(nvapp_whitelist::get_nvidia_app_whitelist_status())
+}
+
+#[tauri::command]
+async fn relaunch_as_admin_cmd() -> Result<(), String> {
+    nvapp_whitelist::relaunch_as_admin()?;
+    std::process::exit(0);
+}
+
+#[tauri::command]
+async fn read_live_drs_status_cmd(
+    exe_name: Option<String>,
+) -> Result<gpu_nvapi::LiveDrsStatus, String> {
+    Ok(gpu_nvapi::read_live_drs_status(exe_name.as_deref()))
+}
+
+#[tauri::command]
+async fn apply_nvidia_app_whitelist(
+    unlock_ops: Option<bool>,
+    state: State<'_, AppState>,
+) -> Result<nvapp_whitelist::NvAppWhitelistStatus, String> {
+    let (flags_cleared, apps_unlocked) =
+        nvapp_whitelist::apply_nvidia_app_whitelist(unlock_ops.unwrap_or(false))?;
+
+    let (games, config, gpu) = {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        let cfg = state.config.lock().map(|c| c.clone()).unwrap_or_default();
+        let g_gpu = state
+            .gpu
+            .lock()
+            .map(|g| g.clone())
+            .unwrap_or_else(|_| detect_gpu_info());
+        let mut g = db.load_games().unwrap_or_default();
+        db.apply_overrides_and_config(&mut g, &cfg);
+        (g, cfg, g_gpu)
+    };
+
+    if gpu.vendor.eq_ignore_ascii_case("NVIDIA") {
+        let exes: Vec<String> = games
+            .iter()
+            .filter_map(|g| {
+                g.custom_exe_path
+                    .clone()
+                    .filter(|s| !s.trim().is_empty())
+                    .or_else(|| {
+                        find_primary_game_executable(Path::new(&g.path))
+                            .map(|p| p.to_string_lossy().to_string())
+                    })
+            })
+            .collect();
+        let cleared_profiles = gpu_nvapi::clear_game_dlss_profile_blocks(&exes);
+        let _ = apply_nvapi_dlss_presets(
+            None,
+            None,
+            &config.global_dlss_preset,
+            &config.global_dlss_rr_preset,
+            &config.global_dlss_fg_preset,
+        );
+        push_log(
+            &state,
+            "INFO",
+            format!(
+                "NVIDIA App Whitelist applied: {} override flags unlocked across {} apps ({} DRS profiles cleaned).",
+                flags_cleared, apps_unlocked, cleared_profiles
+            ),
+        );
+    }
+
+    Ok(nvapp_whitelist::get_nvidia_app_whitelist_status())
+}
+
+#[tauri::command]
+async fn restart_nvidia_services_cmd(state: State<'_, AppState>) -> Result<String, String> {
+    let msg = tokio::task::spawn_blocking(nvapp_whitelist::restart_nvidia_services)
+        .await
+        .map_err(|e| format!("Task join error: {}", e))??;
+    push_log(&state, "INFO", msg.clone());
+    Ok(msg)
+}
+
+#[tauri::command]
 async fn clear_app_logs(state: State<'_, AppState>) -> Result<Vec<LogEntry>, String> {
     if let Ok(mut logs) = state.logs.lock() {
         logs.clear();
@@ -1526,13 +1736,14 @@ async fn check_app_update() -> Result<AppUpdateInfo, String> {
     let current = env!("CARGO_PKG_VERSION").to_string();
     let url = "https://api.github.com/repos/gOOvER/DLSS-Manager/releases/latest";
 
-    let client = reqwest::Client::builder()
-        .user_agent("DLSS-Manager-Rust/1.0.0-beta.1")
-        .timeout(std::time::Duration::from_secs(10))
-        .build()
-        .map_err(|e| e.to_string())?;
+    let client = repository::shared_http_client();
 
-    if let Ok(resp) = client.get(url).send().await {
+    if let Ok(resp) = client
+        .get(url)
+        .timeout(std::time::Duration::from_secs(10))
+        .send()
+        .await
+    {
         if resp.status().is_success() {
             if let Ok(json) = resp.json::<serde_json::Value>().await {
                 let tag = json
@@ -1597,11 +1808,7 @@ async fn validate_and_save_steam_api(
         });
     }
 
-    let client = reqwest::Client::builder()
-        .user_agent("DLSS-Manager/1.0.0-beta.1")
-        .timeout(std::time::Duration::from_secs(12))
-        .build()
-        .map_err(|e| e.to_string())?;
+    let client = repository::shared_http_client();
 
     let validate_url = format!(
         "https://api.steampowered.com/ISteamWebAPIUtil/GetSupportedAPIList/v1/?key={}",
@@ -1609,6 +1816,7 @@ async fn validate_and_save_steam_api(
     );
     let resp = client
         .get(&validate_url)
+        .timeout(std::time::Duration::from_secs(12))
         .send()
         .await
         .map_err(|e| format!("Network error validating Steam API key: {}", e))?;
@@ -1717,11 +1925,7 @@ async fn reresolve_games_via_steam_api(
         .map(|g| g.clone())
         .unwrap_or_else(|_| detect_gpu_info());
 
-    let client = reqwest::Client::builder()
-        .user_agent("DLSS-Manager/1.0.0-beta.1")
-        .timeout(std::time::Duration::from_secs(15))
-        .build()
-        .map_err(|e| e.to_string())?;
+    let client = repository::shared_http_client();
 
     // 1. Fetch owned games map (normalized_name -> (app_id, official_name)) if API key + SteamID configured
     let mut owned_map: std::collections::HashMap<String, (String, String)> =
@@ -1830,6 +2034,9 @@ async fn reresolve_games_via_steam_api(
                 dlss_sr_preset: g.dlss_sr_preset.clone(),
                 dlss_rr_preset: g.dlss_rr_preset.clone(),
                 dlss_fg_preset: g.dlss_fg_preset.clone(),
+                dlss_fg_mode: g.dlss_fg_mode.clone(),
+                dlss_fg_multiplier: g.dlss_fg_multiplier,
+                dlss_fg_target_fps: g.dlss_fg_target_fps,
             });
             resolved_count += 1;
         }
@@ -2033,7 +2240,7 @@ async fn apply_recommended_game_profile(
         .map(|p| p.clone())
         .unwrap_or_else(|_| load_cached_or_seed_game_db());
 
-    let (games, backups, matched_profile, game_name, game_path, exe_override) = {
+    let (games, backups, eff_sr, eff_rr, eff_fg, game_name, game_path, exe_override) = {
         let db = state.db.lock().map_err(|e| e.to_string())?;
         let mut g_list = db.load_games().unwrap_or_default();
         db.apply_overrides_and_config(&mut g_list, &config);
@@ -2051,31 +2258,44 @@ async fn apply_recommended_game_profile(
         let gpath = game.path.clone();
         let exe_opt = game.custom_exe_path.clone();
 
-        let sr = prof
-            .recommended_sr_preset
-            .clone()
-            .unwrap_or_else(|| "Default".to_string());
-        let rr = prof
-            .recommended_rr_preset
-            .clone()
-            .unwrap_or_else(|| "Default".to_string());
-        let fg = prof
-            .recommended_fg_preset
-            .clone()
-            .unwrap_or_else(|| "Default".to_string());
+        let has_sr = game.dlls.iter().any(|d| d.dll_type == DllType::Dlss);
+        let has_rr = game.dlls.iter().any(|d| d.dll_type == DllType::DlssD);
+        let has_fg = game.dlls.iter().any(|d| d.dll_type == DllType::DlssG);
+
+        let sr = if has_sr {
+            prof.recommended_sr_preset
+                .clone()
+                .unwrap_or_else(|| "Default".to_string())
+        } else {
+            "Default".to_string()
+        };
+        let rr = if has_rr {
+            prof.recommended_rr_preset
+                .clone()
+                .unwrap_or_else(|| "Default".to_string())
+        } else {
+            "Default".to_string()
+        };
+        let fg = if has_fg {
+            prof.recommended_fg_preset
+                .clone()
+                .unwrap_or_else(|| "Default".to_string())
+        } else {
+            "Default".to_string()
+        };
 
         let mut overrides = db.load_overrides().unwrap_or_default();
         let mut ov = overrides.remove(&game_id).unwrap_or(GameOverride {
             game_id: game_id.clone(),
             ..Default::default()
         });
-        ov.dlss_sr_preset = Some(sr);
-        ov.dlss_rr_preset = Some(rr);
-        ov.dlss_fg_preset = Some(fg);
+        ov.dlss_sr_preset = Some(sr.clone());
+        ov.dlss_rr_preset = Some(rr.clone());
+        ov.dlss_fg_preset = Some(fg.clone());
         db.save_override(&ov).map_err(|e| e.to_string())?;
 
         let b_list = db.load_backups().unwrap_or_default();
-        (g_list, b_list, prof, gname, gpath, exe_opt)
+        (g_list, b_list, sr, rr, fg, gname, gpath, exe_opt)
     };
 
     if gpu.vendor.eq_ignore_ascii_case("NVIDIA") {
@@ -2086,19 +2306,13 @@ async fn apply_recommended_game_profile(
                 find_primary_game_executable(Path::new(&game_path))
                     .map(|exe| exe.to_string_lossy().to_string())
             });
-        let sr = matched_profile
-            .recommended_sr_preset
-            .as_deref()
-            .unwrap_or("Default");
-        let rr = matched_profile
-            .recommended_rr_preset
-            .as_deref()
-            .unwrap_or("Default");
-        let fg = matched_profile
-            .recommended_fg_preset
-            .as_deref()
-            .unwrap_or("Default");
-        let _ = apply_nvapi_dlss_presets(Some(&game_name), resolved_exe.as_deref(), sr, rr, fg);
+        let _ = apply_nvapi_dlss_presets(
+            Some(&game_name),
+            resolved_exe.as_deref(),
+            &eff_sr,
+            &eff_rr,
+            &eff_fg,
+        );
     }
 
     push_log(
@@ -2160,6 +2374,11 @@ pub fn run() {
             save_game_display_override,
             reset_game_display_override,
             save_game_dlss_presets,
+            get_nvidia_app_whitelist_status,
+            apply_nvidia_app_whitelist,
+            restart_nvidia_services_cmd,
+            relaunch_as_admin_cmd,
+            read_live_drs_status_cmd,
             clear_app_logs,
             check_app_update,
             validate_and_save_steam_api,
