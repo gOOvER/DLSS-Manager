@@ -1151,19 +1151,62 @@ window.setStatusFilter = function (filterId) {
   renderGamesGrid();
 };
 
+function getLauncherEmoji(name) {
+  const n = (name || "").toLowerCase();
+  if (n.includes("steam")) return "🎮";
+  if (n.includes("star citizen")) return "🚀";
+  if (n.includes("battle")) return "⚔️";
+  if (n.includes("xbox")) return "🟩";
+  if (n.includes("epic")) return "🛒";
+  if (n.includes("gog")) return "🌌";
+  if (n.includes("ubisoft")) return "🌀";
+  if (n.includes("ea")) return "⚡";
+  if (n.includes("custom")) return "📁";
+  return "🎯";
+}
+
 function renderLauncherSelect() {
   const sel = document.getElementById("select-launcher-filter");
   if (!sel) return;
+  const counts = {};
+  for (const g of appState.games) {
+    counts[g.launcher_name] = (counts[g.launcher_name] || 0) + 1;
+  }
   const launchers = ["all", ...new Set(appState.games.map((g) => g.launcher_name))];
   const de = isDe();
   sel.innerHTML = launchers
-    .map(
-      (l) => `
-      <option value="${escapeHtml(l)}" ${appState.selectedLauncher === l ? "selected" : ""}>
-        ${l === "all" ? (de ? "Alle Launcher" : "All Launchers") : escapeHtml(l)}
-      </option>`
-    )
+    .map((l) => {
+      const label =
+        l === "all"
+          ? `🌐 ${de ? "Alle Launcher" : "All Launchers"} (${appState.games.length})`
+          : `${getLauncherEmoji(l)} ${l} (${counts[l] || 0})`;
+      return `<option value="${escapeHtml(l)}" ${appState.selectedLauncher === l ? "selected" : ""}>${escapeHtml(label)}</option>`;
+    })
     .join("");
+}
+
+window.resetLauncherAndStatusFilters = function () {
+  appState.selectedLauncher = "all";
+  appState.statusFilter = "all";
+  renderLauncherSelect();
+  renderStatusChips();
+  renderGamesGrid();
+};
+
+function updateActiveLauncherBanner(filteredCount) {
+  const banner = document.getElementById("active-launcher-banner");
+  const textEl = document.getElementById("active-launcher-banner-text");
+  if (!banner || !textEl) return;
+  const de = isDe();
+  if (appState.selectedLauncher !== "all") {
+    banner.style.display = "flex";
+    const emoji = getLauncherEmoji(appState.selectedLauncher);
+    textEl.textContent = de
+      ? `${emoji} Aktiver Launcher: ${appState.selectedLauncher} (${filteredCount} ${filteredCount === 1 ? "Spiel" : "Spiele"})`
+      : `${emoji} Active Launcher: ${appState.selectedLauncher} (${filteredCount} ${filteredCount === 1 ? "game" : "games"})`;
+  } else {
+    banner.style.display = "none";
+  }
 }
 
 function getFilteredGames() {
@@ -1308,6 +1351,7 @@ function renderGamesGrid() {
   grid.className = `games-hero-grid density-${appState.gridDensity}`;
 
   const filtered = getFilteredGames();
+  updateActiveLauncherBanner(filtered.length);
   const de = isDe();
 
   if (filtered.length === 0) {
@@ -2833,7 +2877,10 @@ window.openGameDllModal = function (gameId) {
             : "⚠️ Driver DRS: Blocked by NVIDIA App (0)";
         } else if (drs.sr_override === 1 && drs.sr_preset) {
           drsBadgeEl.className = "compat-status-pill compat-safe";
-          const fgPart = drs.fg_mode ? ` · FG ${drs.fg_mode}${drs.fg_multiplier ? ` ${drs.fg_multiplier}x` : ""}` : "";
+          const fgPart =
+            hasFgTech && drs.fg_mode && drs.fg_mode !== "Default"
+              ? ` · FG ${drs.fg_mode}${drs.fg_multiplier && drs.fg_multiplier > 1 ? ` ${drs.fg_multiplier}x` : ""}`
+              : "";
           drsBadgeEl.textContent = `${de ? "Treiber-Live" : "Driver Live"}: ${drs.sr_preset}${fgPart}`;
         } else {
           drsBadgeEl.className = "default-preset-chip";
@@ -3653,7 +3700,16 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   document.querySelectorAll(".nav-item").forEach((btn) => {
-    btn.addEventListener("click", () => switchView(btn.dataset.view));
+    btn.addEventListener("click", () => {
+      if (btn.dataset.view === "games") {
+        appState.selectedLauncher = "all";
+        appState.statusFilter = "all";
+        renderLauncherSelect();
+        renderStatusChips();
+        renderGamesGrid();
+      }
+      switchView(btn.dataset.view);
+    });
   });
 
   document.getElementById("global-search").addEventListener("input", (e) => {
@@ -3664,6 +3720,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   document.getElementById("select-launcher-filter").addEventListener("change", (e) => {
     appState.selectedLauncher = e.target.value;
+    renderStatusChips();
     renderGamesGrid();
   });
 

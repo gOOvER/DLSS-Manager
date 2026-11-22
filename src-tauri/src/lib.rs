@@ -1810,12 +1810,9 @@ async fn validate_and_save_steam_api(
 
     let client = repository::shared_http_client();
 
-    let validate_url = format!(
-        "https://api.steampowered.com/ISteamWebAPIUtil/GetSupportedAPIList/v1/?key={}",
-        trimmed_key
-    );
     let resp = client
-        .get(&validate_url)
+        .get("https://api.steampowered.com/ISteamWebAPIUtil/GetSupportedAPIList/v1/")
+        .header("x-webapi-key", &trimmed_key)
         .timeout(std::time::Duration::from_secs(12))
         .send()
         .await
@@ -1840,10 +1837,15 @@ async fn validate_and_save_steam_api(
     let mut owned_count = 0usize;
     if !resolved_steam_id.is_empty() {
         let owned_url = format!(
-            "https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?key={}&steamid={}&include_appinfo=1&include_played_free_games=1&skip_unvetted_apps=0",
-            trimmed_key, resolved_steam_id
+            "https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?steamid={}&include_appinfo=1&include_played_free_games=1&skip_unvetted_apps=0",
+            resolved_steam_id
         );
-        if let Ok(o_resp) = client.get(&owned_url).send().await {
+        if let Ok(o_resp) = client
+            .get(&owned_url)
+            .header("x-webapi-key", &trimmed_key)
+            .send()
+            .await
+        {
             if let Ok(json) = o_resp.json::<serde_json::Value>().await {
                 if let Some(arr) = json
                     .get("response")
@@ -1938,11 +1940,15 @@ async fn reresolve_games_via_steam_api(
 
     if !config.steam_api_key.trim().is_empty() && !steam_id.is_empty() {
         let owned_url = format!(
-            "https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?key={}&steamid={}&include_appinfo=1&include_played_free_games=1&skip_unvetted_apps=0",
-            config.steam_api_key.trim(),
+            "https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?steamid={}&include_appinfo=1&include_played_free_games=1&skip_unvetted_apps=0",
             steam_id
         );
-        if let Ok(resp) = client.get(&owned_url).send().await {
+        if let Ok(resp) = client
+            .get(&owned_url)
+            .header("x-webapi-key", config.steam_api_key.trim())
+            .send()
+            .await
+        {
             if let Ok(json) = resp.json::<serde_json::Value>().await {
                 if let Some(arr) = json
                     .get("response")

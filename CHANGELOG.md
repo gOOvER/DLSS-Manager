@@ -11,6 +11,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+- **GitHub CodeQL / Code Scanning Fixes (`src-tauri/src/lib.rs`, `.github/workflows/build-flatpak.yml`):**
+  - Passed Steam Web API keys via the `x-webapi-key` HTTPS request header and structured `.query(...)` parameters instead of interpolating secrets into URL strings (`rust/cleartext-transmission`).
+  - Added explicit `permissions: contents: write` to `.github/workflows/build-flatpak.yml` (`actions/missing-workflow-permissions`).
+
+### Fixed
+- **Games Library Launcher Filter & Navigation (`ui/index.html`, `ui/app.js`):**
+  - Reset launcher & status filters when clicking **Spiele / Games** in the sidebar so all games are always shown again instead of staying stuck on the last selected launcher.
+  - Added launcher icons + game counts in `#select-launcher-filter` and a clear `#active-launcher-banner` above the grid showing the currently active launcher with a one-click reset button.
+- **Live Driver DRS Badge (`ui/app.js`):**
+  - Only append the `FG <mode> <Nx>` suffix in the `Driver Live` badge when the game actually ships `nvngx_dlssg.dll` and a non-default MFG mode is active (avoiding `FG Default 1x` on SR-only games like Star Citizen).
+
 ## [1.0.0-beta.2] - 2026-11-22
 
 ### Changed

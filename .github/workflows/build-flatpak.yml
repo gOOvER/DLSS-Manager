@@ -13,6 +13,8 @@ on:
 jobs:
   build-flatpak:
     runs-on: ubuntu-22.04  # Match AppImage build environment for GLIBC compatibility
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout code
