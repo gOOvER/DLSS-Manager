@@ -7,7 +7,7 @@
 
   [![Rust CI](https://github.com/gOOvER/DLSS-Manager/actions/workflows/rust-ci.yml/badge.svg)](https://github.com/gOOvER/DLSS-Manager/actions/workflows/rust-ci.yml)
   [![GitHub Release](https://img.shields.io/github/v/release/gOOvER/DLSS-Manager?include_prereleases&label=Version&color=brightgreen&logo=github)](https://github.com/gOOvER/DLSS-Manager/releases/latest)
-  [![VirusTotal](https://img.shields.io/badge/VirusTotal-0%2F71%20Clean-10b981?logo=virustotal&logoColor=white)](https://www.virustotal.com/gui/file/5b165ba718f8fd535216d2b2fb2e99455a5f577a8f42ca148bded47d25183d44)
+  [![VirusTotal](https://img.shields.io/badge/VirusTotal-0%2F71%20Clean-=virustotal&logoColor=white)](https://www.virustotal.com/gui/file/5b165ba718f8fd535216d2b2fb2e99455a5f577a8f42ca148bded47d25183d44)
   [![Wiki](https://img.shields.io/badge/Wiki-Documentation-38bdf8?logo=github&logoColor=white)](wiki/Home.md)
   [![Rust & Tauri 2](https://img.shields.io/badge/Built%20with-Rust%20%2B%20Tauri%202-f74c00?logo=rust&logoColor=white)](#building-from-source)
   [![Online-DB](https://img.shields.io/badge/Online--DB-dlssdb.goover.dev-76b900?logo=cloudflare&logoColor=white)](https://dlssdb.goover.dev)
@@ -181,7 +181,7 @@ This reference matrix is also built directly into the **DLSS Manager** UI (via t
 
 | Release Asset | Status | SHA-256 Checksum | VirusTotal Report |
 | :--- | :--- | :--- | :--- |
-| **DLSS-Manager.exe** | [![VirusTotal](https://img.shields.io/badge/VirusTotal-0%2F71%20Clean-10b981?logo=virustotal&logoColor=white)](https://www.virustotal.com/gui/file/5b165ba718f8fd535216d2b2fb2e99455a5f577a8f42ca148bded47d25183d44) | `5b165ba718f8fd535216d2b2fb2e99455a5f577a8f42ca148bded47d25183d44` | [🔍 View Report (0 / 71 Clean)](https://www.virustotal.com/gui/file/5b165ba718f8fd535216d2b2fb2e99455a5f577a8f42ca148bded47d25183d44) |
+| **$(@{Name=DLSS-Manager.exe; Sha256=5b165ba718f8fd535216d2b2fb2e99455a5f577a8f42ca148bded47d25183d44; Url=https://www.virustotal.com/gui/file/5b165ba718f8fd535216d2b2fb2e99455a5f577a8f42ca148bded47d25183d44; Malicious=0; TotalEngines=71; StatusText=0 / 71 Clean; BadgeMd=[![VirusTotal](https://img.shields.io/badge/VirusTotal-0%2F71%20Clean-=virustotal&logoColor=white)](https://www.virustotal.com/gui/file/5b165ba718f8fd535216d2b2fb2e99455a5f577a8f42ca148bded47d25183d44); BadgeUrl=https://img.shields.io/badge/VirusTotal-0%2F71%20Clean-=virustotal&logoColor=white}.Name)** | [![VirusTotal](https://img.shields.io/badge/VirusTotal-0%2F71%20Clean-=virustotal&logoColor=white)](https://www.virustotal.com/gui/file/5b165ba718f8fd535216d2b2fb2e99455a5f577a8f42ca148bded47d25183d44) | `5b165ba718f8fd535216d2b2fb2e99455a5f577a8f42ca148bded47d25183d44` | [🔍 View Report (0 / 71 Clean)](https://www.virustotal.com/gui/file/5b165ba718f8fd535216d2b2fb2e99455a5f577a8f42ca148bded47d25183d44) |
 <!-- VIRUSTOTAL-END -->
 
 ---
