@@ -289,7 +289,10 @@ function applyLanguage() {
 
   const langBtnLabel = document.getElementById("lang-toggle-label");
   if (langBtnLabel) {
-    langBtnLabel.textContent = lang === "de" ? "🇩🇪 DE" : "🇬🇧 EN";
+    langBtnLabel.innerHTML =
+      lang === "de"
+        ? `<svg width="18" height="12" viewBox="0 0 18 12" style="border-radius:2px;flex-shrink:0"><rect width="18" height="4" y="0" fill="#111"/><rect width="18" height="4" y="4" fill="#dd0000"/><rect width="18" height="4" y="8" fill="#ffce00"/></svg> DE`
+        : `<svg width="18" height="12" viewBox="0 0 18 12" style="border-radius:2px;flex-shrink:0"><rect width="18" height="12" fill="#012169"/><path d="M0,0 L18,12 M18,0 L0,12" stroke="#fff" stroke-width="2.2"/><path d="M0,0 L18,12 M18,0 L0,12" stroke="#c8102e" stroke-width="1.1"/><path d="M9,0 V12 M0,6 H18" stroke="#fff" stroke-width="3.6"/><path d="M9,0 V12 M0,6 H18" stroke="#c8102e" stroke-width="2"/></svg> EN`;
   }
   const cfgLang = document.getElementById("cfg-language");
   if (cfgLang && cfgLang.value !== lang) {

@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added explicit `permissions: contents: write` to `.github/workflows/build-flatpak.yml` (`actions/missing-workflow-permissions`).
 
 ### Fixed
+- **SVG Flag Icons in Topbar Language Toggle (`ui/index.html`, `ui/app.js`):**
+  - Replaced Windows-unsupported country emoji flags (`🇩🇪` / `🇬🇧`, which rendered as `DE DE`) with crisp inline SVG flags for Germany and the UK.
 - **Per-Game DLSS Frame Generation & Streamline FG Controls (`src-tauri/src/lib.rs`, `ui/app.js`):**
   - Enabled per-game DLSS Frame Generation & Ray Reconstruction preset/MFG controls for games using `sl.dlss_g.dll` / `sl.dlss_d.dll` in addition to `nvngx_dlssg.dll` / `nvngx_dlssd.dll`.
   - Added inline DLSS-G MFG Mode (`Default`, `Fixed`, `Dynamic`, `Off`), multiplier (`2x–6x`), and target FPS selectors directly inside the Game Details modal (`quickSaveInlineGamePresets`).
