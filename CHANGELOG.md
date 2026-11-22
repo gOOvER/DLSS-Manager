@@ -6,10 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 > [!NOTE]
-> **Beta Release Series:** **DLSS Manager** starts at version `1.0.0-beta.1`. All `1.0.0-beta.x` releases are currently designated as **Beta**.
+> **DLSS Manager Release Series:** **DLSS Manager** started its Rust + Tauri 2 rewrite at `1.0.0-beta.1` and reached its first stable release with **`1.0.0`**.
 > Versions `5.2.0` and older listed at the bottom of this document belong to the **Legacy Changelog** of the upstream project ([DLSS Updater](https://github.com/Recol/DLSS-Updater) by Recol).
 
 ## [Unreleased]
+
+## [1.0.0] - 2026-11-22
 
 ### Added
 - **Automated VirusTotal Security Scan Workflow & Badges (`.github/workflows/virustotal.yml`, `README.md`):**

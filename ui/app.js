@@ -39,7 +39,7 @@ const ALL_TECH_GROUPS = [
 ];
 
 let appState = {
-  version: "1.0.0-beta.2",
+  version: "1.0.0",
   games: [],
   backups: [],
   catalog: [],
