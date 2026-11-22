@@ -148,6 +148,7 @@ const I18N = {
     btn_add_blacklist: "Zur Blacklist hinzufügen",
     "info.subtitle": "Universeller Upscaler- & Frame-Generation-Manager für NVIDIA DLSS 4.5 / 5, Intel XeSS 2, NVIDIA Streamline & Microsoft DirectStorage.",
     "info.github_repo": "⭐ GitHub Repository",
+    "info.wiki": "📚 Wiki & Dokumentation",
     "info.releases": "📦 Releases & Changelog",
     "info.report_issue": "🐞 Fehler melden",
     "info.diag_title": "System- & Speicher-Diagnose",
@@ -252,6 +253,7 @@ const I18N = {
     btn_add_blacklist: "Add to Blacklist",
     "info.subtitle": "Universal Upscaler & Frame Generation Manager for NVIDIA DLSS 4.5 / 5, Intel XeSS 2, NVIDIA Streamline & Microsoft DirectStorage.",
     "info.github_repo": "⭐ GitHub Repository",
+    "info.wiki": "📚 Wiki & Documentation",
     "info.releases": "📦 Releases & Changelog",
     "info.report_issue": "🐞 Report Issue",
     "info.diag_title": "System & Storage Diagnostics",
@@ -2257,12 +2259,6 @@ function buildVersionReferenceTablesHtml() {
               <td><span class="ref-ver-pill">v2.14.16.0</span></td>
               <td><code>sl.interposer.dll</code>, <code>sl.common.dll</code>, <code>sl.dlss.dll</code>, <code>sl.dlss_g.dll</code>, <code>sl.dlss_d.dll</code>, <code>sl.reflex.dll</code>, <code>sl.pcl.dll</code></td>
               <td>NVIDIA GeForce <strong>RTX 20 / 30 / 40 / 50</strong> (Reflex & PCL auch auf GTX 900/10/16)</td>
-            </tr>
-            <tr>
-              <td><strong>AMD FidelityFX Super Resolution 3.1 / 4</strong></td>
-              <td><span class="ref-ver-pill">v4.0.2 / v3.1.5</span></td>
-              <td><code>amd_fidelityfx_dx12.dll</code>, <code>amd_fidelityfx_vk.dll</code>, <code>amd_fidelityfx_upscaler_dx12.dll</code>, <code>amd_fidelityfx_framegeneration_dx12.dll</code></td>
-              <td><strong>FSR 3.1:</strong> Alle GPUs (AMD, NVIDIA, Intel) · <strong>FSR 4 KI-Upscaler:</strong> AMD Radeon RX 9000 (RDNA 4)</td>
             </tr>
             <tr>
               <td><strong>Intel XeSS 2 (SR / FG / XeLL)</strong></td>

@@ -7,6 +7,7 @@
 
   [![Rust CI](https://github.com/gOOvER/DLSS-Manager/actions/workflows/rust-ci.yml/badge.svg)](https://github.com/gOOvER/DLSS-Manager/actions/workflows/rust-ci.yml)
   [![GitHub Release](https://img.shields.io/github/v/release/gOOvER/DLSS-Manager?include_prereleases&label=Version&color=brightgreen&logo=github)](https://github.com/gOOvER/DLSS-Manager/releases/latest)
+  [![Wiki](https://img.shields.io/badge/Wiki-Documentation-38bdf8?logo=github&logoColor=white)](wiki/Home.md)
   [![Rust & Tauri 2](https://img.shields.io/badge/Built%20with-Rust%20%2B%20Tauri%202-f74c00?logo=rust&logoColor=white)](#building-from-source)
   [![Online-DB](https://img.shields.io/badge/Online--DB-dlssdb.goover.dev-76b900?logo=cloudflare&logoColor=white)](https://dlssdb.goover.dev)
   [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux-0078D6?logo=windows&logoColor=white)](#installation)
@@ -20,6 +21,7 @@
 ## 📋 Contents
 
 - [Overview](#-overview)
+- [📚 Wiki & Full Documentation](#-wiki--full-documentation)
 - [Key Features](#-key-features)
 - [Supported Game Launchers](#-supported-game-launchers)
 - [📊 DLSS Version, Preset & Hardware Reference Matrix](#-dlss-version-preset--hardware-reference-matrix)
@@ -36,7 +38,24 @@
 
 ## 🚀 Overview
 
-**DLSS Manager** (starting at `v1.0.0-beta.1`) is a complete ground-up **Rust + Tauri 2** desktop application that automatically discovers installed games across **9 game launchers**, inspects their **NVIDIA DLSS 4.5 / 5**, **Intel XeSS 2**, **NVIDIA Streamline**, and **Microsoft DirectStorage** binaries via zero-allocation Win32 PE `VS_FIXEDFILEINFO` parsing, updates them from official upstream sources with automatic rollback backups, and configures **Global & Per-Game NVIDIA Driver DRS Presets (`Preset J / K / L / M / F`)** directly via `nvapi64.dll`.
+**DLSS Manager** (starting at `v1.0.0-beta.1`) is a complete ground-up **Rust + Tauri 2** desktop application that automatically discovers installed games across **9 game launchers**, inspects their **NVIDIA DLSS 4.5 / 5**, **Intel XeSS 2**, **NVIDIA Streamline**, and **Microsoft DirectStorage** binaries via zero-allocation Win32 PE `VS_FIXEDFILEINFO` parsing, verifies cryptographic Authenticode signatures (`WinVerifyTrust`), updates them from official upstream sources with automatic rollback backups, and configures **Global & Per-Game NVIDIA Driver DRS Presets (`Preset J / K / L / M / F`)** directly via `nvapi64.dll` — including a 1-click **NVIDIA App Override Whitelist Unlocker**.
+
+---
+
+## 📚 Wiki & Full Documentation
+
+Complete technical documentation, guides, and troubleshooting are available in the **[`wiki/`](wiki/Home.md)** directory and on the **[GitHub Wiki](https://github.com/gOOvER/DLSS-Manager/wiki)**:
+
+| Wiki Guide | Summary |
+| :--- | :--- |
+| **[🏠 Wiki Home](wiki/Home.md)** | Main overview, feature matrix & quick navigation |
+| **[🚀 Installation & Quick Start](wiki/Installation-and-Quick-Start.md)** | Portable `.exe`, NSIS/MSI installers, Winget, UAC Administrator privileges, `%LOCALAPPDATA%\gOOvER\DLSS-Manager` storage layout & 1-minute setup |
+| **[📊 DLSS 4.5 / 5 Presets (A–M) & Versions](wiki/DLSS-Presets-and-Versions.md)** | Complete DLSS version history (`v2.0` to `v310.9.16+`), 74.18 MB full build vs. slim builds, Preset `J / K / L / M / E / F`, DLSS-G Multi-Frame Generation (`2×–6×`) & all managed DLLs |
+| **[🎛️ NVIDIA Driver DRS & NVIDIA App Whitelist](wiki/NVIDIA-Driver-DRS-and-NVIDIA-App-Whitelist.md)** | How `nvapi64.dll` DRS works, why NVIDIA App resets overrides to `0`, how the 1-click Whitelist Unlocker works & in-game verification via the DLSS On-Screen Overlay |
+| **[🎮 Launchers, Star Citizen & Anti-Cheat](wiki/Supported-Launchers-and-Anti-Cheat.md)** | Multi-drive detection (`A:\`–`Z:\`) across 9 launchers, dedicated **Star Citizen** EasyAntiCheat & Driver DRS guide, manifest verification & Authenticode checks |
+| **[☁️ Online Database (`dlssdb.goover.dev`)](wiki/Online-Compatibility-Database.md)** | Personal API key setup, profile syncing, `unverified` auto-discovery with SteamDB/PCGamingWiki links & 1-click community reporting |
+| **[🛠️ Architecture & Building from Source](wiki/Architecture-and-Building-from-Source.md)** | Rust backend modules, SQLite schema, build prerequisites & Windows 11 Smart App Control tips |
+| **[❓ Troubleshooting & FAQ](wiki/Troubleshooting-and-FAQ.md)** | Common questions & solutions (NVIDIA App resets, missing/duplicate games, backup restoration, anti-cheat protection) |
 
 ---
 
@@ -132,7 +151,6 @@ This reference matrix is also built directly into the **DLSS Manager** UI (via t
 | **DLSS Frame Generation (FG / MFG)** | `v310.9.16.0` (DLSS 4.5) | `nvngx_dlssg.dll` | **RTX 40 / 50** (2× FG) · **RTX 50 Blackwell** (3×–6× Multi Frame Gen) |
 | **DLSS 5 Neural Rendering (NR)** | `v310.8.0.0` | `nvngx_dlssnr.dll` | NVIDIA GeForce **RTX 50 Series (Blackwell)** |
 | **NVIDIA Streamline SDK** | `v2.14.16.0` | `sl.interposer.dll`, `sl.common.dll`, `sl.dlss.dll`, `sl.dlss_g.dll`, `sl.dlss_d.dll`, `sl.reflex.dll`, `sl.pcl.dll`, `sl.directsr.dll`, `sl.nis.dll` | NVIDIA GeForce **RTX 20 / 30 / 40 / 50 Series** (Reflex/PCL also GTX 900+) |
-| **AMD FSR 3.1 / FSR 4** | `v4.0.2` / `v3.1.5` | `amd_fidelityfx_dx12.dll`, `amd_fidelityfx_vk.dll`, `amd_fidelityfx_loader_dx12.dll`, `amd_fidelityfx_upscaler_dx12.dll`, `amd_fidelityfx_framegeneration_dx12.dll` | **FSR 3.1:** All GPUs (AMD, NVIDIA, Intel) · **FSR 4 AI Upscaler:** Radeon RX 9000 (RDNA 4) |
 | **Intel XeSS 2 (SR / FG / XeLL)** | `v2.0.2.68` | `libxess.dll`, `libxess_dx11.dll`, `libxess_fg.dll`, `libxell.dll` | **XeSS SR:** All GPUs (XMX on Intel Arc, DP4a on NVIDIA/AMD) · **XeSS-FG:** Intel Arc |
 | **Microsoft DirectStorage** | `v1.2.2504+` | `dstorage.dll`, `dstoragecore.dll` | **All DirectX 12 GPUs** (NVIDIA, AMD, Intel) + NVMe SSD |
 

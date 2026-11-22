@@ -12,6 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Comprehensive Project & GitHub Wiki (`wiki/`, `.github/workflows/wiki-sync.yml`, `README.md`, `ui/index.html`):**
+  - Created a complete 8-page technical Wiki (`Home.md`, `Installation-and-Quick-Start.md`, `DLSS-Presets-and-Versions.md`, `NVIDIA-Driver-DRS-and-NVIDIA-App-Whitelist.md`, `Supported-Launchers-and-Anti-Cheat.md`, `Online-Compatibility-Database.md`, `Architecture-and-Building-from-Source.md`, `Troubleshooting-and-FAQ.md`, plus `_Sidebar.md` and `_Footer.md`) covering installation, UAC elevation, all DLSS 4.5 / 5 versions and presets (`A–M`), `nvapi64.dll` Driver DRS Setting IDs, the NVIDIA App Whitelist Unlocker, Star Citizen EasyAntiCheat setup, `dlssdb.goover.dev` integration, and build instructions.
+  - Added `.github/workflows/wiki-sync.yml` (`actions/checkout@v7`) to automatically sync changes in `wiki/` to the GitHub Wiki, linked all Wiki guides in `README.md`, and added a **📚 Wiki & Dokumentation** shortcut on the in-app **ℹ️ Info** page.
 - **Live Startup Progress Overlay (`ui/index.html`, `ui/app.js`):**
   - Replaced the thin Hub banner with a centered `#startup-overlay` modal featuring larger typography, an animated progress bar (`33% -> 70% -> 100%`), step counter (`1 / 3` → `3 / 3`), and a **Run in Background** dismiss button.
 
