@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added explicit `permissions: contents: write` to `.github/workflows/build-flatpak.yml` (`actions/missing-workflow-permissions`).
 
 ### Fixed
+- **Report Game to Online-DB Modal Styling (`ui/app.js`, `ui/styles.css`):**
+  - Styled all modal form controls (`<select>`, `<textarea>`, `<input>`) and the header close button (`✕ Schließen`) with the dark elevated theme (`var(--bg-elevated)`), green focus rings, launcher icon + technology badges in the game info header row, and complete DLSS 4.5 preset options (`Preset K`, `J`, `L`, `M`, `Latest`, `E`, `C`), eliminating unstyled white browser form inputs.
 - **SVG Flag Icons in Topbar Language Toggle (`ui/index.html`, `ui/app.js`):**
   - Replaced Windows-unsupported country emoji flags (`🇩🇪` / `🇬🇧`, which rendered as `DE DE`) with crisp inline SVG flags for Germany and the UK.
 - **Per-Game DLSS Frame Generation & Streamline FG Controls (`src-tauri/src/lib.rs`, `ui/app.js`):**

@@ -486,15 +486,82 @@ body {
   gap: 10px;
 }
 
-.toolbar-select {
+.toolbar-select,
+.filter-select,
+.search-input,
+.modal-dialog input[type="text"],
+.modal-dialog input[type="password"],
+.modal-dialog input[type="number"],
+.modal-dialog select,
+.modal-dialog textarea {
   background: var(--bg-elevated);
   color: var(--text-primary);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
-  padding: 7px 12px;
-  font-size: 0.82rem;
+  padding: 9px 12px;
+  font-size: 0.84rem;
+  font-family: inherit;
   outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.toolbar-select,
+.filter-select,
+.modal-dialog select {
   cursor: pointer;
+}
+
+.toolbar-select:focus,
+.filter-select:focus,
+.search-input:focus,
+.modal-dialog input[type="text"]:focus,
+.modal-dialog input[type="password"]:focus,
+.modal-dialog input[type="number"]:focus,
+.modal-dialog select:focus,
+.modal-dialog textarea:focus {
+  border-color: var(--accent-green);
+  box-shadow: 0 0 0 2px rgba(118, 185, 0, 0.18);
+}
+
+.search-input::placeholder,
+.modal-dialog input::placeholder,
+.modal-dialog textarea::placeholder {
+  color: var(--text-secondary);
+  opacity: 0.65;
+}
+
+.modal-dialog textarea {
+  line-height: 1.48;
+  resize: vertical;
+  min-height: 84px;
+  user-select: text;
+}
+
+.modal-dialog input[type="text"],
+.modal-dialog input[type="password"],
+.modal-dialog input[type="number"] {
+  user-select: text;
+}
+
+.btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-icon:hover {
+  color: var(--text-primary);
+  border-color: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .density-pill-group {

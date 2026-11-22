@@ -653,47 +653,57 @@ window.openReportGameModal = function (gameId) {
   const defaultPreset = game.dlss_sr_preset || game.db_profile?.recommended_sr_preset || "";
   const de = isDe();
 
+  const techBadgesHtml =
+    techs.length > 0
+      ? techs.map((t) => `<span class="dll-badge">${escapeHtml(t)}</span>`).join("")
+      : `<span class="dll-badge">DLSS</span>`;
+
   content.innerHTML = `
     <div class="modal-header">
-      <div>
-        <h2>${de ? "📤 Spiel an Online-DB melden" : "📤 Report Game to Online-DB"}</h2>
-        <p class="muted" style="font-size:0.82rem;margin-top:2px">
+      <div class="modal-header-info">
+        <h3>${de ? "📤 Spiel an Online-DB melden" : "📤 Report Game to Online-DB"} — ${escapeHtml(game.name)}</h3>
+        <div class="muted" style="font-size:0.78rem;margin-top:3px">
           ${de
-      ? `Melde <strong>${escapeHtml(game.name)}</strong> an <code>dlssdb.goover.dev</code>. <strong>Pflichtangabe:</strong> Geht oder Geht nicht — alles andere ist optional.`
-      : `Report <strong>${escapeHtml(game.name)}</strong> to <code>dlssdb.goover.dev</code>. <strong>Required:</strong> Works or Doesn't Work — everything else is optional.`
+      ? `Melde Kompatibilität & optimale Einstellungen für <strong>${escapeHtml(game.name)}</strong> an <code>dlssdb.goover.dev</code>. <strong>Pflichtangabe:</strong> Geht oder Geht nicht — alles andere ist optional.`
+      : `Report compatibility & optimal settings for <strong>${escapeHtml(game.name)}</strong> to <code>dlssdb.goover.dev</code>. <strong>Required:</strong> Works or Doesn't Work — everything else is optional.`
     }
-        </p>
+        </div>
       </div>
-      <button class="btn-icon" onclick="closeSecondaryModal()">✕</button>
+      <button class="btn btn-secondary btn-card-action" onclick="closeSecondaryModal()">✕ ${de ? "Schließen" : "Close"}</button>
     </div>
 
-    <div class="modal-body" style="display:flex;flex-direction:column;gap:14px;padding-top:10px">
-      <div style="background:rgba(15,23,42,0.65);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:10px 14px;font-size:0.82rem">
-        <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px">
-          <span><strong>${de ? "Spiel:" : "Game:"}</strong> ${escapeHtml(game.name)} (${escapeHtml(game.launcher_name)})</span>
-          <span><strong>${de ? "Erkannte DLLs:" : "Detected DLLs:"}</strong> ${escapeHtml(techs.join(", ") || "DLSS")}</span>
-        </div>
-        ${game.anti_cheat
-      ? `<div style="margin-top:4px;color:#fcd34d">🛡️ ${de ? "Erkanntes Anti-Cheat:" : "Detected Anti-Cheat:"} ${escapeHtml(game.anti_cheat)}</div>`
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:16px">
+      <div class="dll-row" style="padding:12px 16px">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <img src="assets/icons/${escapeHtml(game.launcher_icon || "folder.svg")}" style="width:20px;height:20px;flex-shrink:0" alt="" />
+          <strong style="font-size:0.92rem">${escapeHtml(game.name)}</strong>
+          <span class="default-preset-chip">${escapeHtml(game.launcher_name)}</span>
+          ${game.anti_cheat
+      ? `<span class="anticheat-badge">🛡️ ${escapeHtml(game.anti_cheat)}</span>`
       : ""
     }
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+          <span class="muted" style="font-size:0.76rem;margin-right:2px">${de ? "Erkannte DLLs:" : "Detected DLLs:"}</span>
+          ${techBadgesHtml}
+        </div>
       </div>
 
-      <div>
-        <label style="display:block;font-size:0.82rem;font-weight:700;margin-bottom:6px">
+      <div class="preset-field">
+        <label style="font-size:0.82rem;font-weight:700;color:var(--text-primary)">
           ${de
-      ? `Status: Funktioniert das Spiel mit DLSS / Upscaler-Update? <span style="color:#a3e635">* (Muss)</span>`
+      ? `Status: Funktioniert das Spiel mit DLSS / Upscaler-Update? <span style="color:#a3e635">* (Pflichtfeld)</span>`
       : `Status: Does this game work with DLSS / Upscaler updates? <span style="color:#a3e635">* (Required)</span>`
     }
         </label>
         <input type="hidden" id="modal-rep-works-status" value="works" />
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:4px">
           <button
             type="button"
             id="modal-rep-btn-works"
             class="btn"
             onclick="setModalReportStatus('works')"
-            style="justify-content:center;padding:11px;border:1px solid rgba(118,185,0,0.75);background:rgba(118,185,0,0.2);color:#d9f99d;font-weight:700"
+            style="justify-content:center;padding:12px 14px;border:1px solid rgba(118,185,0,0.75);background:rgba(118,185,0,0.18);color:#d9f99d;font-weight:700;font-size:0.86rem"
           >
             ${de ? "✅ Geht (Funktioniert)" : "✅ Works"}
           </button>
@@ -702,55 +712,57 @@ window.openReportGameModal = function (gameId) {
             id="modal-rep-btn-broken"
             class="btn btn-secondary"
             onclick="setModalReportStatus('broken')"
-            style="justify-content:center;padding:11px;opacity:0.75"
+            style="justify-content:center;padding:12px 14px;opacity:0.78;font-size:0.86rem"
           >
             ${de ? "❌ Geht nicht (Probleme / Blockiert)" : "❌ Doesn't Work (Broken / Blocked)"}
           </button>
         </div>
       </div>
 
-      <div>
-        <label style="display:block;font-size:0.8rem;color:var(--text-muted);margin-bottom:5px">
+      <div class="preset-field">
+        <label>
           ${de ? "Empfohlenes DLSS Preset" : "Recommended DLSS Preset"} <span style="opacity:0.75">(Optional)</span>
         </label>
-        <select id="modal-rep-preset" class="filter-select" style="width:100%">
-          <option value="" ${!defaultPreset ? "selected" : ""}>${de ? "— Keine Angabe (Optional) —" : "— Not specified (Optional) —"}</option>
-          <option value="Preset K" ${defaultPreset === "Preset K" ? "selected" : ""}>Preset K (DLSS 4.5 Transformer Gen 2)</option>
-          <option value="Preset J" ${defaultPreset === "Preset J" ? "selected" : ""}>Preset J (DLSS 4.5 Transformer)</option>
-          <option value="Latest" ${defaultPreset === "Latest" ? "selected" : ""}>Latest (Driver Default)</option>
-          <option value="Preset E" ${defaultPreset === "Preset E" ? "selected" : ""}>Preset E (CNN)</option>
-          <option value="Preset C" ${defaultPreset === "Preset C" ? "selected" : ""}>Preset C</option>
+        <select id="modal-rep-preset" class="toolbar-select" style="width:100%">
+          <option value="" ${!defaultPreset || defaultPreset === "Default" ? "selected" : ""}>${de ? "— Keine Angabe (Optional) —" : "— Not specified (Optional) —"}</option>
+          <option value="Preset K" ${defaultPreset === "Preset K" ? "selected" : ""}>Preset K (DLSS 4.5 Transformer Gen 2 · Standard-Empfehlung)</option>
+          <option value="Preset J" ${defaultPreset === "Preset J" ? "selected" : ""}>Preset J (DLSS 4.0 Transformer Gen 1)</option>
+          <option value="Preset L" ${defaultPreset === "Preset L" ? "selected" : ""}>Preset L (DLSS 4.5 Transformer Gen 2 · 4K Performance)</option>
+          <option value="Preset M" ${defaultPreset === "Preset M" ? "selected" : ""}>Preset M (DLSS 4.5 Transformer Gen 2 · Max Quality / DLAA)</option>
+          <option value="Latest" ${defaultPreset === "Latest" ? "selected" : ""}>Latest (Vom NVIDIA-Treiber gesteuert)</option>
+          <option value="Preset E" ${defaultPreset === "Preset E" ? "selected" : ""}>Preset E (DLSS 3.7+ CNN)</option>
+          <option value="Preset C" ${defaultPreset === "Preset C" ? "selected" : ""}>Preset C (CNN)</option>
         </select>
       </div>
 
-      <div>
-        <label style="display:block;font-size:0.8rem;color:var(--text-muted);margin-bottom:5px">
-          ${de ? "Empfohlene In-Game Einstellungen" : "Recommended In-Game Settings"} <span style="opacity:0.75">${de ? "(Optional, eine pro Zeile)" : "(Optional, one per line)"}</span>
+      <div class="preset-field">
+        <label>
+          ${de ? "Empfohlene In-Game Einstellungen" : "Recommended In-Game Settings"} <span style="opacity:0.75">${de ? "(Optional, eine Einstellung pro Zeile)" : "(Optional, one setting per line)"}</span>
         </label>
         <textarea
           id="modal-rep-settings"
-          class="search-input"
-          rows="3"
-          style="width:100%;height:auto;padding:8px 10px;resize:vertical;font-family:inherit"
+          class="toolbar-select"
+          rows="4"
+          style="width:100%"
           placeholder="${de ? "Optional, z.B.&#10;Graphics Renderer: Vulkan&#10;Upscaling: DLSS Quality" : "Optional, e.g.&#10;Graphics Renderer: Vulkan&#10;Upscaling: DLSS Quality"}"
         >${escapeHtml(existingSettings)}</textarea>
       </div>
 
-      <div>
-        <label style="display:block;font-size:0.8rem;color:var(--text-muted);margin-bottom:5px">
+      <div class="preset-field">
+        <label>
           ${de ? "Hinweise / Fehlerbeschreibung" : "Notes / Issue Description"} <span style="opacity:0.75">(Optional)</span>
         </label>
         <input
           type="text"
           id="modal-rep-notes"
-          class="search-input"
+          class="toolbar-select"
           style="width:100%"
           placeholder="${de ? "Optional: z.B. Läuft super / Anti-Cheat blockiert / Flackern bei..." : "Optional: e.g. Runs great / Anti-Cheat blocks swap / Flickering..."}"
         />
       </div>
     </div>
 
-    <div class="modal-footer" style="margin-top:16px;display:flex;justify-content:flex-end;gap:10px">
+    <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeSecondaryModal()">${de ? "Abbrechen" : "Cancel"}</button>
       <button class="btn btn-primary" onclick="submitModalGameReport('${escapeJsStr(game.id)}')">
         ${de ? "📤 Jetzt an Datenbank melden" : "📤 Submit Report to Database"}
