@@ -43,7 +43,7 @@ if (-not (Get-Command cargo-tauri -ErrorAction SilentlyContinue)) {
 }
 
 Write-Host "`n=== Building DLSS Manager (Rust Release + MSI/NSIS Installer) ===" -ForegroundColor Cyan
-Get-Process -Name "dlss-manager" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+Get-Process -Name "DLSS-Manager", "dlss-manager", "DLSS_Manager" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 Start-Sleep -Milliseconds 300
 Push-Location (Join-Path $PSScriptRoot "src-tauri")
 try {

@@ -168,7 +168,7 @@ This reference matrix is also built directly into the **DLSS Manager** UI (via t
 ## 📥 Installation
 
 ### Windows
-- **Standalone Portable Executable:** Run `dist\dlss-manager.exe` directly (zero installation required).
+- **Standalone Portable Executable:** Run `dist\DLSS-Manager.exe` directly (zero installation required).
 - **Installer (`.msi` / NSIS `.exe`):** Download the latest release from [**GitHub Releases**](https://github.com/gOOvER/DLSS-Manager/releases/latest).
 - **Winget:**
   ```powershell
@@ -196,7 +196,7 @@ cargo test --release
 cargo tauri build --no-bundle
 
 # Copy standalone binary to dist/
-Copy-Item target\release\dlss-manager.exe ..\dist\dlss-manager.exe -Force
+Copy-Item target\release\DLSS-Manager.exe ..\dist\DLSS-Manager.exe -Force
 ```
 
 To build the full Windows `.msi` and NSIS `.exe` installers, run:

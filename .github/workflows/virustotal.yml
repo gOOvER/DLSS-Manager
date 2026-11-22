@@ -1,0 +1,63 @@
+name: VirusTotal Release & Binary Scan
+
+on:
+  release:
+    types: [published, edited]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  virustotal-scan:
+    name: Build & Scan DLSS-Manager.exe on VirusTotal
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Install Rust stable toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "./src-tauri -> target"
+
+      - name: Build DLSS-Manager.exe (Release)
+        working-directory: src-tauri
+        run: cargo build --release --bin DLSS-Manager
+
+      - name: Upload & Verify on VirusTotal API v3
+        id: vt
+        shell: pwsh
+        env:
+          VT_API_KEY: ${{ secrets.VT_API_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          $exePath = "src-tauri\target\release\DLSS-Manager.exe"
+          if (-not (Test-Path $exePath)) {
+            Write-Error "DLSS-Manager.exe not found at $exePath"
+            exit 1
+          }
+          $sha256 = (Get-FileHash -Path $exePath -Algorithm SHA256).Hash.ToLower()
+          $vtGuiUrl = "https://www.virustotal.com/gui/file/$sha256"
+          Write-Host "DLSS-Manager.exe SHA-256: $sha256"
+          Write-Host "VirusTotal URL: $vtGuiUrl"
+
+          if ([string]::IsNullOrWhiteSpace($env:VT_API_KEY)) {
+            Write-Warning "VT_API_KEY secret is not configured."
+            exit 0
+          }
+
+          $headers = @{ "x-apikey" = $env:VT_API_KEY }
+          $form = @{ file = Get-Item -Path $exePath }
+          $resp = Invoke-RestMethod -Uri "https://www.virustotal.com/api/v3/files" -Method Post -Headers $headers -Form $form
+          $analysisId = $resp.data.id
+          Write-Host "Uploaded to VirusTotal. Analysis ID: $analysisId"
+
+          "### 🛡️ VirusTotal Security Scan (`DLSS-Manager.exe`)" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          "- **Binary:** `DLSS-Manager.exe`" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          "- **SHA-256:** `$sha256`" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          "- **VirusTotal Report:** [$vtGuiUrl]($vtGuiUrl)" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append

@@ -56,11 +56,11 @@ git clone https://github.com/gOOvER/DLSS-Manager.git
 cd DLSS-Manager
 ```
 
-### Schneller Release-Build (Portable `DLSS_Manager.exe`)
+### Schneller Release-Build (Portable `DLSS-Manager.exe`)
 ```powershell
 cd src-tauri
-cargo build --release --bin dlss-manager
-Copy-Item target\release\dlss-manager.exe ..\dist\DLSS_Manager.exe -Force
+cargo build --release --bin DLSS-Manager
+Copy-Item target\release\DLSS-Manager.exe ..\dist\DLSS-Manager.exe -Force
 ```
 
 ### Tests ausführen
@@ -85,5 +85,5 @@ Falls unter Windows 11 **Smart App Control** aktiv ist und `rustc` beim erneuten
 cd src-tauri
 Remove-Item "target\release\deps\*.dll" -Force
 Remove-Item "target\release\.fingerprint\serde_derive-*", "target\release\.fingerprint\tauri-macros-*" -Recurse -Force
-cargo build --release --bin dlss-manager
+cargo build --release --bin DLSS-Manager
 ```

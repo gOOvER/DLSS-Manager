@@ -8,8 +8,8 @@ Diese Seite erklärt die Installation von **DLSS Manager**, warum Administrator-
 
 Du kannst **DLSS Manager** auf drei Arten nutzen:
 
-### Option A: Portable Einzeldatei (`DLSS_Manager.exe`)
-- Lade `DLSS_Manager.exe` (bzw. `dlss-manager.exe`) von der [**GitHub Releases**](https://github.com/gOOvER/DLSS-Manager/releases/latest)-Seite herunter oder nutze `dist\DLSS_Manager.exe`.
+### Option A: Portable Einzeldatei (`DLSS-Manager.exe`)
+- Lade `DLSS-Manager.exe` von der [**GitHub Releases**](https://github.com/gOOvER/DLSS-Manager/releases/latest)-Seite herunter oder nutze `dist\DLSS-Manager.exe`.
 - Es ist **keine Installation** erforderlich – die Datei enthält das gesamte Rust-Backend und die Benutzeroberfläche.
 
 ### Option B: Windows-Installer (`.exe` NSIS / `.msi`)
@@ -27,7 +27,7 @@ winget install "DLSS Manager"
 
 ## 🛡️ 2. Warum Administrator-Rechte (UAC) wichtig sind
 
-Seit `v1.0.0-beta.2` besitzt `DLSS_Manager.exe` ein eingebettetes Windows-UAC-Manifest (`requireAdministrator`). Falls die App ohne Admin-Rechte gestartet wird, erscheint auf dem **Hub** ein gelbes Warnbanner mit dem Button **„🛡️ Als Administrator neu starten“**.
+Seit `v1.0.0-beta.2` besitzt `DLSS-Manager.exe` ein eingebettetes Windows-UAC-Manifest (`requireAdministrator`). Falls die App ohne Admin-Rechte gestartet wird, erscheint auf dem **Hub** ein gelbes Warnbanner mit dem Button **„🛡️ Als Administrator neu starten“**.
 
 Administrator-Rechte werden für vier Kernfunktionen benötigt:
 1. **NVIDIA Treiber-DRS (`nvapi64.dll`):** Das Schreiben und Löschen von globalen und spielspezifischen DLSS-Profilen in der NVIDIA-Treiberdatenbank (`C:\ProgramData\NVIDIA Corporation\Drs\nvdrsdb0.bin` / `nvdrsdb1.bin`).

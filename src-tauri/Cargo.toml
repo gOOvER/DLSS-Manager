@@ -12,6 +12,10 @@ rust-version = "1.77.2"
 name = "dlss_manager_lib"
 crate-type = ["rlib"]
 
+[[bin]]
+name = "DLSS-Manager"
+path = "src/main.rs"
+
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
