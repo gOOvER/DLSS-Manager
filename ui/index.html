@@ -107,6 +107,11 @@
 
         <!-- VIEW: HUB -->
         <section class="view-section active" id="view-hub">
+          <div id="startup-status-bar" class="panel" style="display:flex;margin-bottom:12px;padding:8px 14px;align-items:center;justify-content:space-between;gap:10px;border-color:rgba(56,189,248,0.35);background:rgba(56,189,248,0.08);">
+            <span id="startup-status-text" style="font-size:0.82rem;font-weight:600">⏳ Initialisiere DLSS Manager: Lade Spiele, GPU &amp; NVIDIA DRS-Profile…</span>
+            <span id="startup-status-step" class="muted" style="font-size:0.76rem">1 / 3</span>
+          </div>
+
           <div class="panel" id="admin-warning-banner" style="display:none;margin-bottom:14px;padding:12px 16px;border-color:#f59e0b;background:rgba(245,158,11,0.1);align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
             <div>
               <strong style="font-size:0.9rem;color:#fbbf24" data-i18n="admin_warn_title">⚠️ Keine Administrator-Rechte aktiv</strong>

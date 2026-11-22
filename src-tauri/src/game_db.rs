@@ -844,13 +844,18 @@ pub async fn report_games_to_remote_db(
         "https://dlssdb.goover.dev/api/v1/games/report".to_string()
     };
 
+    let is_manual = source == "manual" || source == "user_report";
     let input = user_input.unwrap_or_default();
-    let works_status = input
-        .works_status
-        .as_deref()
-        .map(|s| s.trim().to_ascii_lowercase())
-        .filter(|s| s == "works" || s == "broken")
-        .unwrap_or_else(|| "works".to_string());
+    let works_status = if is_manual {
+        input
+            .works_status
+            .as_deref()
+            .map(|s| s.trim().to_ascii_lowercase())
+            .filter(|s| s == "works" || s == "broken")
+            .unwrap_or_else(|| "works".to_string())
+    } else {
+        "unverified".to_string()
+    };
 
     let mut payload_games = Vec::new();
     for g in games {
@@ -890,17 +895,40 @@ pub async fn report_games_to_remote_db(
             .filter(|s| !s.trim().is_empty())
             .or_else(|| g.dlss_sr_preset.clone());
 
+        let reference_url = match g.app_id.as_deref() {
+            Some(aid) if !aid.is_empty() && aid.chars().all(|c| c.is_ascii_digit()) => {
+                format!("https://steamdb.info/app/{}/", aid)
+            }
+            _ => {
+                let encoded: String = g
+                    .name
+                    .bytes()
+                    .map(|b| match b {
+                        b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' => {
+                            (b as char).to_string()
+                        }
+                        b' ' => "+".to_string(),
+                        _ => format!("%{:02X}", b),
+                    })
+                    .collect();
+                format!("https://www.pcgamingwiki.com/w/index.php?search={}", encoded)
+            }
+        };
+
         payload_games.push(serde_json::json!({
             "title": g.name,
             "app_id": g.app_id,
             "executable": exe_name,
+            "reference_url": reference_url,
             "supported_techs": techs,
             "launcher": g.launcher_name,
             "works_status": works_status,
-            "recommended_settings": input.recommended_settings,
-            "recommended_sr_preset": sr_preset,
+            "recommended_settings": if is_manual { input.recommended_settings.clone() } else { None },
+            "recommended_sr_preset": if is_manual { sr_preset } else { None },
             "anticheat_status": if works_status == "broken" {
                 "blocked"
+            } else if !is_manual {
+                if g.anti_cheat.is_some() { "signed_only" } else { "unverified" }
             } else if g.anti_cheat.is_some() {
                 "signed_only"
             } else {

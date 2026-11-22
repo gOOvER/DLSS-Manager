@@ -11,12 +11,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Live Startup Progress Banner (`ui/index.html`, `ui/app.js`):**
+  - Added a live `#startup-status-bar` on the Hub view showing each startup phase (`1/3` loading games & enforcing NVIDIA DRS presets, `2/3` refreshing official upstream manifests & game database, `3/3` completed) before auto-hiding.
+
 ### Security
 - **GitHub CodeQL / Code Scanning Fixes (`src-tauri/src/lib.rs`, `.github/workflows/build-flatpak.yml`):**
   - Passed Steam Web API keys via the `x-webapi-key` HTTPS request header and structured `.query(...)` parameters instead of interpolating secrets into URL strings (`rust/cleartext-transmission`).
   - Added explicit `permissions: contents: write` to `.github/workflows/build-flatpak.yml` (`actions/missing-workflow-permissions`).
 
 ### Fixed
+- **Per-Game DLSS Frame Generation & Streamline FG Controls (`src-tauri/src/lib.rs`, `ui/app.js`):**
+  - Enabled per-game DLSS Frame Generation & Ray Reconstruction preset/MFG controls for games using `sl.dlss_g.dll` / `sl.dlss_d.dll` in addition to `nvngx_dlssg.dll` / `nvngx_dlssd.dll`.
+  - Added inline DLSS-G MFG Mode (`Default`, `Fixed`, `Dynamic`, `Off`), multiplier (`2x–6x`), and target FPS selectors directly inside the Game Details modal (`quickSaveInlineGamePresets`).
 - **Games Library Launcher Filter & Navigation (`ui/index.html`, `ui/app.js`):**
   - Reset launcher & status filters when clicking **Spiele / Games** in the sidebar so all games are always shown again instead of staying stuck on the last selected launcher.
   - Added launcher icons + game counts in `#select-launcher-filter` and a clear `#active-launcher-banner` above the grid showing the currently active launcher with a one-click reset button.
@@ -26,6 +33,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.0-beta.2] - 2026-11-22
 
 ### Changed
+- **Unverified Auto-Discovery Reporting + SteamDB/Reference Links (`src-tauri/src/game_db.rs`, `DLSS-Manager-OnlineDB/functions/api/v1/report.js`):**
+  - Automatic library scan reports (`auto_scan`) now submit `works_status: "unverified"` and `anticheat_status: "unverified"` (never falsely marking untested games as `works` / `safe`), and attach a `reference_url` (`https://steamdb.info/app/<id>/` for Steam games or a PCGamingWiki search link for non-Steam games) so the database can grow cleanly without unverified compatibility claims.
+  - Removed obsolete `FSR 3/4` tags from the seed `games.json` database.
 - **Official Upstreams for Streamline & DirectStorage; Removed AMD FSR (`src-tauri/src/repository.rs`, `src-tauri/src/models.rs`, `ui/index.html`, `ui/app.js`):**
   - Added official `NVIDIA-RTX/Streamline` GitHub Release SDK upstream (`sl.*.dll`) and official Microsoft NuGet (`Microsoft.Direct3D.DirectStorage`, `.nupkg`) upstream (`dstorage.dll`, `dstoragecore.dll`), plus `xess_dx11` (`libxess_dx11.dll`) from `dlss-swapper-manifest-builder`.
   - Removed AMD FSR (`amd_fidelityfx_*`, `ffx_fsr2_*`, `FSR 3/4`, `FSR VK`, `FSR 2`) from DLL scanning, manifest resolution, and UI technology scope filters.

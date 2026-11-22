@@ -1556,10 +1556,18 @@ async fn save_game_dlss_presets(
             .map(|g| g.dlls.iter().any(|d| d.dll_type == DllType::Dlss))
             .unwrap_or(true);
         let has_rr = matched_game
-            .map(|g| g.dlls.iter().any(|d| d.dll_type == DllType::DlssD))
+            .map(|g| {
+                g.dlls.iter().any(|d| {
+                    d.dll_type == DllType::DlssD || d.filename.eq_ignore_ascii_case("sl.dlss_d.dll")
+                })
+            })
             .unwrap_or(false);
         let has_fg = matched_game
-            .map(|g| g.dlls.iter().any(|d| d.dll_type == DllType::DlssG))
+            .map(|g| {
+                g.dlls.iter().any(|d| {
+                    d.dll_type == DllType::DlssG || d.filename.eq_ignore_ascii_case("sl.dlss_g.dll")
+                })
+            })
             .unwrap_or(false);
 
         let clean_sr = if has_sr {

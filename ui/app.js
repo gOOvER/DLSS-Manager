@@ -2373,12 +2373,24 @@ function buildPresetGuideHtml(hasSr, hasRr, hasFg) {
     </details>`;
 }
 
+function gameHasRrTech(game) {
+  return (game.dlls || []).some(
+    (d) => d.type_label === "DLSS-RR" || (d.filename || "").toLowerCase() === "sl.dlss_d.dll"
+  );
+}
+
+function gameHasFgTech(game) {
+  return (game.dlls || []).some(
+    (d) => d.type_label === "DLSS-G" || (d.filename || "").toLowerCase() === "sl.dlss_g.dll"
+  );
+}
+
 window.quickSaveInlineGamePresets = async function (gameId, reset = false) {
   const game = appState.games.find((g) => g.id === gameId);
   if (!game) return;
   const hasSrTech = (game.dlls || []).some((d) => d.type_label === "DLSS");
-  const hasRrTech = (game.dlls || []).some((d) => d.type_label === "DLSS-RR");
-  const hasFgTech = (game.dlls || []).some((d) => d.type_label === "DLSS-G");
+  const hasRrTech = gameHasRrTech(game);
+  const hasFgTech = gameHasFgTech(game);
 
   const srPreset =
     reset || !hasSrTech
@@ -2392,6 +2404,20 @@ window.quickSaveInlineGamePresets = async function (gameId, reset = false) {
     reset || !hasFgTech
       ? "Default"
       : document.getElementById("inline-fg-preset")?.value || game.dlss_fg_preset || "Default";
+  const fgMode =
+    reset || !hasFgTech
+      ? "Default"
+      : document.getElementById("inline-fg-mode")?.value || game.dlss_fg_mode || "Default";
+  const fgMultRaw = document.getElementById("inline-fg-mult")?.value;
+  const fgMultiplier =
+    reset || !hasFgTech ? null : parseInt(fgMultRaw || game.dlss_fg_multiplier || "2", 10) || 2;
+  const fgFpsRaw = document.getElementById("inline-fg-target-fps")?.value;
+  const fgTargetFps =
+    reset || !hasFgTech
+      ? null
+      : fgFpsRaw !== undefined
+        ? parseInt(fgFpsRaw, 10) || null
+        : game.dlss_fg_target_fps || null;
 
   try {
     const payload = await invoke("save_game_dlss_presets", {
@@ -2399,6 +2425,9 @@ window.quickSaveInlineGamePresets = async function (gameId, reset = false) {
       srPreset,
       rrPreset,
       fgPreset,
+      fgMode,
+      fgMultiplier,
+      fgTargetFps,
       customExePath: game.custom_exe_path || null,
     });
     applyPayload(payload);
@@ -2434,8 +2463,8 @@ window.openGameDllModal = function (gameId) {
   const dbProf = game.db_profile;
 
   const hasSrTech = counts.groups.some((g) => g.typeLabel === "DLSS");
-  const hasRrTech = counts.groups.some((g) => g.typeLabel === "DLSS-RR");
-  const hasFgTech = counts.groups.some((g) => g.typeLabel === "DLSS-G");
+  const hasRrTech = gameHasRrTech(game);
+  const hasFgTech = gameHasFgTech(game);
 
   const gameSr = hasSrTech ? game.dlss_sr_preset || "Default" : "Default";
   const gameRr = hasRrTech ? game.dlss_rr_preset || "Default" : "Default";
@@ -2653,6 +2682,18 @@ window.openGameDllModal = function (gameId) {
           <select id="inline-fg-preset" class="preset-slot-select" onchange="quickSaveInlineGamePresets('${game.id}', false)">
             ${buildPresetOptionsHtml("fg", gameFg, recFg, fgDllVer)}
           </select>
+          <div style="display:grid;grid-template-columns:1fr 90px 100px;gap:8px;margin-top:8px">
+            <select id="inline-fg-mode" class="preset-slot-select" title="${de ? "DLSS-G MFG Modus (RTX 50)" : "DLSS-G MFG Mode (RTX 50)"}" onchange="quickSaveInlineGamePresets('${game.id}', false)">
+              <option value="Default" ${!game.dlss_fg_mode || game.dlss_fg_mode === "Default" ? "selected" : ""}>MFG: Default</option>
+              <option value="Fixed" ${game.dlss_fg_mode === "Fixed" ? "selected" : ""}>MFG: Fixed</option>
+              <option value="Dynamic" ${game.dlss_fg_mode === "Dynamic" ? "selected" : ""}>MFG: Dynamic</option>
+              <option value="Off" ${game.dlss_fg_mode === "Off" ? "selected" : ""}>MFG: Off</option>
+            </select>
+            <select id="inline-fg-mult" class="preset-slot-select" title="${de ? "Multiplikator" : "Multiplier"}" onchange="quickSaveInlineGamePresets('${game.id}', false)">
+              ${[2, 3, 4, 5, 6].map((m) => `<option value="${m}" ${(game.dlss_fg_multiplier || 2) === m ? "selected" : ""}>${m}x</option>`).join("")}
+            </select>
+            <input type="number" id="inline-fg-target-fps" class="preset-slot-select" min="0" max="1000" value="${game.dlss_fg_target_fps || 0}" title="${de ? "Ziel-FPS (0 = Auto)" : "Target FPS (0 = Auto)"}" onchange="quickSaveInlineGamePresets('${game.id}', false)" />
+          </div>
           <div class="preset-slot-desc">💡 ${escapeHtml(getPresetDescription("fg", gameFg, fgDllVer))}</div>
         </div>
       `);
@@ -3114,8 +3155,8 @@ window.openGameDlssPresetsModal = function (gameId) {
   const de = isDe();
 
   const hasSrTech = (game.dlls || []).some((d) => d.type_label === "DLSS");
-  const hasRrTech = (game.dlls || []).some((d) => d.type_label === "DLSS-RR");
-  const hasFgTech = (game.dlls || []).some((d) => d.type_label === "DLSS-G");
+  const hasRrTech = gameHasRrTech(game);
+  const hasFgTech = gameHasFgTech(game);
 
   const sr = hasSrTech ? game.dlss_sr_preset || "Default" : "Default";
   const rr = hasRrTech ? game.dlss_rr_preset || "Default" : "Default";
@@ -4008,13 +4049,38 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   });
 
+  const startupBar = document.getElementById("startup-status-bar");
+  const startupText = document.getElementById("startup-status-text");
+  const startupStep = document.getElementById("startup-status-step");
+  const setStartupStatus = (msgDe, msgEn, stepText) => {
+    if (startupText) startupText.textContent = isDe() ? msgDe : msgEn;
+    if (startupStep && stepText !== undefined) startupStep.textContent = stepText;
+  };
+
   try {
+    setStartupStatus(
+      "⏳ Schritt 1/3: Lade Spielebibliothek, GPU & wende NVIDIA DRS Presets an…",
+      "⏳ Step 1/3: Loading games library, GPU & enforcing NVIDIA DRS presets…",
+      "1 / 3"
+    );
     const initial = await invoke("get_initial_state");
     applyPayload(initial);
     if (!initial.games || initial.games.length === 0) {
-      triggerGameScan(false);
+      setStartupStatus(
+        "🔍 Scanne Launcher & Spieleordner nach Upscaler-DLLs…",
+        "🔍 Scanning launchers & game folders for upscaler DLLs…",
+        "1 / 3"
+      );
+      await triggerGameScan(false);
     }
-    invoke("refresh_dll_manifest")
+
+    setStartupStatus(
+      "🌐 Schritt 2/3: Prüfe offizielle Upstreams (NVIDIA DLSS, Streamline, DirectStorage, Intel XeSS) & Spiele-DB…",
+      "🌐 Step 2/3: Checking official upstreams (NVIDIA DLSS, Streamline, DirectStorage, Intel XeSS) & Game DB…",
+      "2 / 3"
+    );
+
+    const manifestTask = invoke("refresh_dll_manifest")
       .then((catalog) => {
         if (catalog) {
           appState.catalog = catalog;
@@ -4023,13 +4089,13 @@ document.addEventListener("DOMContentLoaded", async () => {
       })
       .catch(() => { });
 
-    invoke("sync_game_database", { customUrl: null })
+    const dbTask = invoke("sync_game_database", { customUrl: null })
       .then((payload) => {
         if (payload) applyPayload(payload);
       })
       .catch(() => { });
 
-    invoke("check_app_update")
+    const updateTask = invoke("check_app_update")
       .then((info) => {
         if (info && info.update_available) {
           appState.appUpdateInfo = info;
@@ -4043,7 +4109,23 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
       })
       .catch(() => { });
+
+    Promise.allSettled([manifestTask, dbTask, updateTask]).then(() => {
+      setStartupStatus(
+        "✅ Start-Checks abgeschlossen — Alle Manifeste, DRS-Presets & Spiele-Datenbank sind aktuell.",
+        "✅ Startup checks complete — Manifests, DRS presets & game database are up to date.",
+        "3 / 3"
+      );
+      if (startupBar) {
+        startupBar.style.borderColor = "rgba(16,185,129,0.4)";
+        startupBar.style.background = "rgba(16,185,129,0.08)";
+        setTimeout(() => {
+          startupBar.style.display = "none";
+        }, 3200);
+      }
+    });
   } catch (e) {
+    if (startupBar) startupBar.style.display = "none";
     showToast("Failed to load initial state: " + e, true);
   }
 });
