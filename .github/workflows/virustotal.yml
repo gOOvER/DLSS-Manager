@@ -1,63 +1,163 @@
-name: VirusTotal Release & Binary Scan
+name: VirusTotal Release & README Scan
 
 on:
   release:
-    types: [published, edited]
+    types: [published]
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Optional release tag to scan and update (defaults to latest release)"
+        required: false
+        type: string
 
 permissions:
   contents: write
 
 jobs:
   virustotal-scan:
-    name: Build & Scan DLSS-Manager.exe on VirusTotal
+    name: Scan Release Binaries on VirusTotal & Update Release + README
     runs-on: windows-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
-
-      - name: Install Rust stable toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Rust Cache
-        uses: Swatinem/rust-cache@v2
         with:
-          workspaces: "./src-tauri -> target"
+          ref: main
+          fetch-depth: 0
 
-      - name: Build DLSS-Manager.exe (Release)
-        working-directory: src-tauri
-        run: cargo build --release --bin DLSS-Manager
-
-      - name: Upload & Verify on VirusTotal API v3
-        id: vt
+      - name: Scan Release Assets on VirusTotal & Update Release Notes + README.md
         shell: pwsh
         env:
           VT_API_KEY: ${{ secrets.VT_API_KEY }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          EVENT_TAG: ${{ github.event.release.tag_name }}
+          INPUT_TAG: ${{ inputs.tag }}
         run: |
-          $exePath = "src-tauri\target\release\DLSS-Manager.exe"
-          if (-not (Test-Path $exePath)) {
-            Write-Error "DLSS-Manager.exe not found at $exePath"
+          $ErrorActionPreference = 'Stop'
+          if ([string]::IsNullOrWhiteSpace($env:VT_API_KEY)) {
+            Write-Error "VT_API_KEY secret is not configured."
             exit 1
           }
-          $sha256 = (Get-FileHash -Path $exePath -Algorithm SHA256).Hash.ToLower()
-          $vtGuiUrl = "https://www.virustotal.com/gui/file/$sha256"
-          Write-Host "DLSS-Manager.exe SHA-256: $sha256"
-          Write-Host "VirusTotal URL: $vtGuiUrl"
 
-          if ([string]::IsNullOrWhiteSpace($env:VT_API_KEY)) {
-            Write-Warning "VT_API_KEY secret is not configured."
+          $tag = if (-not [string]::IsNullOrWhiteSpace($env:INPUT_TAG)) {
+            $env:INPUT_TAG
+          } elseif (-not [string]::IsNullOrWhiteSpace($env:EVENT_TAG)) {
+            $env:EVENT_TAG
+          } else {
+            (gh release view --json tagName | ConvertFrom-Json).tagName
+          }
+          Write-Host "Target Release Tag: $tag"
+
+          $dlDir = Join-Path $env:RUNNER_TEMP "vt_assets"
+          New-Item -ItemType Directory -Force -Path $dlDir | Out-Null
+          gh release download $tag --dir $dlDir --pattern "*.exe" --pattern "*.msi" --clobber
+
+          $files = Get-ChildItem -Path $dlDir -File | Sort-Object Name
+          if ($files.Count -eq 0) {
+            Write-Warning "No .exe or .msi assets found on release $tag."
             exit 0
           }
 
           $headers = @{ "x-apikey" = $env:VT_API_KEY }
-          $form = @{ file = Get-Item -Path $exePath }
-          $resp = Invoke-RestMethod -Uri "https://www.virustotal.com/api/v3/files" -Method Post -Headers $headers -Form $form
-          $analysisId = $resp.data.id
-          Write-Host "Uploaded to VirusTotal. Analysis ID: $analysisId"
+          $results = @()
 
-          "### 🛡️ VirusTotal Security Scan (`DLSS-Manager.exe`)" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
-          "- **Binary:** `DLSS-Manager.exe`" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
-          "- **SHA-256:** `$sha256`" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
-          "- **VirusTotal Report:** [$vtGuiUrl]($vtGuiUrl)" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          foreach ($f in $files) {
+            $sha256 = (Get-FileHash -Path $f.FullName -Algorithm SHA256).Hash.ToLower()
+            $vtGuiUrl = "https://www.virustotal.com/gui/file/$sha256"
+            Write-Host "Uploading $($f.Name) ($sha256) to VirusTotal..."
+
+            try {
+              $form = @{ file = Get-Item -Path $f.FullName }
+              $null = Invoke-RestMethod -Uri "https://www.virustotal.com/api/v3/files" -Method Post -Headers $headers -Form $form
+            } catch {
+              Write-Host "Upload note for $($f.Name): $($_.Exception.Message)"
+            }
+
+            $malicious = 0
+            $totalEngines = 0
+            for ($attempt = 1; $attempt -le 18; $attempt++) {
+              try {
+                $info = Invoke-RestMethod -Uri "https://www.virustotal.com/api/v3/files/$sha256" -Method Get -Headers $headers
+                $s = $info.data.attributes.last_analysis_stats
+                $total = [int]$s.malicious + [int]$s.suspicious + [int]$s.undetected + [int]$s.harmless
+                if ($total -ge 40) {
+                  $malicious = [int]$s.malicious + [int]$s.suspicious
+                  $totalEngines = $total
+                  break
+                }
+              } catch {}
+              Write-Host "Waiting for VirusTotal analysis ($attempt/18)..."
+              Start-Sleep -Seconds 10
+            }
+
+            $badgeColor = if ($malicious -eq 0) { "10b981" } else { "f59e0b" }
+            $statusLabel = if ($totalEngines -gt 0) { "$malicious%2F$totalEngines%20Clean" } else { "Scanned" }
+            $statusText = if ($totalEngines -gt 0) { "$malicious / $totalEngines Clean" } else { "View Report" }
+            $badgeMd = "[![VirusTotal](https://img.shields.io/badge/VirusTotal-$statusLabel-$badgeColor?logo=virustotal&logoColor=white)]($vtGuiUrl)"
+
+            $results += [PSCustomObject]@{
+              Name         = $f.Name
+              Sha256       = $sha256
+              Url          = $vtGuiUrl
+              Malicious    = $malicious
+              TotalEngines = $totalEngines
+              StatusText   = $statusText
+              BadgeMd      = $badgeMd
+              BadgeUrl     = "https://img.shields.io/badge/VirusTotal-$statusLabel-$badgeColor?logo=virustotal&logoColor=white"
+            }
+          }
+
+          # Build markdown table for Release Notes and README.md
+          $tableLines = @(
+            "| Release Asset | Status | SHA-256 Checksum | VirusTotal Report |",
+            "| :--- | :--- | :--- | :--- |"
+          )
+          foreach ($r in $results) {
+            $tableLines += "| **`$($r.Name)`** | $($r.BadgeMd) | ``$($r.Sha256)`` | [🔍 View Report ($($r.StatusText))]($($r.Url)) |"
+          }
+          $tableBlock = $tableLines -join "`n"
+
+          # 1. Update GitHub Release Notes
+          $relJson = gh release view $tag --json body | ConvertFrom-Json
+          $oldBody = [string]$relJson.body
+          $vtSection = "<!-- VIRUSTOTAL-START -->`n## 🛡️ VirusTotal Security Scan`n`n$tableBlock`n<!-- VIRUSTOTAL-END -->"
+          if ($oldBody -match '(?s)<!-- VIRUSTOTAL-START -->.*?<!-- VIRUSTOTAL-END -->') {
+            $newBody = [regex]::Replace($oldBody, '(?s)<!-- VIRUSTOTAL-START -->.*?<!-- VIRUSTOTAL-END -->', $vtSection)
+          } elseif ($oldBody -match '(?s)## 🛡️ VirusTotal Security Scan.*$') {
+            $newBody = [regex]::Replace($oldBody, '(?s)## 🛡️ VirusTotal Security Scan.*$', $vtSection)
+          } else {
+            $newBody = $oldBody.TrimEnd() + "`n`n---`n`n" + $vtSection + "`n"
+          }
+          $notesFile = Join-Path $env:RUNNER_TEMP "release_notes.md"
+          Set-Content -Path $notesFile -Value $newBody -Encoding UTF8
+          gh release edit $tag --notes-file $notesFile
+          Write-Host "Updated GitHub Release notes for $tag."
+
+          # 2. Update README.md (Top Badge + Installation VirusTotal Section)
+          $primary = $results | Where-Object { $_.Name -ieq "DLSS-Manager.exe" } | Select-Object -First 1
+          if (-not $primary) { $primary = $results[0] }
+
+          $readmePath = "README.md"
+          $readme = Get-Content -Path $readmePath -Raw -Encoding UTF8
+          $topBadge = "[![VirusTotal]($($primary.BadgeUrl))]($($primary.Url))"
+          $readme = [regex]::Replace($readme, '\[!\[VirusTotal\]\(https://img\.shields\.io/badge/VirusTotal-[^\)]+\)\]\(https://www\.virustotal\.com/gui/file/[a-fA-F0-9]+\)', $topBadge)
+
+          $readmeBlock = "<!-- VIRUSTOTAL-START -->`n### 🛡️ VirusTotal Security Verification (``$tag``)`n`n$tableBlock`n<!-- VIRUSTOTAL-END -->"
+          if ($readme -match '(?s)<!-- VIRUSTOTAL-START -->.*?<!-- VIRUSTOTAL-END -->') {
+            $readme = [regex]::Replace($readme, '(?s)<!-- VIRUSTOTAL-START -->.*?<!-- VIRUSTOTAL-END -->', $readmeBlock)
+          }
+          Set-Content -Path $readmePath -Value $readme -NoNewline -Encoding UTF8
+
+          # 3. Job Summary
+          "## 🛡️ VirusTotal Security Scan (`$tag`)" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          "" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          $tableBlock | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+
+          # 4. Commit & Push README.md if changed
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add README.md
+          $diff = git status --porcelain README.md
+          if (-not [string]::IsNullOrWhiteSpace($diff)) {
+            git commit -m "chore(security): update VirusTotal scan results for $tag [skip ci]"
+            git push origin HEAD:main
+          }
