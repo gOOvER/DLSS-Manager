@@ -1,51 +1,51 @@
-# ❓ Fehlerbehebung & Häufige Fragen (FAQ)
+# ❓ Troubleshooting & Frequently Asked Questions (FAQ)
 
-Hier findest du direkte Antworten und Lösungen auf die häufigsten Fragen rund um **DLSS Manager**, **NVIDIA Treiber-DRS Presets**, die **NVIDIA App** und den **Spiele-Scanner**.
-
----
-
-### 1. Werden meine DLSS-Presets von der NVIDIA App wieder überschrieben?
-**Ursache:** Ja, standardmäßig setzt der Hintergrunddienst der **NVIDIA App** (`NVDisplay.ContainerLocalSystem`) bei jedem Start oder Update alle Spiele, die in NVIDIAs interner Datei `ApplicationStorage.json` bzw. `fingerprint.db` mit `"Disable_SR_Override": true` markiert sind (wie z. B. **Star Citizen**), im Treiberprofil aktiv auf `0` (Blockiert) zurück.  
-**Lösung in DLSS Manager:**
-1. Klicke auf dem **Hub** (oder unter **⚙️ Einstellungen → Globale NVIDIA DLSS-Presets**) im Bereich **„🛡️ NVIDIA App Override-Status“** auf **„🔓 Alle Spiele freischalten“**.
-2. Klicke anschließend auf **„🔄 NVIDIA Dienst neu starten“**.
-3. Zudem prüft und bereinigt DLSS Manager bei jedem App-Start automatisch alle `0`-Blockaden in deinen Spielprofilen und setzt deine gespeicherten Presets erneut im Treiber durch.
+Here are direct answers and solutions to the most common questions about **DLSS Manager**, **NVIDIA Driver DRS Presets**, **NVIDIA App**, and the **Game Scanner**.
 
 ---
 
-### 2. Wie kann ich sicher prüfen, welches DLSS-Preset im Spiel tatsächlich aktiv ist?
-Du hast zwei Möglichkeiten:
-1. **In DLSS Manager (Live-Treiber-Readback):** Öffne die Details eines Spiels. In der Box **„🎛️ Angewendete NVIDIA DLSS Presets (Treiber-DRS)“** liest DLSS Manager den echten Live-Wert aus `nvapi64.dll` aus und zeigt z. B. **`🟢 Treiber-Live: Preset K`** an.
-2. **Direkt im Spiel (DLSS-Overlay):** Schalte oben rechts in der Topbar von DLSS Manager den Schalter **„DLSS-Overlay“** ein und starte das Spiel. Unten links im Spielbildschirm zeigt das offizielle NVIDIA-NGX-Overlay die exakte DLL-Version und das aktive Preset (`Preset K`, `Transformer`) an.
+### 1. Does NVIDIA App overwrite my DLSS presets?
+**Cause:** Yes — by default, **NVIDIA App**'s background service (`NVDisplay.ContainerLocalSystem`) checks `ApplicationStorage.json` and `fingerprint.db` on startup or update. For any game flagged with `"Disable_SR_Override": true` (such as **Star Citizen**), NVIDIA App actively writes `0` (Blocked) into the game's NVIDIA driver profile.  
+**Solution in DLSS Manager:**
+1. On the **Hub** (or under **⚙️ Settings → Global NVIDIA DLSS Presets**), click **🔓 Unlock All Games** inside the **🛡️ NVIDIA App Override Status** card.
+2. Click **🔄 Restart NVIDIA Service**.
+3. In addition, DLSS Manager automatically cleans any `0`-blocks in your game DRS profiles and re-enforces your saved presets on every app launch.
 
 ---
 
-### 3. Ein Spiel (z. B. aus Ubisoft Connect, EA App oder auf einer anderen Festplatte) fehlt in der Liste – warum?
-- **Werden alle Festplatten gescannt?** Ja, DLSS Manager scannt automatisch alle Laufwerksbuchstaben von `A:\` bis `Z:\` nach Steam, Star Citizen, Battle.net, Epic Games, GOG, EA App, Ubisoft Connect, Xbox Game Pass sowie allgemeinen Spieleordnern (`Games`, `Spiele`, `PC Games`).
-- **Wichtig:** Ein Spiel erscheint nur dann in der Liste, wenn im Spielordner mindestens eine unterstützte **64-Bit Upscaler-/Streaming-DLL** (`nvngx_dlss*.dll`, `sl.*.dll`, `libxess*.dll` oder `dstorage*.dll`) gefunden wird.
-- **Tipp:** Ältere Spiele (wie z. B. *Tom Clancy's The Division 1* von 2016), die vor der Einführung von DLSS/XeSS/DirectStorage erschienen sind, besitzen keine solchen DLLs und werden daher nicht als Upscaler-Spiele gelistet.
-- Falls du ein Spiel in einem ungewöhnlichen Pfad installiert hast, füge den Ordner einfach unter **⚙️ Einstellungen → Eigene Spieleordner** hinzu und klicke links auf **„🔍 Spiele scannen“**.
+### 2. How can I verify which DLSS preset is actually active in-game?
+You have two ways to verify:
+1. **Inside DLSS Manager (Live Driver Readback):** Click any game card to open the **Game Details Modal**. Inside the **🎛️ Applied NVIDIA DLSS Presets (Driver DRS)** panel, DLSS Manager reads the live setting directly from `nvapi64.dll` and displays **`🟢 Driver Live: Preset K`**.
+2. **In-Game (DLSS On-Screen Overlay):** Enable the **DLSS Overlay** toggle in the top bar of DLSS Manager and launch your game. In the bottom-left corner of the game screen, NVIDIA's official NGX indicator displays the exact DLSS version and active preset (`Preset K`, `Transformer`).
 
 ---
 
-### 4. Warum wurde ein Spiel doppelt (z. B. unter Steam und Epic Games) angezeigt, obwohl es auf Epic deinstalliert ist?
-- Manche Deinstallationsprogramme lassen alte Restordner mit einem `.egstore`-Unterordner (Epic) oder Restdateien in `steamapps\common\` bzw. Battle.net zurück.
-- **Lösung (automatisch aktiv):** DLSS Manager verifiziert jeden Epic-Games-Ordner gegen die offiziellen Epic-Manifeste (`C:\ProgramData\Epic\EpicGamesLauncher\Data\Manifests\*.item` mit `bIsIncompleteInstall != true`), prüft Steam-Ordner gegen `appmanifest_*.acf`, verifiziert Battle.net-Spiele gegen aktive Flavor-Executables (`_retail_`, `_classic_`) und verwirft generische Standalone-Duplikate, wenn dasselbe Spiel bereits unter einem offiziellen Launcher installiert ist.
+### 3. A game (e.g. from Ubisoft Connect, EA App, or on another drive) is missing — why?
+- **Are all drives scanned?** Yes, DLSS Manager automatically scans all drive letters from `A:\` to `Z:\` for Steam, Star Citizen, Battle.net, Epic Games, GOG, EA App, Ubisoft Connect, Xbox Game Pass, and generic game folders (`Games`, `Spiele`, `PC Games`).
+- **Important:** A game is only listed if its installation directory contains at least one supported **64-bit upscaler or streaming DLL** (`nvngx_dlss*.dll`, `sl.*.dll`, `libxess*.dll`, or `dstorage*.dll`).
+- **Note:** Older titles released before DLSS/XeSS/DirectStorage existed (such as *Tom Clancy's The Division 1* from 2016) do not ship with any of these DLLs and therefore do not appear as upscaler games.
+- If a game is installed in a non-standard directory, add the folder under **⚙️ Settings → Custom Game Folders** and click **🔍 Scan Games** in the sidebar.
 
 ---
 
-### 5. Warum kann ich bei Star Citizen die DLL nicht direkt per „⚡ Update“ ersetzen?
-- **Star Citizen** nutzt **EasyAntiCheat (EAC)**, das beim Start den exakten Datei-Hash von `Bin64\nvngx_dlss.dll` prüft. Würde die Datei auf der Festplatte ausgetauscht, würde EAC den Spielstart blockieren.
-- Da Star Citizen bereits mit DLSS 4.0 (`v310.2.1.0`) ausgeliefert wird, zeigt DLSS Manager dort **„🛡️ Nur Treiber-DRS“** an: Du lässt die Original-DLL im Spielordner unangetastet und aktivierst stattdessen **Preset K (Transformer Gen 2)** sicher über **„✨ Optimales Preset anwenden (Preset K)“** im NVIDIA-Treiber!
+### 4. Why did a game appear twice (e.g. under Steam and Epic Games) even though it was uninstalled on Epic?
+- Some uninstallers leave behind old folders containing a `.egstore` subdirectory (Epic) or leftover files in `steamapps\common\` or Battle.net.
+- **Solution (automatic):** DLSS Manager verifies every Epic Games folder against official Epic manifests (`C:\ProgramData\Epic\EpicGamesLauncher\Data\Manifests\*.item` with `bIsIncompleteInstall != true`), checks Steam folders against `appmanifest_*.acf`, verifies Battle.net games against active flavor executables (`_retail_`, `_classic_`), and drops generic standalone duplicates when the same game is already installed under an official launcher.
 
 ---
 
-### 6. Ein Spiel stürzt nach einem DLL-Update ab oder zeigt Grafikfehler – wie stelle ich das Original wieder her?
-DLSS Manager legt vor **jedem** Überschreiben einer DLL automatisch ein Backup der Originaldatei unter `%LOCALAPPDATA%\gOOvER\DLSS-Manager\backups\` an:
-- **Einzelne Technologie zurücksetzen:** Öffne das Spiel in DLSS Manager und klicke in der Zeile der jeweiligen Technologie (z. B. `DLSS` oder `Streamline`) auf **„⏪ Backup“**.
-- **Komplettes Spiel zurücksetzen:** Klicke unten im Spieldetails-Modal auf **„⏪ Alle Backups wiederherstellen“** oder wechsle links in den Reiter **🛡️ Backups** und klicke beim Spiel auf **„⏪ Original wiederherstellen“**.
+### 5. Why can't I replace the DLL on disk in Star Citizen using "⚡ Update"?
+- **Star Citizen** uses **EasyAntiCheat (EAC)**, which verifies the exact file hash of `Bin64\nvngx_dlss.dll` at launch. Replacing the file on disk causes EAC to block the game from starting.
+- Because Star Citizen already ships with DLSS 4.0 (`v310.2.1.0`), DLSS Manager displays **`🛡️ Driver DRS Only`**: keep the stock DLL untouched on disk and click **✨ Apply Optimal Preset (Preset K)** to activate **Preset K (Transformer Gen 2)** safely via the NVIDIA driver!
 
 ---
 
-### 7. Werden AMD FSR DLLs (`amd_fidelityfx_*.dll`) auch verwaltet?
-Nein. Auf Wunsch und zugunsten eines reinen Fokus auf **NVIDIA DLSS 4.5 / 5**, **NVIDIA Streamline**, **Intel XeSS 2** und **Microsoft DirectStorage** aus offiziellen Hersteller-Upstreams wurde AMD FSR ab `v1.0.0-beta.2` vollständig aus dem Scanner und Update-Katalog entfernt.
+### 6. A game crashes or shows visual artifacts after a DLL update — how do I restore the original DLL?
+DLSS Manager automatically backs up every original game DLL to `%LOCALAPPDATA%\gOOvER\DLSS-Manager\backups\` before replacing it:
+- **Restore a single technology:** Open the game in DLSS Manager and click **⏪ Restore** next to the specific technology row (e.g. `DLSS` or `Streamline`).
+- **Restore the entire game:** Click **⏪ Restore All Backups** in the Game Details modal footer, or switch to the **🛡️ Backups** tab in the sidebar and click **⏪ Restore Original**.
+
+---
+
+### 7. Are AMD FSR DLLs (`amd_fidelityfx_*.dll`) managed as well?
+No. Starting with `v1.0.0-beta.2`, AMD FSR was removed from the scanner and update catalog to focus exclusively on **NVIDIA DLSS 4.5 / 5**, **NVIDIA Streamline**, **Intel XeSS 2**, and **Microsoft DirectStorage** from official vendor upstreams.

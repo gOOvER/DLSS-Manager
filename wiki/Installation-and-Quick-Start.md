@@ -1,75 +1,75 @@
-# 🚀 Installation & Erste Schritte (Quick Start)
+# 🚀 Installation & Quick Start
 
-Diese Seite erklärt die Installation von **DLSS Manager**, warum Administrator-Rechte unter Windows benötigt werden, wo alle Daten gespeichert werden und wie du in einer Minute deine Spiele optimierst.
+This page explains how to install **DLSS Manager**, why Administrator privileges are required on Windows, where local files and backups are stored, and how to optimize your games in under a minute.
 
 ---
 
-## 📥 1. Installation unter Windows
+## 📥 1. Installation on Windows
 
-Du kannst **DLSS Manager** auf drei Arten nutzen:
+You can run **DLSS Manager** in three ways:
 
-### Option A: Portable Einzeldatei (`DLSS-Manager.exe`)
-- Lade `DLSS-Manager.exe` von der [**GitHub Releases**](https://github.com/gOOvER/DLSS-Manager/releases/latest)-Seite herunter oder nutze `dist\DLSS-Manager.exe`.
-- Es ist **keine Installation** erforderlich – die Datei enthält das gesamte Rust-Backend und die Benutzeroberfläche.
+### Option A: Standalone Portable Executable (`DLSS-Manager.exe`)
+- Download `DLSS-Manager.exe` from the [**GitHub Releases**](https://github.com/gOOvER/DLSS-Manager/releases/latest) page or run `dist\DLSS-Manager.exe`.
+- **Zero installation required** — the single executable embeds the entire Rust backend and UI.
 
-### Option B: Windows-Installer (`.exe` NSIS / `.msi`)
-- Lade das Setup (`DLSS.Manager_x.y.z_x64-setup.exe` oder `.msi`) von [**GitHub Releases**](https://github.com/gOOvER/DLSS-Manager/releases/latest) herunter.
-- Erstellt automatisch Startmenü- und Desktop-Verknüpfungen sowie einen Deinstallations-Eintrag.
+### Option B: Windows Installer (`.exe` NSIS / `.msi`)
+- Download the installer (`DLSS.Manager_x.y.z_x64-setup.exe` or `.msi`) from [**GitHub Releases**](https://github.com/gOOvER/DLSS-Manager/releases/latest).
+- Automatically creates Start Menu and Desktop shortcuts as well as an uninstaller entry.
 
 ### Option C: Winget (Windows Package Manager)
 ```powershell
 winget install "DLSS Manager"
 ```
 
-> **Voraussetzung unter Windows 10 / 11:** Die **Microsoft Edge WebView2 Runtime** (auf aktuellen Windows-10/11-Systemen bereits standardmäßig vorinstalliert).
+> **Windows 10 / 11 Requirement:** **Microsoft Edge WebView2 Runtime** (pre-installed by default on modern Windows 10 and Windows 11 systems).
 
 ---
 
-## 🛡️ 2. Warum Administrator-Rechte (UAC) wichtig sind
+## 🛡️ 2. Why Administrator Privileges (UAC) Are Required
 
-Seit `v1.0.0-beta.2` besitzt `DLSS-Manager.exe` ein eingebettetes Windows-UAC-Manifest (`requireAdministrator`). Falls die App ohne Admin-Rechte gestartet wird, erscheint auf dem **Hub** ein gelbes Warnbanner mit dem Button **„🛡️ Als Administrator neu starten“**.
+`DLSS-Manager.exe` includes an embedded Windows UAC application manifest (`requireAdministrator`). If launched without elevation, a warning banner appears on the **Hub** with a **🛡️ Relaunch as Administrator** button.
 
-Administrator-Rechte werden für vier Kernfunktionen benötigt:
-1. **NVIDIA Treiber-DRS (`nvapi64.dll`):** Das Schreiben und Löschen von globalen und spielspezifischen DLSS-Profilen in der NVIDIA-Treiberdatenbank (`C:\ProgramData\NVIDIA Corporation\Drs\nvdrsdb0.bin` / `nvdrsdb1.bin`).
-2. **NVIDIA App Override-Whitelist:** Das Patchen von `C:\ProgramData\NVIDIA Corporation\NVIDIA app\UpdateFramework\ota-artifacts\grd\post-processing\*\ApplicationStorage.json` und `%LOCALAPPDATA%\NVIDIA Corporation\NVIDIA app\CefCache\Default\fingerprint.db`.
-3. **NVIDIA Dienst-Neustart:** Das Neustarten von `NVDisplay.ContainerLocalSystem`, damit die NVIDIA App die freigeschaltete Whitelist neu einliest.
-4. **DLSS On-Screen Overlay (Registry):** Das Setzen von `ShowDlssIndicator` unter `HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NGXCore`.
+Administrator rights are required for four core operations:
+1. **NVIDIA Driver DRS (`nvapi64.dll`):** Writing and deleting global and per-game DLSS profiles inside the NVIDIA driver database (`C:\ProgramData\NVIDIA Corporation\Drs\nvdrsdb0.bin` / `nvdrsdb1.bin`).
+2. **NVIDIA App Override Whitelist:** Patching `C:\ProgramData\NVIDIA Corporation\NVIDIA app\UpdateFramework\ota-artifacts\grd\post-processing\*\ApplicationStorage.json` and `%LOCALAPPDATA%\NVIDIA Corporation\NVIDIA app\CefCache\Default\fingerprint.db`.
+3. **NVIDIA Service Restart:** Restarting `NVDisplay.ContainerLocalSystem` so NVIDIA App reloads the unlocked whitelist.
+4. **DLSS On-Screen Overlay (Registry):** Toggling `ShowDlssIndicator` under `HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NGXCore`.
 
 ---
 
-## 📂 3. Speicherorte & Automatische Migration (`AppData`)
+## 📂 3. Storage Locations & Automatic Migration (`AppData`)
 
-Alle lokalen Einstellungen, Backups und gecachten DLLs liegen zentral unter:
+All configuration files, backups, and cached binaries are stored under:
 
 ```text
 %LOCALAPPDATA%\gOOvER\DLSS-Manager\
 ```
-*(z. B. `C:\Users\<DeinName>\AppData\Local\gOOvER\DLSS-Manager\`)*
+*(e.g. `C:\Users\<YourName>\AppData\Local\gOOvER\DLSS-Manager\`)*
 
-| Datei / Ordner | Beschreibung |
+| File / Folder | Description |
 | :--- | :--- |
-| `config.json` | App-Konfiguration (Sprache `de`/`en`, Theme, globale DLSS-Presets, eigene Spieleordner, Blacklist, Steam- & Online-DB-API-Keys) |
-| `dlss_manager_v2.db` | Lokale SQLite-Datenbank (WAL + FTS5) mit allen erkannten Spielen, benutzerdefinierten Presets, Cover-URLs und Backup-Metadaten |
-| `backups\<game_id>\` | Automatischer Backup-Tresor für alle originalen Spiel-DLLs vor dem Überschreiben |
-| `dll_cache\` | Heruntergeladene und Authenticode-geprüfte Upscaler-DLLs (`nvngx_dlss.dll`, `sl.*.dll`, `libxess.dll`, `dstorage.dll` usw.) |
-| `artwork_cache\` | Lokal zwischengespeicherte Steam-Hero- und Cover-Bilder |
-| `game_compat_db_cache.json` | Offline-Cache der zuletzt von `dlssdb.goover.dev` synchronisierten Kompatibilitätsdatenbank |
+| `config.json` | App configuration (language `de`/`en`, theme, global DLSS presets, custom game folders, blacklist, Steam & Online-DB API keys) |
+| `dlss_manager_v2.db` | Local SQLite database (WAL + FTS5) storing discovered games, per-game preset overrides, cover URLs, and backup metadata |
+| `backups\<game_id>\` | Automatic backup vault for all original game DLLs prior to replacement |
+| `dll_cache\` | Downloaded and Authenticode-verified upscaler binaries (`nvngx_dlss.dll`, `sl.*.dll`, `libxess.dll`, `dstorage.dll`, etc.) |
+| `artwork_cache\` | Locally cached Steam hero and portrait cover images |
+| `game_compat_db_cache.json` | Offline cache of the game compatibility database synced from `dlssdb.goover.dev` |
 
-> 💡 **Automatische Migration:** Falls auf deinem System noch ein alter Ordner `%LOCALAPPDATA%\Recol\DLSS-Updater` existiert, migriert **DLSS Manager** beim ersten Start automatisch alle Einstellungen, Datenbanken, Backups und Caches nach `%LOCALAPPDATA%\gOOvER\DLSS-Manager`.
+> 💡 **Automatic Legacy Migration:** If a legacy `%LOCALAPPDATA%\Recol\DLSS-Updater` folder exists on your PC, **DLSS Manager** automatically migrates your configuration, SQLite database, backups, and caches to `%LOCALAPPDATA%\gOOvER\DLSS-Manager` on first launch.
 
-Über **ℹ️ Info → System- & Speicher-Diagnose** kannst du den AppData-Ordner, den DLL-Cache und den Backup-Tresor jederzeit mit einem Klick im Windows Explorer öffnen.
+You can open the AppData directory, DLL cache, and Backups vault at any time from **ℹ️ Info → System & Storage Diagnostics**.
 
 ---
 
-## ⚡ 4. Schnellstart in 4 Schritten
+## ⚡ 4. Quick Start in 4 Steps
 
-1. **Spiele scannen (passiert beim Start automatisch):**
-   - Beim Start durchsucht DLSS Manager automatisch alle Laufwerke (`A:\` bis `Z:\`) nach Spielen aus **9 Launchern** (Steam, Star Citizen, Battle.net, Epic Games, GOG, EA App, Ubisoft Connect, Xbox Game Pass & eigene Ordner).
-2. **NVIDIA App Whitelist freischalten (auf dem Hub):**
-   - Falls auf dem **Hub** unter **„🛡️ NVIDIA App Override-Status“** angezeigt wird, dass Spiele durch die NVIDIA App blockiert werden, klicke auf **„🔓 Alle Spiele freischalten“**. Dadurch überschreibt die NVIDIA App deine DLSS-Presets nicht mehr.
-3. **DLLs aktualisieren & Optimales Preset aktivieren:**
-   - Öffne die **🎮 Spiele**-Ansicht und klicke auf ein Spiel (oder direkt auf **⚡ Update** auf der Spielkarte).
-   - Im **Spieldetails-Modal** siehst du alle erkannten Technologien (`DLSS`, `DLSS-RR`, `DLSS-G`, `Streamline`, `XeSS`, `DirectStorage`) sowie die Box **„🎛️ Angewendete NVIDIA DLSS Presets (Treiber-DRS)“**.
-   - Klicke auf **„✨ Optimales Preset anwenden (Preset K)“** oder wähle dein Wunsch-Preset im Dropdown aus – es wird sofort live in den NVIDIA-Treiber geschrieben (`Treiber-Live: Preset K`).
-4. **Im Spiel überprüfen (Optional):**
-   - Schalte oben in der Topbar den Schalter **„DLSS-Overlay“** ein. Beim nächsten Spielstart zeigt NVIDIA unten links im Spiel exakt an, welche DLSS-Version und welches Preset (`Preset K`, `Transformer Gen 2`) aktiv rendert.
+1. **Scan Games (runs automatically on startup):**
+   - On launch, DLSS Manager scans all connected drives (`A:\` to `Z:\`) for installed games across **9 launchers** (Steam, Star Citizen, Battle.net, Epic Games, GOG, EA App, Ubisoft Connect, Xbox Game Pass & Custom Folders).
+2. **Unlock NVIDIA App Override Whitelist (on the Hub):**
+   - If the **🛡️ NVIDIA App Override Status** card on the **Hub** reports that games are locked by NVIDIA App, click **🔓 Unlock All Games**. This prevents NVIDIA App from resetting your DLSS presets back to `0`.
+3. **Update DLLs & Apply Optimal Preset:**
+   - Open the **🎮 Games** view and click any game card (or click **⚡ Update** directly on the card footer).
+   - Inside the **Game Details Modal**, inspect all detected technologies (`DLSS`, `DLSS-RR`, `DLSS-G`, `Streamline`, `XeSS`, `DirectStorage`) and the **🎛️ Applied NVIDIA DLSS Presets (Driver DRS)** panel.
+   - Click **✨ Apply Optimal Preset (Preset K)** or select any preset from the dropdown — it is written immediately to the NVIDIA driver (`Driver Live: Preset K`).
+4. **Verify In-Game (Optional):**
+   - Toggle **DLSS Overlay** on in the top bar. Next time you launch a game with DLSS enabled, NVIDIA displays an on-screen indicator in the bottom-left corner showing the exact DLSS version and active preset (`Preset K`, `Transformer Gen 2`).

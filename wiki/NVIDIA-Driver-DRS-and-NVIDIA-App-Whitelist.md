@@ -1,90 +1,90 @@
-# 🎛️ NVIDIA Treiber-DRS (`nvapi64.dll`) & NVIDIA App Whitelist
+# 🎛️ NVIDIA Driver DRS (`nvapi64.dll`) & NVIDIA App Whitelist
 
-Eine der mächtigsten Funktionen von **DLSS Manager** ist die direkte Steuerung der **NVIDIA Driver Settings (DRS)** über `nvapi64.dll` in Kombination mit dem **NVIDIA App Override-Whitelist-Unlocker**.
+One of **DLSS Manager**'s most powerful capabilities is direct **NVIDIA Driver Settings (DRS)** configuration via `nvapi64.dll`, combined with the **1-Click NVIDIA App Override Whitelist Unlocker**.
 
 ---
 
-## 1. Wie funktioniert NVIDIA Treiber-DRS (`nvapi64.dll`)?
+## 1. How NVIDIA Driver DRS (`nvapi64.dll`) Works
 
-Anstatt inoffizielle Wrapper-DLLs in den Spielordner zu injizieren (was von Anti-Cheat-Systemen wie EasyAntiCheat blockiert wird), spricht DLSS Manager direkt die offizielle Treiber-Schnittstelle `nvapi64.dll` von NVIDIA an.
+Instead of injecting unsigned third-party wrapper DLLs into game directories (which triggers anti-cheat blocks in EasyAntiCheat and BattlEye), DLSS Manager communicates directly with NVIDIA's official driver interface `nvapi64.dll`.
 
-### Verwendete NVAPI DRS Setting-IDs
+### NVAPI DRS Setting IDs Used
 
-| Funktion | NVAPI Setting-ID (Hex) | Werte |
+| Function | NVAPI Setting ID (Hex) | Values |
 | :--- | :--- | :--- |
-| **DLSS-SR Override aktivieren** | `0x10E41DF3` | `1` = Aktiv, *gelöscht* bei `Default` (`0` bedeutet im Treiber „Durch NVIDIA App gesperrt“!) |
-| **DLSS-SR Render-Preset** | `0x10E41DF7` | `0x01`–`0x06` (`Preset A–F`), `0x0A` (`Preset J`), `0x0B` (`Preset K`), `0x0C` (`Preset L`), `0x0D` (`Preset M`), `0x00FFFFFF` (`Latest`) |
-| **DLSS-RR Override aktivieren** | `0x10E41DF5` | `1` = Aktiv, *gelöscht* bei `Default` |
-| **DLSS-RR Render-Preset** | `0x10E41DF8` | `0x04` (`Preset D`), `0x06` (`Preset F`), `0x00FFFFFF` (`Latest`) |
-| **DLSS-FG Override aktivieren** | `0x10E41DF4` | `1` = Aktiv, *gelöscht* bei `Default` |
-| **DLSS-FG Render-Preset** | `0x10E41DF6` | `0x01` (`Preset A`), `0x02` (`Preset B`), `0x00FFFFFF` (`Latest`) |
-| **Streamline Override Gate** | `0x10E41E06` | Wird von der NVIDIA App als Sperr-Gate (`0`) missbraucht; wird von DLSS Manager automatisch bereinigt |
-| **DLSS-G Multi-Frame Gen (MFG)** | `0x10308298`, `0x104D6667`, `0x10562D0F`, `0x10CF4125` | Steuert MFG-Modus (`Default`, `Fixed`, `Dynamic`, `Off`), Multiplikator (`2×–6×`) und Dynamic Ziel-FPS |
+| **DLSS-SR Override Enable** | `0x10E41DF3` | `1` = Enabled, *deleted* on `Default` (`0` means "Explicitly blocked by NVIDIA App"!) |
+| **DLSS-SR Render Preset** | `0x10E41DF7` | `0x01`–`0x06` (`Preset A–F`), `0x0A` (`Preset J`), `0x0B` (`Preset K`), `0x0C` (`Preset L`), `0x0D` (`Preset M`), `0x00FFFFFF` (`Latest`) |
+| **DLSS-RR Override Enable** | `0x10E41DF5` | `1` = Enabled, *deleted* on `Default` |
+| **DLSS-RR Render Preset** | `0x10E41DF8` | `0x04` (`Preset D`), `0x06` (`Preset F`), `0x00FFFFFF` (`Latest`) |
+| **DLSS-FG Override Enable** | `0x10E41DF4` | `1` = Enabled, *deleted* on `Default` |
+| **DLSS-FG Render Preset** | `0x10E41DF6` | `0x01` (`Preset A`), `0x02` (`Preset B`), `0x00FFFFFF` (`Latest`) |
+| **Streamline Override Gate** | `0x10E41E06` | Used by NVIDIA App as a blocking gate (`0`); automatically cleaned by DLSS Manager |
+| **DLSS-G Multi-Frame Gen (MFG)** | `0x10308298`, `0x104D6667`, `0x10562D0F`, `0x10CF4125` | Controls MFG Mode (`Default`, `Fixed`, `Dynamic`, `Off`), Multiplier (`2×–6×`), and Dynamic Target FPS |
 
-### Wichtig: Warum `DeleteProfileSetting` statt `0` bei „Default“?
-Im NVIDIA-Treiber bedeutet der Wert `0` bei `0x10E41DF3` **nicht** „Standard“, sondern **„DLSS-Override explizit für dieses Spiel verbieten“**!  
-Wenn du in DLSS Manager ein Preset auf `Default` zurücksetzt, ruft DLSS Manager deshalb sauber `NvAPI_DRS_DeleteProfileSetting` auf. Dadurch wird die Sperre komplett aus dem Spielprofil gelöscht, sodass globale Presets oder die Spieleinstellung wieder normal greifen.
+### Crucial Detail: Why `DeleteProfileSetting` Instead of Writing `0` on "Default"?
+In the NVIDIA driver, setting `0x10E41DF3` to `0` does **not** mean "Inherit Default" — it means **"Explicitly forbid DLSS overrides for this application"**!  
+Whenever you reset a game preset to `Default` in DLSS Manager, it invokes `NvAPI_DRS_DeleteProfileSetting` to remove the setting cleanly from the game profile so global presets or in-game defaults work normally.
 
 ---
 
-## 2. Warum überschreibt die NVIDIA App Presets wieder auf `0`?
+## 2. Why Does NVIDIA App Reset Presets Back to `0`?
 
-Wenn die **NVIDIA App** auf deinem PC installiert ist, lädt deren Hintergrunddienst (`NVDisplay.ContainerLocalSystem`) regelmäßig eine interne Whitelist:
+When **NVIDIA App** is installed on your PC, its background service (`NVDisplay.ContainerLocalSystem`) periodically evaluates an internal application whitelist:
 
-1. **`ApplicationStorage.json`** unter:
+1. **`ApplicationStorage.json`** located at:
    ```text
    C:\ProgramData\NVIDIA Corporation\NVIDIA app\UpdateFramework\ota-artifacts\grd\post-processing\*\ApplicationStorage.json
    ```
-2. **`fingerprint.db`** (Chromium/CEF-Cache der NVIDIA App) unter:
+2. **`fingerprint.db`** (NVIDIA App's CEF cache) located at:
    ```text
    %LOCALAPPDATA%\NVIDIA Corporation\NVIDIA app\CefCache\Default\fingerprint.db
    ```
 
-Für Spiele, die von NVIDIA noch nicht offiziell für die NVIDIA-App-Oberfläche freigeschaltet wurden (wie z. B. **Star Citizen**), stehen in dieser Liste standardmäßig folgende Sperr-Flags:
+For games that NVIDIA has not yet officially whitelisted in the NVIDIA App UI (such as **Star Citizen**), these files contain blocking flags by default:
 - `"Disable_SR_Override": true`
 - `"Disable_RR_Override": true`
 - `"Disable_FG_Override": true`
 - `"Disable_SR_Model_Override": true`
 - `"Disable_RR_Model_Override": true`
 
-Sobald die NVIDIA App im Hintergrund startet oder synchronisiert, liest sie diese `true`-Flags und schreibt aktiv **`0x10E41DF3 = 0`** (Blockiert!) in das NVIDIA-Treiberprofil des Spiels!
+Whenever NVIDIA App starts or syncs in the background, it reads those `true` flags and actively writes **`0x10E41DF3 = 0`** (Blocked!) into the game's NVIDIA driver profile!
 
 ---
 
-## 3. Die Lösung: 1-Klick NVIDIA App Override-Whitelist in DLSS Manager
+## 3. The Solution: 1-Click NVIDIA App Override Whitelist Unlocker
 
-DLSS Manager löst dieses Problem auf drei Ebenen:
+DLSS Manager solves this on three levels:
 
-### Ebene 1: 1-Klick Whitelist-Unlocker (`🔓 Alle Spiele freischalten`)
-Auf dem **Hub** (und unter **⚙️ Einstellungen → Globale NVIDIA DLSS-Presets**) prüft DLSS Manager beim Start automatisch den Status deiner NVIDIA App:
-- Ein Klick auf **„🔓 Alle Spiele freischalten“** legt automatisch ein Backup (`ApplicationStorage.json.dlss_manager.bak` & `fingerprint.db.dlss_manager.bak`) an.
-- Alle `Disable_FG_Override`, `Disable_RR_Override`, `Disable_SR_Override`, `Disable_RR_Model_Override` und `Disable_SR_Model_Override`-Einträge werden in `ApplicationStorage.json` und `fingerprint.db` auf `false` (`0`) gesetzt und `IsOpsSupported` aktiviert.
-- Über **„🔄 NVIDIA Dienst neu starten“** wird der Hintergrunddienst neu geladen, sodass die NVIDIA App kein einziges Spiel mehr zurücksetzt.
+### Level 1: 1-Click Whitelist Unlocker (`🔓 Unlock All Games`)
+On the **Hub** (and under **⚙️ Settings → Global NVIDIA DLSS Presets**), DLSS Manager automatically checks your NVIDIA App whitelist status on startup:
+- Clicking **🔓 Unlock All Games** creates automatic backups (`ApplicationStorage.json.dlss_manager.bak` & `fingerprint.db.dlss_manager.bak`).
+- It flips all `Disable_FG_Override`, `Disable_RR_Override`, `Disable_SR_Override`, `Disable_RR_Model_Override`, and `Disable_SR_Model_Override` flags in `ApplicationStorage.json` and `fingerprint.db` to `false` (`0`) and enables `IsOpsSupported`.
+- Clicking **🔄 Restart NVIDIA Service** reloads `NVDisplay.ContainerLocalSystem` so NVIDIA App stops reverting your overrides.
 
-### Ebene 2: Automatische Bereinigung von `0`-Blockaden im Treiberprofil
-Selbst wenn du ein Spiel auf `Default` (Globales Preset erben) belässt, prüft DLSS Manager beim Start (`clear_game_dlss_profile_blocks`), ob die NVIDIA App heimlich eine `0`-Sperre in das Spielprofil (z. B. `"Squadron 42 - Star Citizen"`) geschrieben hat, und löscht diese Sperre automatisch aus dem Treiber.
+### Level 2: Automatic Cleanup of `0`-Blocks in Driver Profiles
+Even if a game is left on `Default` (inheriting your Global preset), DLSS Manager inspects its per-game DRS profile on startup (`clear_game_dlss_profile_blocks`) and automatically deletes any stale `0`-blocks placed by NVIDIA App (e.g. on `"Squadron 42 - Star Citizen"`).
 
-### Ebene 3: Live-DRS-Readback im Spieldetails-Modal (`Treiber-Live`)
-Wenn du ein Spiel in DLSS Manager anklickst, liest DLSS Manager per `NvAPI_DRS_GetSetting` in Echtzeit den tatsächlichen Zustand aus dem NVIDIA-Treiber aus und zeigt ein Live-Badge an:
-- **`🟢 Treiber-Live: Preset K`** → Das Preset ist aktiv und im NVIDIA-Treiber verifiziert.
-- **`🟠 ⚠️ Treiber-DRS: Durch NVIDIA App blockiert (0)`** → Die NVIDIA App hat eine `0`-Sperre gesetzt (ein Klick auf **🔓 Alle Spiele freischalten** oder erneutes Auswählen des Presets behebt dies sofort).
+### Level 3: Live DRS Readback in Game Details (`Driver Live`)
+Whenever you open a game's details modal, DLSS Manager queries `NvAPI_DRS_GetSetting` in real time and displays a live verification badge:
+- **`🟢 Driver Live: Preset K`** → The preset is active and verified in the live NVIDIA driver.
+- **`🟠 ⚠️ Driver DRS: Blocked by NVIDIA App (0)`** → NVIDIA App wrote a `0`-block (clicking **🔓 Unlock All Games** or re-selecting your preset clears it immediately).
 
 ---
 
-## 4. Lokaler NVIDIA NGX OTA-Modell-Cache
+## 4. Local NVIDIA NGX OTA Model Cache
 
-Moderne NVIDIA-Treiber laden aktualisierte DLSS-4.5-Modelle automatisch über NVIDIAs **NGX Over-The-Air (OTA)**-System herunter und legen sie verschlüsselt/signiert hier ab:
+Modern NVIDIA drivers automatically download updated DLSS 4.5 model weights via NVIDIA's **NGX Over-The-Air (OTA)** system and store them under:
 ```text
 C:\ProgramData\NVIDIA\NGX\models\dlss\versions\
 ```
-DLSS Manager zeigt die höchste lokal installierte **NGX OTA-Version** (z. B. `v310.5.3` / `v310.9.16`) direkt im NVIDIA-App-Statusbanner auf dem Hub an. Dank dieses NGX-Caches kann der NVIDIA-Treiber selbst bei Spielen mit älterer DLSS-4.0-DLL auf der Festplatte (wie Star Citizen mit `v310.2.1.0`) zur Laufzeit das neuere Transformer-Gen-2-Modell (**Preset K**) einspeisen, sobald das Treiber-DRS-Override aktiv ist!
+DLSS Manager displays the highest locally installed **NGX OTA version** (e.g. `v310.5.3` / `v310.9.16`) directly in the NVIDIA App status bar on the Hub. Thanks to this NGX cache, the NVIDIA driver can inject newer Transformer Gen 2 model weights (**Preset K**) at runtime even in games whose on-disk DLL is an older DLSS 4.0 build (like Star Citizen's `v310.2.1.0`)!
 
 ---
 
-## 5. Überprüfung im Spiel: Das DLSS On-Screen Overlay
+## 5. In-Game Verification: The DLSS On-Screen Overlay
 
-Du möchtest im Spiel mit eigenen Augen sehen, ob **Preset K** und **DLSS 4.5** laufen?
-1. Aktiviere oben rechts in der Topbar von DLSS Manager den Schalter **„DLSS-Overlay“** (setzt `HKLM\SOFTWARE\NVIDIA Corporation\Global\NGXCore\ShowDlssIndicator = 0x400`).
-2. Starte dein Spiel mit aktiviertem DLSS.
-3. Unten links im Spielbildschirm blendet NVIDIA nun einen kleinen Textblock ein, der die aktive **DLSS-DLL-Version**, die **Render-Auflösung** und das aktive **Preset (`Preset K`, `Transformer`)** live anzeigt.
-4. Schalte den Schalter nach der Kontrolle einfach wieder aus.
+Want to verify in-game that **Preset K** and **DLSS 4.5** are actively rendering?
+1. Enable the **DLSS Overlay** toggle in the top bar of DLSS Manager (writes `HKLM\SOFTWARE\NVIDIA Corporation\Global\NGXCore\ShowDlssIndicator = 0x400`).
+2. Launch your game with DLSS enabled.
+3. Look at the bottom-left corner of the screen: NVIDIA's official NGX overlay displays the active **DLSS DLL version**, **internal render resolution**, and **active preset (`Preset K`, `Transformer`)** in real time.
+4. Toggle **DLSS Overlay** back off when finished.

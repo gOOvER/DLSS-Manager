@@ -1,60 +1,59 @@
-# 🎮 Unterstützte Launcher, Star Citizen & Anti-Cheat-Schutz
+# 🎮 Supported Launchers, Star Citizen & Anti-Cheat Protection
 
-**DLSS Manager** durchsucht automatisch alle angeschlossenen Festplatten und SSDs (`A:\` bis `Z:\`) nach installierten Spielen aus **9 Launchern** und schützt dich zuverlässig vor Anti-Cheat-Konflikten sowie verwaisten Deinstallations-Ordnern.
+**DLSS Manager** automatically scans all connected drives (`A:\` through `Z:\`) for installed games across **9 launchers** while protecting against anti-cheat conflicts and leftover uninstalled folders.
 
 ---
 
-## 1. Alle 9 unterstützten Spiele-Launcher im Überblick
+## 1. All 9 Supported Game Launchers
 
-| Launcher | Erkennungs- & Verifizierungs-Mechanismus | Besonderheiten |
+| Launcher | Detection & Verification Mechanism | Key Features |
 | :--- | :--- | :--- |
-| **Steam** | Windows Registry (`HKCU`/`HKLM`) + `libraryfolders.vdf` + `appmanifest_*.acf` + `loginusers.vdf` | Filtert deinstallierte Restordner in `steamapps\common` anhand vorhandener `.acf`-Manifeste; erkennt automatisch deine `Steam64 ID` und löst 2025/2026 SHA-1-gehashte Cover- & Hero-Bilder auf |
-| **Star Citizen (RSI Launcher)** | `%APPDATA%\rsilauncher\logs\log.log` + Laufwerks-Scan (`StarCitizen\LIVE`, `PTU`, `EPTU`, `TECH-PREVIEW`, `HOTFIX`) | Eigene Spielkarte pro Kanal (`LIVE`, `PTU` usw.), automatische Bindung an das NVIDIA-Treiberprofil `"Squadron 42 - Star Citizen"`, offizielles Star-Citizen-Cover & EAC-Schutzmodus |
-| **Battle.net** | `C:\ProgramData\Battle.net\Agent\product.db` (Protobuf-Parser) + Windows Uninstall Registry | Prüft aktive Flavor-Unterordner (`_retail_`, `_classic_`, `_ptr_`, `_beta_`) auf echte Spiel-Executables und ignoriert leere/deinstallierte Geisterordner |
-| **Epic Games** | `C:\ProgramData\Epic\EpicGamesLauncher\Data\Manifests\*.item` + `LauncherInstalled.dat` | Verifiziert jeden Ordner mit `.egstore` gegen echte Epic-Manifeste (`bIsIncompleteInstall != true`), damit alte Restordner nicht fälschlich als installiert angezeigt werden |
-| **GOG Galaxy** | `HKLM\SOFTWARE\WOW6432Node\GOG.com\Games\*` + Laufwerks-Scan (`GOG Games`) | Erkennt Installationspfad, Titel und primäre `.exe` direkt aus der GOG-Registry |
-| **EA App / Origin** | `C:\ProgramData\EA Desktop\InstallData` + Registry + Laufwerks-Scan (`EA Games`) | Automatischer Scan aller EA-Desktop-Bibliotheken auf allen Laufwerken |
-| **Ubisoft Connect** | `HKLM\SOFTWARE\WOW6432Node\Ubisoft\Launcher\Installs\*` + Laufwerks-Scan (`Ubisoft Game Launcher\games`) | Erkennt alle Ubisoft-Connect-Installationen über Registry und Laufwerksbibliotheken |
-| **Xbox / PC Game Pass** | `.GamingRoot` + `MicrosoftGame.config` auf allen Laufwerken (`XboxGames`) | Löst `Content\`-Unterordner, Anzeigenamen und lokale Splash-/Logo-Grafiken aus `MicrosoftGame.config` auf |
-| **Eigene Ordner (Custom)** | Frei konfigurierbar unter **⚙️ Einstellungen → Eigene Spieleordner** + Laufwerks-Scan (`Games`, `Spiele`, `PC Games`) | Akzeptiert sowohl einzelne Spielordner als auch übergeordnete Bibliotheksordner mit vielen Spielen; verwirft automatisch Duplikate, falls ein Spiel bereits unter einem offiziellen Launcher erkannt wurde |
+| **Steam** | Windows Registry (`HKCU`/`HKLM`) + `libraryfolders.vdf` + `appmanifest_*.acf` + `loginusers.vdf` | Filters uninstalled leftover folders in `steamapps\common` against active `.acf` manifests; auto-detects your `Steam64 ID` and resolves 2025/2026 SHA-1 hashed cover & hero artwork |
+| **Star Citizen (RSI Launcher)** | `%APPDATA%\rsilauncher\logs\log.log` + multi-drive scan (`StarCitizen\LIVE`, `PTU`, `EPTU`, `TECH-PREVIEW`, `HOTFIX`) | Dedicated card per channel (`LIVE`, `PTU`, etc.), automatic binding to the `"Squadron 42 - Star Citizen"` NVIDIA DRS profile, built-in cover artwork & EAC-safe DRS mode |
+| **Battle.net** | `C:\ProgramData\Battle.net\Agent\product.db` (Protobuf parser) + Windows Uninstall Registry | Verifies active flavor subdirectories (`_retail_`, `_classic_`, `_ptr_`, `_beta_`) for real game executables and filters uninstalled ghost folders |
+| **Epic Games** | `C:\ProgramData\Epic\EpicGamesLauncher\Data\Manifests\*.item` + `LauncherInstalled.dat` | Verifies every `.egstore` directory against active Epic manifests (`bIsIncompleteInstall != true`) so leftover folders from uninstalled games are ignored |
+| **GOG Galaxy** | `HKLM\SOFTWARE\WOW6432Node\GOG.com\Games\*` + multi-drive scan (`GOG Games`) | Resolves install paths, titles, and primary executables directly from the GOG registry |
+| **EA App / Origin** | `C:\ProgramData\EA Desktop\InstallData` + Registry + multi-drive scan (`EA Games`) | Automatic discovery of EA Desktop libraries across all drives |
+| **Ubisoft Connect** | `HKLM\SOFTWARE\WOW6432Node\Ubisoft\Launcher\Installs\*` + multi-drive scan (`Ubisoft Game Launcher\games`) | Detects all Ubisoft Connect installations via registry and drive libraries |
+| **Xbox / PC Game Pass** | `.GamingRoot` + `MicrosoftGame.config` across all drives (`XboxGames`) | Resolves `Content\` subdirectories, display names, and local splash/logo artwork from `MicrosoftGame.config` |
+| **Custom Folders** | User-configured directories in **⚙️ Settings → Custom Game Folders** + drive scan (`Games`, `Spiele`, `PC Games`) | Accepts both single game folders and multi-game parent libraries; automatically drops standalone duplicates if a game is already installed under an official launcher |
 
 ---
 
-## 2. 🚀 Spezial-Guide: Star Citizen & EasyAntiCheat (EAC)
+## 2. 🚀 Special Guide: Star Citizen & EasyAntiCheat (EAC)
 
-**Star Citizen** ist eines der beliebtesten Spiele für DLSS 4 / 4.5 Transformer-Upscaling (deutlich schärfere MFD-Displays im Cockpit, klarere HUD-Schriften und ruhigere Schiffskanten in der Distanz), besitzt aber zwei technische Besonderheiten:
+**Star Citizen** benefits tremendously from DLSS 4 / 4.5 Transformer upscaling (much sharper cockpit MFD text, cleaner HUD elements, and crisp distant ship hulls), but has two important technical characteristics:
 
-### Warum darf `Bin64\nvngx_dlss.dll` in Star Citizen nicht auf der Festplatte ersetzt werden?
-1. Star Citizen wird durch **EasyAntiCheat (EAC)** geschützt. Beim Spielstart prüft EAC die Datei-Hashes sämtlicher Dateien im Ordner `LIVE\Bin64\` gegen das offizielle CIG-Manifest.
-2. Wird `Bin64\nvngx_dlss.dll` manuell durch eine neuere DLL überschrieben, verweigert EasyAntiCheat den Spielstart mit einer File-Integrity-Warnung (obwohl die neue DLL offiziell von NVIDIA signiert ist, weil ihr Hash nicht mit dem CIG-Patch-Manifest übereinstimmt).
+### Why Must `Bin64\nvngx_dlss.dll` Not Be Replaced on Disk in Star Citizen?
+1. Star Citizen uses **EasyAntiCheat (EAC)**, which verifies the file hashes of all files inside `LIVE\Bin64\` against CIG's official build manifest at launch.
+2. If `Bin64\nvngx_dlss.dll` is replaced on disk with a newer DLL, EasyAntiCheat blocks the game from launching with a file integrity violation (even though the newer DLL carries an official NVIDIA signature, because its hash differs from CIG's patch manifest).
 
-### Wie aktiviert man trotzdem DLSS 4.5 / Preset K in Star Citizen?
-- Star Citizen liefert ab Werk bereits **`nvngx_dlss.dll v310.2.1.0`** (DLSS 4.0) aus.
-- Deshalb schaltet DLSS Manager Star Citizen automatisch in den geschützten Modus **„🛡️ Nur Treiber-DRS (Original-DLL EAC-geschützt)“**:
-  - Die Datei `Bin64\nvngx_dlss.dll` auf der Festplatte bleibt unangetastet (100 % EAC-sicher!).
-  - Über **„✨ Optimales Preset anwenden (Preset K)“** schreibt DLSS Manager das Override-Flag (`0x10E41DF3 = 1`) und **`Preset K` (`0x10E41DF7 = 0x0B`)** direkt in das NVIDIA-Treiberprofil **`"Squadron 42 - Star Citizen"`** (`starcitizen.exe`).
-  - Gleichzeitig hebt der **NVIDIA App Whitelist-Unlocker** (`🔓 Alle Spiele freischalten`) NVIDIAs Sperre für Star Citizen auf und nutzt das aktuelle NGX-OTA-Modell aus dem NVIDIA-Treiber.
+### How to Enable DLSS 4.5 / Preset K Safely in Star Citizen
+- Star Citizen already ships with **`nvngx_dlss.dll v310.2.1.0`** (DLSS 4.0) out of the box.
+- DLSS Manager therefore places Star Citizen automatically into **`🛡️ Driver DRS Only (Stock DLL EAC Protected)`** mode:
+  - The on-disk `Bin64\nvngx_dlss.dll` file remains completely untouched (100% EAC-safe!).
+  - Clicking **✨ Apply Optimal Preset (Preset K)** writes the override enable flag (`0x10E41DF3 = 1`) and **`Preset K` (`0x10E41DF7 = 0x0B`)** directly into the NVIDIA driver profile **`"Squadron 42 - Star Citizen"`** (`starcitizen.exe`).
+  - Combined with the **NVIDIA App Whitelist Unlocker** (`🔓 Unlock All Games`), the NVIDIA driver overrides Star Citizen's default CNN fallback (`r.TSR.UpscalingPreset = 0` / `Preset E`) and runs **Preset K (Transformer)** with the latest NGX OTA model weights.
 
-### Empfohlene In-Game Einstellungen für Star Citizen
-- **Graphics Renderer:** `Vulkan` *(oder DirectX 11)*
-- **Upscaling:** `DLSS` (`Quality` oder `Balanced` bei 1440p / 4K)
-- **NVIDIA Treiber-DRS Preset:** `Preset K` *(Transformer Gen 2)*
-- **Hinweis zu `r.TSR.UpscalingPreset`:** Ohne aktives NVIDIA-Treiber-DRS-Override fordert Star Citizen intern `Preset E` (CNN) an (`r.TSR.UpscalingPreset = 0`). Erst durch das Treiber-DRS-Override in DLSS Manager wird im Treiber **Preset K (Transformer)** erzwungen.
+### Recommended In-Game Settings for Star Citizen
+- **Graphics Renderer:** `Vulkan` *(or DirectX 11)*
+- **Upscaling:** `DLSS` (`Quality` or `Balanced` at 1440p / 4K)
+- **NVIDIA Driver DRS Preset:** `Preset K` *(Transformer Gen 2)*
 
 ---
 
-## 3. 🛡️ Anti-Cheat-Stufen & Authenticode-Signaturprüfung
+## 3. 🛡️ Anti-Cheat Tiers & Authenticode Signature Verification
 
-### Die 4 Anti-Cheat-Kategorien in DLSS Manager
+### The 4 Anti-Cheat Categories in DLSS Manager
 
-| Badge | Status-Code | Bedeutung & Verhalten in DLSS Manager |
+| Badge | Status Code | Meaning & Behavior in DLSS Manager |
 | :--- | :--- | :--- |
-| **🟢 Sicher (Voller DLL-Tausch & DRS)** | `safe` | Kein restriktives Anti-Cheat vorhanden (z. B. *Cyberpunk 2077*). Sowohl der direkte Austausch der DLL-Dateien als auch NVIDIA Treiber-DRS-Presets sind uneingeschränkt nutzbar. |
-| **🟡 Nur signierte DLLs & Treiber-DRS** | `signed_only` | Das Spiel nutzt Anti-Cheat (z. B. *Diablo IV*, *Overwatch 2*, *Call of Duty*), akzeptiert aber offiziell von NVIDIA/Intel/Microsoft digital signierte Original-DLLs sowie Treiber-DRS-Presets. Keine unsignierten Drittanbieter-Wrapper injizieren! |
-| **🟠 Nur Treiber-DRS empfohlen** | `driver_override_only` / `drs_only` | EasyAntiCheat prüft den exakten Datei-Hash der mitgelieferten DLL (z. B. *Star Citizen*). DLSS Manager sperrt den direkten DLL-Button im Spiel-Modal (`🛡️ Nur Treiber-DRS`), damit die Original-DLL intakt bleibt, und konfiguriert das Spiel sicher über das NVIDIA Treiber-DRS-Preset. |
-| **🔴 Durch Anti-Cheat blockiert** | `blocked` | Strenges Kernel-Anti-Cheat blockiert jegliche DLL-Modifikation auf der Festplatte. Nutze ausschließlich das globale oder spielspezifische NVIDIA Treiber-DRS-Preset. |
+| **🟢 Safe (Full DLL Swap & DRS)** | `safe` | No restrictive anti-cheat present (e.g. *Cyberpunk 2077*). Both on-disk DLL updates and NVIDIA Driver DRS presets work without restriction. |
+| **🟡 Signed DLLs & Driver DRS Only** | `signed_only` | Game uses anti-cheat (e.g. *Diablo IV*, *Overwatch 2*, *Call of Duty*), but accepts official digitally signed NVIDIA/Intel/Microsoft binaries and Driver DRS presets. Do not inject unsigned third-party wrappers! |
+| **🟠 Driver DRS Override Recommended** | `driver_override_only` / `drs_only` | EasyAntiCheat checks the exact file hash of the bundled DLL (e.g. *Star Citizen*). DLSS Manager locks the on-disk DLL update button (`🛡️ Driver DRS Only`) to keep the original DLL intact and configures the game safely via NVIDIA Driver DRS. |
+| **🔴 Blocked by Anti-Cheat** | `blocked` | Strict kernel anti-cheat blocks on-disk DLL modifications. Use global or per-game NVIDIA Driver DRS presets only. |
 
-### Automatische PE- & Authenticode-Prüfung (`WinVerifyTrust`)
-Bevor DLSS Manager eine heruntergeladene DLL in einen Spielordner kopiert, durchläuft jede Datei zwei Sicherheitsprüfungen in [`pe_version.rs`](../src-tauri/src/pe_version.rs):
-1. **Win32 PE-Header & `VS_FIXEDFILEINFO`-Prüfung:** Stellt sicher, dass es sich um eine gültige 64-Bit-Windows-DLL (`MZ` / `PE\0\0`) mit auslesbarer Versionsressource handelt (verhindert beschädigte Downloads oder HTML-Fehlerseiten).
-2. **Kryptografische Authenticode-Signaturprüfung (`wintrust.dll!WinVerifyTrust`):** Jede NVIDIA DLSS- und Streamline-DLL wird gegen die Windows-Zertifikatskette auf eine gültige, unveränderte digitale Signatur geprüft. Unsignierte oder manipulierte Binärdateien werden strikt abgelehnt.
+### Automatic PE & Authenticode Verification (`WinVerifyTrust`)
+Before copying any downloaded DLL into a game folder, DLSS Manager performs two security checks in [`pe_version.rs`](../src-tauri/src/pe_version.rs):
+1. **Win32 PE Header & `VS_FIXEDFILEINFO` Validation:** Confirms the file is a valid 64-bit Windows PE binary (`MZ` / `PE\0\0`) with a readable version resource (preventing corrupted downloads or HTML error pages).
+2. **Cryptographic Authenticode Signature Verification (`wintrust.dll!WinVerifyTrust`):** Every NVIDIA DLSS and Streamline binary is verified against the Windows certificate trust chain. Unsigned or tampered binaries are strictly rejected.
