@@ -40,7 +40,9 @@
 
 ## 🚀 Overview
 
-**DLSS Manager** (starting at `v1.0.0-beta.1`) is a complete ground-up **Rust + Tauri 2** desktop application that automatically discovers installed games across **9 game launchers**, inspects their **NVIDIA DLSS 4.5 / 5**, **Intel XeSS 2**, **NVIDIA Streamline**, and **Microsoft DirectStorage** binaries via zero-allocation Win32 PE `VS_FIXEDFILEINFO` parsing, verifies cryptographic Authenticode signatures (`WinVerifyTrust`), updates them from official upstream sources with automatic rollback backups, and configures **Global & Per-Game NVIDIA Driver DRS Presets (`Preset J / K / L / M / F`)** directly via `nvapi64.dll` — including a 1-click **NVIDIA App Override Whitelist Unlocker**.
+**Why DLSS Manager?** Previously, getting the latest DLSS 4.5 files and forcing optimal Transformer presets (`Preset K / L / M`) required juggling **multiple separate tools and manual hacks** — one tool to swap DLL files, *NVIDIA Profile Inspector* to edit driver DRS flags, manual text/hex edits in `ApplicationStorage.json` & `fingerprint.db` to stop **NVIDIA App** from resetting non-whitelisted games (like *Star Citizen*), and `.reg` files to toggle the DLSS On-Screen Overlay. **DLSS Manager was created to replace all of those with a single, fast all-in-one tool.**
+
+**DLSS Manager** (`v1.0.0+`) is a complete ground-up **Rust + Tauri 2** desktop application that automatically discovers installed games across **9 game launchers**, inspects their **NVIDIA DLSS 4.5 / 5**, **Intel XeSS 2**, **NVIDIA Streamline**, and **Microsoft DirectStorage** binaries via zero-allocation Win32 PE `VS_FIXEDFILEINFO` parsing, verifies cryptographic Authenticode signatures (`WinVerifyTrust`), updates them from official upstream sources with automatic rollback backups, and configures **Global & Per-Game NVIDIA Driver DRS Presets (`Preset J / K / L / M / F`)** directly via `nvapi64.dll` — including a 1-click **NVIDIA App Override Whitelist Unlocker**.
 
 ---
 

@@ -1,6 +1,8 @@
 # 📚 DLSS Manager Wiki
 
-Welcome to the official **DLSS Manager** Wiki (`v1.0.0+`) — the native **Rust + Tauri 2** desktop manager for **NVIDIA DLSS 4.5 / 5**, **NVIDIA Driver DRS Presets (`nvapi64.dll`)**, **NVIDIA Streamline SDK**, **Intel XeSS 2**, and **Microsoft DirectStorage**.
+Welcome to the official **DLSS Manager** Wiki (`v1.0.0+`) — the native **Rust + Tauri 2** all-in-one desktop manager for **NVIDIA DLSS 4.5 / 5**, **NVIDIA Driver DRS Presets (`nvapi64.dll`)**, **NVIDIA Streamline SDK**, **Intel XeSS 2**, and **Microsoft DirectStorage**.
+
+> 💡 **Why DLSS Manager Was Built:** Instead of juggling 4 different tools and manual workarounds (one tool to swap DLLs, *NVIDIA Profile Inspector* to force driver presets, manual edits to `ApplicationStorage.json` / `fingerprint.db` so NVIDIA App doesn't overwrite your settings, and Registry hacks for the DLSS indicator), **DLSS Manager** combines everything into a single, 1-click application.
 
 ---
 
