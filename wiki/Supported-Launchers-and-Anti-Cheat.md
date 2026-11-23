@@ -24,16 +24,13 @@
 
 **Star Citizen** benefits tremendously from DLSS 4 / 4.5 Transformer upscaling (much sharper cockpit MFD text, cleaner HUD elements, and crisp distant ship hulls), but has two important technical characteristics:
 
-### Why Must `Bin64\nvngx_dlss.dll` Not Be Replaced on Disk in Star Citizen?
-1. Star Citizen uses **EasyAntiCheat (EAC)**, which verifies the file hashes of all files inside `LIVE\Bin64\` against CIG's official build manifest at launch.
-2. If `Bin64\nvngx_dlss.dll` is replaced on disk with a newer DLL, EasyAntiCheat blocks the game from launching with a file integrity violation (even though the newer DLL carries an official NVIDIA signature, because its hash differs from CIG's patch manifest).
-
-### How to Enable DLSS 4.5 / Preset K Safely in Star Citizen
-- Star Citizen already ships with **`nvngx_dlss.dll v310.2.1.0`** (DLSS 4.0) out of the box.
-- DLSS Manager therefore places Star Citizen automatically into **`🛡️ Driver DRS Only (Stock DLL EAC Protected)`** mode:
-  - The on-disk `Bin64\nvngx_dlss.dll` file remains completely untouched (100% EAC-safe!).
-  - Clicking **✨ Apply Optimal Preset (Preset K)** writes the override enable flag (`0x10E41DF3 = 1`) and **`Preset K` (`0x10E41DF7 = 0x0B`)** directly into the NVIDIA driver profile **`"Squadron 42 - Star Citizen"`** (`starcitizen.exe`).
-  - Combined with the **NVIDIA App Whitelist Unlocker** (`🔓 Unlock All Games`), the NVIDIA driver overrides Star Citizen's default CNN fallback (`r.TSR.UpscalingPreset = 0` / `Preset E`) and runs **Preset K (Transformer)** with the latest NGX OTA model weights.
+### How Does EasyAntiCheat Handle `Bin64\nvngx_dlss.dll` in Star Citizen?
+1. Star Citizen uses **EasyAntiCheat (EAC)**, which verifies that `LIVE\Bin64\nvngx_dlss.dll` carries a valid, untampered **official NVIDIA Authenticode digital signature**.
+2. **Official NVIDIA-signed `nvngx_dlss.dll` updates (`v310.9.16.0`, DLSS 4.5) work safely with EAC!** Before copying `nvngx_dlss.dll`, DLSS Manager verifies the cryptographic signature via `wintrust.dll!WinVerifyTrust`. (Only unsigned third-party wrapper DLLs like custom `dxgi.dll` / `nvngx.dll` injectors are blocked by EAC).
+3. **Why You Need BOTH the DLL Update AND the Driver DRS Preset:**
+   - **Step 1 — Update the DLL (`⚡ Update` to `v310.9.16.0`):** Star Citizen ships with an older DLSS 4.0 binary (`v310.2.1.0`) that only contains Gen 1 weights and lacks **DLSS 4.5 (`Preset L`, `Preset M`, and refined Gen 2 `Preset K` weights)**. Updating the DLL puts the full **74.18 MB DLSS 4.5 (`v310.9.16.0`)** binary into `Bin64\`.
+   - **Step 2 — Apply the Driver DRS Preset (`✨ Apply Optimal Preset (Preset K)`):** Even with the new `v310.9.16.0` DLL in `Bin64\`, Star Citizen's engine requests `Preset E` (classic CNN, `r.TSR.UpscalingPreset = 0`) by default unless the NVIDIA driver overrides it!
+   - Clicking **✨ Apply Optimal Preset (Preset K)** writes the override enable flag (`0x10E41DF3 = 1`) and **`Preset K` (`0x10E41DF7 = 0x0B`)** directly into the NVIDIA driver profile **`"Squadron 42 - Star Citizen"`** (`starcitizen.exe`), and the **NVIDIA App Whitelist Unlocker** (`🔓 Unlock All Games`) prevents NVIDIA App from resetting that override back to `0`.
 
 ### Recommended In-Game Settings for Star Citizen
 - **Graphics Renderer:** `Vulkan` *(or DirectX 11)*

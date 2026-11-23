@@ -34,9 +34,10 @@ You have two ways to verify:
 
 ---
 
-### 5. Why can't I replace the DLL on disk in Star Citizen using "⚡ Update"?
-- **Star Citizen** uses **EasyAntiCheat (EAC)**, which verifies the exact file hash of `Bin64\nvngx_dlss.dll` at launch. Replacing the file on disk causes EAC to block the game from starting.
-- Because Star Citizen already ships with DLSS 4.0 (`v310.2.1.0`), DLSS Manager displays **`🛡️ Driver DRS Only`**: keep the stock DLL untouched on disk and click **✨ Apply Optimal Preset (Preset K)** to activate **Preset K (Transformer Gen 2)** safely via the NVIDIA driver!
+### 5. Do I need to update the DLL file AND apply the preset in Star Citizen?
+- **Yes — you need both for true DLSS 4.5!**
+  1. **Update the DLL (`⚡ Update` to `v310.9.16.0`):** Star Citizen ships with an older DLSS 4.0 DLL (`v310.2.1.0`). Replacing it via DLSS Manager's **⚡ Update** button installs the official NVIDIA-signed **DLSS 4.5 (`v310.9.16.0`, 74.18 MB)** binary containing the new Transformer Gen 2 weights (`Preset K`, `Preset L`, `Preset M`). Because DLSS Manager only installs official NVIDIA Authenticode-signed DLLs (`WinVerifyTrust`), **EasyAntiCheat allows this update safely**.
+  2. **Apply the Driver DRS Preset (`✨ Apply Optimal Preset (Preset K)`):** Without a driver preset override, Star Citizen's engine still defaults to `Preset E` (old CNN model) even when `v310.9.16.0` is installed. Applying **Preset K** in DLSS Manager forces the NVIDIA driver to use the new DLSS 4.5 Transformer Gen 2 model from the updated DLL!
 
 ---
 
