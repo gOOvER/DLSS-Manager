@@ -710,6 +710,7 @@ pub fn apply_nvapi_dlss_presets(
             }
 
             if !h_profile.is_null() {
+                let is_per_game = game_name.is_some() || exe_name.is_some();
                 let del_setting_opt: Option<DrsDeleteProfileSettingFn> =
                     if !delete_setting_ptr.is_null() {
                         Some(std::mem::transmute(delete_setting_ptr))
@@ -723,6 +724,13 @@ pub fn apply_nvapi_dlss_presets(
                     let mut s2 = make_dword_setting(NGX_DLSS_SR_PRESET_ID, sr_val);
                     let _ = set_setting(h_session, h_profile, &mut s1);
                     let _ = set_setting(h_session, h_profile, &mut s2);
+                } else if sr_preset.trim().eq_ignore_ascii_case("off") && is_per_game {
+                    // Explicitly disable DLSS-SR override on this game profile so it does not inherit Global BaseProfile
+                    let mut s1 = make_dword_setting(NGX_DLSS_SR_OVERRIDE_ID, 0);
+                    let _ = set_setting(h_session, h_profile, &mut s1);
+                    if let Some(del_fn) = del_setting_opt {
+                        let _ = del_fn(h_session, h_profile, NGX_DLSS_SR_PRESET_ID);
+                    }
                 } else if let Some(del_fn) = del_setting_opt {
                     let _ = del_fn(h_session, h_profile, NGX_DLSS_SR_OVERRIDE_ID);
                     let _ = del_fn(h_session, h_profile, NGX_DLSS_SR_PRESET_ID);
@@ -739,6 +747,12 @@ pub fn apply_nvapi_dlss_presets(
                     let mut r2 = make_dword_setting(NGX_DLSS_RR_PRESET_ID, rr_val);
                     let _ = set_setting(h_session, h_profile, &mut r1);
                     let _ = set_setting(h_session, h_profile, &mut r2);
+                } else if rr_preset.trim().eq_ignore_ascii_case("off") && is_per_game {
+                    let mut r1 = make_dword_setting(NGX_DLSS_RR_OVERRIDE_ID, 0);
+                    let _ = set_setting(h_session, h_profile, &mut r1);
+                    if let Some(del_fn) = del_setting_opt {
+                        let _ = del_fn(h_session, h_profile, NGX_DLSS_RR_PRESET_ID);
+                    }
                 } else if let Some(del_fn) = del_setting_opt {
                     let _ = del_fn(h_session, h_profile, NGX_DLSS_RR_OVERRIDE_ID);
                     let _ = del_fn(h_session, h_profile, NGX_DLSS_RR_PRESET_ID);
@@ -755,6 +769,22 @@ pub fn apply_nvapi_dlss_presets(
                     let mut f2 = make_dword_setting(NGX_DLSS_FG_PRESET_ID, fg_val);
                     let _ = set_setting(h_session, h_profile, &mut f1);
                     let _ = set_setting(h_session, h_profile, &mut f2);
+                } else if fg_preset.trim().eq_ignore_ascii_case("off") && is_per_game {
+                    // Explicitly disable FG & MFG overrides on this game profile so it does not inherit Global FG/MFG
+                    let mut f1 = make_dword_setting(NGX_DLSS_FG_OVERRIDE_ID, 0);
+                    let mut m0 = make_dword_setting(0x1030_8298u32, 0); // Override DLSSG mode = Off
+                    let _ = set_setting(h_session, h_profile, &mut f1);
+                    let _ = set_setting(h_session, h_profile, &mut m0);
+                    if let Some(del_fn) = del_setting_opt {
+                        let _ = del_fn(h_session, h_profile, NGX_DLSS_FG_PRESET_ID);
+                        for fg_extra_id in &[
+                            0x104D_6667u32, // Override DLSSG multi-frame count
+                            0x1056_2D0Fu32, // Override maximum DLSSG dynamic multi frame count
+                            0x10CF_4125u32, // Override DLSSG Target Frame Rate
+                        ] {
+                            let _ = del_fn(h_session, h_profile, *fg_extra_id);
+                        }
+                    }
                 } else if let Some(del_fn) = del_setting_opt {
                     let _ = del_fn(h_session, h_profile, NGX_DLSS_FG_OVERRIDE_ID);
                     let _ = del_fn(h_session, h_profile, NGX_DLSS_FG_PRESET_ID);

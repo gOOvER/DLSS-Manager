@@ -205,11 +205,21 @@ async fn get_initial_state(state: State<'_, AppState>) -> Result<InitialPayload,
             &config.global_dlss_rr_preset,
             &config.global_dlss_fg_preset,
         );
+        // Ensure stale Global BaseProfile MFG overrides (e.g. DLSSG_MODE=4 / 6x from NVIDIA App)
+        // are cleaned or enforced so games do not unintentionally inherit global MFG stuttering.
+        let _ = gpu_nvapi::apply_nvapi_dlssg_mfg(
+            None,
+            None,
+            &config.global_dlss_fg_mode,
+            2,
+            None,
+        );
         let mut enforced_games = 0usize;
         for g in &games {
             let has_override = g.dlss_sr_preset.is_some()
                 || g.dlss_rr_preset.is_some()
-                || g.dlss_fg_preset.is_some();
+                || g.dlss_fg_preset.is_some()
+                || g.dlss_fg_mode.is_some();
             if has_override {
                 let resolved_exe = g
                     .custom_exe_path
@@ -220,8 +230,12 @@ async fn get_initial_state(state: State<'_, AppState>) -> Result<InitialPayload,
                             .map(|p| p.to_string_lossy().to_string())
                     });
                 let has_sr = g.dlls.iter().any(|d| d.dll_type == DllType::Dlss);
-                let has_rr = g.dlls.iter().any(|d| d.dll_type == DllType::DlssD);
-                let has_fg = g.dlls.iter().any(|d| d.dll_type == DllType::DlssG);
+                let has_rr = g.dlls.iter().any(|d| {
+                    d.dll_type == DllType::DlssD || d.filename.eq_ignore_ascii_case("sl.dlss_d.dll")
+                });
+                let has_fg = g.dlls.iter().any(|d| {
+                    d.dll_type == DllType::DlssG || d.filename.eq_ignore_ascii_case("sl.dlss_g.dll")
+                }) || (has_sr && gpu.supports_dlss_fg);
 
                 let sr = if has_sr {
                     g.dlss_sr_preset
@@ -230,14 +244,24 @@ async fn get_initial_state(state: State<'_, AppState>) -> Result<InitialPayload,
                 } else {
                     "Default"
                 };
-                let rr = if has_rr {
+                let rr = if has_rr
+                    || g.dlss_rr_preset
+                        .as_deref()
+                        .map(|v| v.eq_ignore_ascii_case("off"))
+                        .unwrap_or(false)
+                {
                     g.dlss_rr_preset
                         .as_deref()
                         .unwrap_or(&config.global_dlss_rr_preset)
                 } else {
                     "Default"
                 };
-                let fg = if has_fg {
+                let fg = if has_fg
+                    || g.dlss_fg_preset
+                        .as_deref()
+                        .map(|v| v.eq_ignore_ascii_case("off"))
+                        .unwrap_or(false)
+                {
                     g.dlss_fg_preset
                         .as_deref()
                         .unwrap_or(&config.global_dlss_fg_preset)
@@ -251,6 +275,17 @@ async fn get_initial_state(state: State<'_, AppState>) -> Result<InitialPayload,
                     rr,
                     fg,
                 );
+                if let Some(ref mode_val) = g.dlss_fg_mode {
+                    if !fg.eq_ignore_ascii_case("off") || mode_val.eq_ignore_ascii_case("off") {
+                        let _ = gpu_nvapi::apply_nvapi_dlssg_mfg(
+                            Some(&g.name),
+                            resolved_exe.as_deref(),
+                            mode_val,
+                            g.dlss_fg_multiplier.unwrap_or(2),
+                            g.dlss_fg_target_fps,
+                        );
+                    }
+                }
                 enforced_games += 1;
             }
         }
@@ -262,6 +297,7 @@ async fn get_initial_state(state: State<'_, AppState>) -> Result<InitialPayload,
                 g.dlss_sr_preset.is_none()
                     && g.dlss_rr_preset.is_none()
                     && g.dlss_fg_preset.is_none()
+                    && g.dlss_fg_mode.is_none()
             })
             .filter_map(|g| {
                 g.custom_exe_path
@@ -961,6 +997,13 @@ async fn update_app_config(
                 &new_config.global_dlss_rr_preset,
                 &new_config.global_dlss_fg_preset,
             );
+            let _ = gpu_nvapi::apply_nvapi_dlssg_mfg(
+                None,
+                None,
+                &new_config.global_dlss_fg_mode,
+                2,
+                None,
+            );
         }
     }
     push_log(&state, "INFO", "Saved application settings.");
@@ -1063,6 +1106,17 @@ async fn launch_game_cmd(
                 rr,
                 fg,
             );
+            if let Some(ref mode_val) = game.dlss_fg_mode {
+                if !fg.eq_ignore_ascii_case("off") || mode_val.eq_ignore_ascii_case("off") {
+                    let _ = gpu_nvapi::apply_nvapi_dlssg_mfg(
+                        Some(&game.name),
+                        resolved_exe.as_deref(),
+                        mode_val,
+                        game.dlss_fg_multiplier.unwrap_or(2),
+                        game.dlss_fg_target_fps,
+                    );
+                }
+            }
         }
     }
 
@@ -1568,19 +1622,20 @@ async fn save_game_dlss_presets(
                     d.dll_type == DllType::DlssG || d.filename.eq_ignore_ascii_case("sl.dlss_g.dll")
                 })
             })
-            .unwrap_or(false);
+            .unwrap_or(false)
+            || (has_sr && gpu.supports_dlss_fg);
 
-        let clean_sr = if has_sr {
+        let clean_sr = if has_sr || sr_preset.trim().eq_ignore_ascii_case("off") {
             sr_preset.clone()
         } else {
             "Default".to_string()
         };
-        let clean_rr = if has_rr {
+        let clean_rr = if has_rr || rr_preset.trim().eq_ignore_ascii_case("off") {
             rr_preset.clone()
         } else {
             "Default".to_string()
         };
-        let clean_fg = if has_fg {
+        let clean_fg = if has_fg || fg_preset.trim().eq_ignore_ascii_case("off") {
             fg_preset.clone()
         } else {
             "Default".to_string()
@@ -1627,13 +1682,15 @@ async fn save_game_dlss_presets(
         )
         .unwrap_or_else(|e| e);
         if let Some(ref mode_val) = fg_mode {
-            let _ = gpu_nvapi::apply_nvapi_dlssg_mfg(
-                game_name_opt.as_deref(),
-                resolved_exe.as_deref(),
-                mode_val,
-                fg_multiplier.unwrap_or(2),
-                fg_target_fps,
-            );
+            if !eff_fg.trim().eq_ignore_ascii_case("off") || mode_val.trim().eq_ignore_ascii_case("off") {
+                let _ = gpu_nvapi::apply_nvapi_dlssg_mfg(
+                    game_name_opt.as_deref(),
+                    resolved_exe.as_deref(),
+                    mode_val,
+                    fg_multiplier.unwrap_or(2),
+                    fg_target_fps,
+                );
+            }
         }
         push_log(
             &state,
@@ -1708,6 +1765,15 @@ async fn apply_nvidia_app_whitelist(
             &config.global_dlss_preset,
             &config.global_dlss_rr_preset,
             &config.global_dlss_fg_preset,
+        );
+        // Ensure stale Global BaseProfile MFG overrides (e.g. DLSSG_MODE=4 / 6x from NVIDIA App)
+        // are cleaned or enforced so games do not unintentionally inherit global MFG stuttering.
+        let _ = gpu_nvapi::apply_nvapi_dlssg_mfg(
+            None,
+            None,
+            &config.global_dlss_fg_mode,
+            2,
+            None,
         );
         push_log(
             &state,

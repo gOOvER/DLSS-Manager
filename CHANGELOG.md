@@ -11,6 +11,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-11-24
+
+### Added
+- **Per-Game `Off` Override Option & Driver-Level DLSS-FG / MFG Controls (`src-tauri/src/gpu_nvapi.rs`, `src-tauri/src/lib.rs`, `ui/app.js`):**
+  - Added an explicit **`Off` (Disable Override)** option for per-game DLSS SR, RR, and FG presets that writes `NGX_DLSS_*_OVERRIDE_ID = 0` (and `NGX_DLSSG_MODE_ID = 0` for FG) directly into the game's DRS profile so individual games (such as **Overwatch 2**) stop inheriting global BaseProfile overrides (`Preset K` / `FG` / `MFG`) that can cause stuttering.
+  - Enabled per-game DLSS Frame Generation & Multi-Frame Generation (MFG) controls for all DLSS games on RTX 40/50 GPUs even when no local `nvngx_dlssg.dll` is present in the game folder (e.g., **Overwatch 2**, which supports driver/NVIDIA App FG overrides via `stateMaskFG = 1`), and enforced saved per-game `dlss_fg_mode` settings on startup and game launch.
+  - Added a **Global DLSS-G MFG Mode** control (`global_dlss_fg_mode`, default `Default`) in Settings and automatically clean stale Global BaseProfile MFG settings (`0x10308298`, `0x104D6667`, `0x10562D0F`, `0x10CF4125`) on startup so games do not unintentionally inherit global MFG overrides (such as NVIDIA App's Dynamic 6x) across all titles.
+
 ## [1.0.1] - 2026-11-24
 
 ### Fixed

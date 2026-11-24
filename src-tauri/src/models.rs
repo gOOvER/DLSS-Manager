@@ -377,6 +377,8 @@ pub struct AppConfig {
     pub global_dlss_rr_preset: String,
     #[serde(default = "default_preset")]
     pub global_dlss_fg_preset: String,
+    #[serde(default = "default_preset")]
+    pub global_dlss_fg_mode: String,
     #[serde(default)]
     pub hide_ignored_games: bool,
     #[serde(default = "default_enabled_techs")]
@@ -410,6 +412,7 @@ impl Default for AppConfig {
             global_dlss_preset: "Default".to_string(),
             global_dlss_rr_preset: "Default".to_string(),
             global_dlss_fg_preset: "Default".to_string(),
+            global_dlss_fg_mode: "Default".to_string(),
             hide_ignored_games: false,
             enabled_technologies: default_enabled_techs(),
             check_app_updates_on_startup: true,

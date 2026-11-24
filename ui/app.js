@@ -39,7 +39,7 @@ const ALL_TECH_GROUPS = [
 ];
 
 let appState = {
-  version: "1.0.1",
+  version: "1.0.2",
   games: [],
   backups: [],
   catalog: [],
@@ -521,9 +521,11 @@ function renderAll() {
     const srSel = document.getElementById("cfg-global-sr-preset");
     const rrSel = document.getElementById("cfg-global-rr-preset");
     const fgSel = document.getElementById("cfg-global-fg-preset");
+    const fgModeSel = document.getElementById("cfg-global-fg-mode");
     if (srSel) srSel.value = appState.config.global_dlss_preset || "Default";
     if (rrSel) rrSel.value = appState.config.global_dlss_rr_preset || "Default";
     if (fgSel) fgSel.value = appState.config.global_dlss_fg_preset || "Default";
+    if (fgModeSel) fgModeSel.value = appState.config.global_dlss_fg_mode || "Default";
 
     renderCustomFolders();
     renderSettingsTechScope();
@@ -1724,10 +1726,16 @@ function translateDbText(raw) {
 const DLSS_PRESET_META = {
   sr: {
     Default: {
-      opt_de: "Standard (Default) — Vom Spiel gesteuert",
-      opt_en: "Default — Controlled by Game",
-      desc_de: "Nutzt das vom Spiel bzw. der DLL standardmäßig vorgesehene DLSS-Profil ohne Treiber-Eingriff.",
-      desc_en: "Uses the game's built-in default DLSS profile without driver override.",
+      opt_de: "Standard (Global erben) — Übernimmt globales Treiber-Preset",
+      opt_en: "Default (Inherit Global) — Inherits global driver preset",
+      desc_de: "Löscht die spielspezifische Regel; nutzt das globale Treiber-Preset (oder Spiel-Standard, falls Global auf Default steht).",
+      desc_en: "Clears the per-game rule; inherits the global driver preset (or game default if Global is Default).",
+    },
+    Off: {
+      opt_de: "Aus (Override deaktivieren) — Spiel-Standard ohne Global-Erbe",
+      opt_en: "Off (Disable Override) — Game native without inheriting Global",
+      desc_de: "Deaktiviert den Treiber-Override explizit für dieses Spiel (NGX Override = 0), auch wenn ein globales Preset aktiv ist.",
+      desc_en: "Explicitly disables the driver override for this game (NGX Override = 0), even when a global preset is active.",
     },
     Latest: {
       opt_de: "Latest — Automatisch neuestes NVIDIA-Profil",
@@ -1786,10 +1794,16 @@ const DLSS_PRESET_META = {
   },
   rr: {
     Default: {
-      opt_de: "Standard (Default) — Vom Spiel gesteuert",
-      opt_en: "Default — Controlled by Game",
-      desc_de: "Nutzt das Standard-Ray-Reconstruction-Profil des Spiels ohne Treiber-Eingriff.",
-      desc_en: "Uses the game's default Ray Reconstruction profile without driver override.",
+      opt_de: "Standard (Global erben) — Übernimmt globales RR-Preset",
+      opt_en: "Default (Inherit Global) — Inherits global RR preset",
+      desc_de: "Löscht die spielspezifische RR-Regel; erbt das globale Ray-Reconstruction-Preset.",
+      desc_en: "Clears the per-game RR rule; inherits the global Ray Reconstruction preset.",
+    },
+    Off: {
+      opt_de: "Aus (Override deaktivieren) — Spiel-Standard ohne Global-Erbe",
+      opt_en: "Off (Disable Override) — Game native without inheriting Global",
+      desc_de: "Deaktiviert den Ray-Reconstruction-Override explizit für dieses Spiel (NGX RR Override = 0).",
+      desc_en: "Explicitly disables the Ray Reconstruction override for this game (NGX RR Override = 0).",
     },
     Latest: {
       opt_de: "Latest — Automatisch neuestes Ray-Reconstruction-Profil",
@@ -1812,10 +1826,16 @@ const DLSS_PRESET_META = {
   },
   fg: {
     Default: {
-      opt_de: "Standard (Default) — Vom Spiel gesteuert",
-      opt_en: "Default — Controlled by Game",
-      desc_de: "Nutzt das Standard-Frame-Generation-Profil des Spiels ohne Treiber-Eingriff.",
-      desc_en: "Uses the game's default Frame Generation profile without driver override.",
+      opt_de: "Standard (Global erben) — Übernimmt globales FG/MFG-Preset",
+      opt_en: "Default (Inherit Global) — Inherits global FG/MFG preset",
+      desc_de: "Löscht die spielspezifische FG-Regel; erbt das globale Frame-Generation-/MFG-Preset.",
+      desc_en: "Clears the per-game FG rule; inherits the global Frame Generation / MFG preset.",
+    },
+    Off: {
+      opt_de: "Aus (FG/MFG-Override deaktivieren) — Kein Global-Erbe (empfohlen bei Rucklern)",
+      opt_en: "Off (Disable FG/MFG Override) — No Global inheritance (recommended if stuttering)",
+      desc_de: "Deaktiviert Frame Generation & MFG-Override explizit für dieses Spiel (FG Override = 0, MFG Mode = Off), sodass globale FG/MFG-Einstellungen nicht greifen.",
+      desc_en: "Explicitly disables Frame Generation & MFG override for this game (FG Override = 0, MFG Mode = Off) so global FG/MFG settings are not inherited.",
     },
     Latest: {
       opt_de: "Latest — Neuestes Optical-Flow / Flip-Metering Modell (Empfohlen)",
@@ -1852,39 +1872,39 @@ function getSupportedPresetsForDllVersion(cat, dllVersion) {
   if (cat === "sr") {
     if (major >= 310) {
       if (minor >= 9) {
-        return ["Default", "Latest", "Preset J", "Preset K", "Preset L", "Preset M", "Preset E"];
+        return ["Default", "Off", "Latest", "Preset J", "Preset K", "Preset L", "Preset M", "Preset E"];
       }
       if (minor >= 2) {
         // v310.2.x – v310.8.x (e.g. Star Citizen stock 310.2.1.0): NO Preset L or M (DLSS 4.5 310.9+ only!)
-        return ["Default", "Latest", "Preset J", "Preset K", "Preset E"];
+        return ["Default", "Off", "Latest", "Preset J", "Preset K", "Preset E"];
       }
       // v310.1.x: only Preset J + CNN
-      return ["Default", "Latest", "Preset J", "Preset E"];
+      return ["Default", "Off", "Latest", "Preset J", "Preset E"];
     }
     if (major === 3 && minor >= 7) {
-      return ["Default", "Preset E", "Preset C", "Preset D", "Preset F"];
+      return ["Default", "Off", "Preset E", "Preset C", "Preset D", "Preset F"];
     }
     if (major === 3 && minor >= 1) {
-      return ["Default", "Preset C", "Preset D", "Preset F"];
+      return ["Default", "Off", "Preset C", "Preset D", "Preset F"];
     }
-    return ["Default"];
+    return ["Default", "Off"];
   }
   if (cat === "rr") {
     if (major >= 310) {
       if (minor >= 4) {
-        return ["Default", "Latest", "Preset D", "Preset F"];
+        return ["Default", "Off", "Latest", "Preset D", "Preset F"];
       }
-      return ["Default", "Latest", "Preset D"];
+      return ["Default", "Off", "Latest", "Preset D"];
     }
-    return ["Default"];
+    return ["Default", "Off"];
   }
   if (cat === "fg") {
     if (major >= 310) {
-      return ["Default", "Latest", "Preset A", "Preset B"];
+      return ["Default", "Off", "Latest", "Preset A", "Preset B"];
     }
-    return ["Default"];
+    return ["Default", "Off"];
   }
-  return ["Default"];
+  return ["Default", "Off"];
 }
 
 function getPresetOptionLabel(cat, opt, recVal = null, dllVersion = null) {
@@ -1905,11 +1925,11 @@ function getPresetOptionLabel(cat, opt, recVal = null, dllVersion = null) {
 
 function getAllPresetsForCategory(cat) {
   if (cat === "sr") {
-    return ["Default", "Latest", "Preset J", "Preset K", "Preset L", "Preset M", "Preset E", "Preset C", "Preset D", "Preset F"];
+    return ["Default", "Off", "Latest", "Preset J", "Preset K", "Preset L", "Preset M", "Preset E", "Preset C", "Preset D", "Preset F"];
   }
-  if (cat === "rr") return ["Default", "Latest", "Preset D", "Preset F"];
-  if (cat === "fg") return ["Default", "Latest", "Preset A", "Preset B"];
-  return ["Default"];
+  if (cat === "rr") return ["Default", "Off", "Latest", "Preset D", "Preset F"];
+  if (cat === "fg") return ["Default", "Off", "Latest", "Preset A", "Preset B"];
+  return ["Default", "Off"];
 }
 
 function getPresetMinDllHint(cat, opt, de) {
@@ -2391,9 +2411,11 @@ function gameHasRrTech(game) {
 }
 
 function gameHasFgTech(game) {
-  return (game.dlls || []).some(
+  const hasFgDll = (game.dlls || []).some(
     (d) => d.type_label === "DLSS-G" || (d.filename || "").toLowerCase() === "sl.dlss_g.dll"
   );
+  const hasSrDll = (game.dlls || []).some((d) => d.type_label === "DLSS");
+  return hasFgDll || (hasSrDll && Boolean(appState.gpu?.supports_dlss_fg));
 }
 
 window.quickSaveInlineGamePresets = async function (gameId, reset = false) {
@@ -3929,7 +3951,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   });
 
-  ["cfg-global-sr-preset", "cfg-global-rr-preset", "cfg-global-fg-preset"].forEach((id) => {
+  ["cfg-global-sr-preset", "cfg-global-rr-preset", "cfg-global-fg-preset", "cfg-global-fg-mode"].forEach((id) => {
     const el = document.getElementById(id);
     if (!el) return;
     el.addEventListener("change", async () => {
@@ -3937,6 +3959,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       appState.config.global_dlss_preset = document.getElementById("cfg-global-sr-preset").value;
       appState.config.global_dlss_rr_preset = document.getElementById("cfg-global-rr-preset").value;
       appState.config.global_dlss_fg_preset = document.getElementById("cfg-global-fg-preset").value;
+      const fgModeEl = document.getElementById("cfg-global-fg-mode");
+      if (fgModeEl) appState.config.global_dlss_fg_mode = fgModeEl.value;
       await saveConfig();
     });
   });
