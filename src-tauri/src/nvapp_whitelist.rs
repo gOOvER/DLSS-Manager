@@ -155,6 +155,7 @@ fn count_blocked_in_json(
             }
             if map.get("IsOpsSupported").and_then(|v| v.as_bool()) == Some(false) {
                 *ops_unsupported += 1;
+                obj_blocked = true;
             }
             if obj_blocked {
                 if let Some(name) = label {
@@ -272,6 +273,10 @@ pub fn get_nvidia_app_whitelist_status() -> NvAppWhitelistStatus {
                 let needle = format!("<{}>1</{}>", key, key);
                 blocked_flags += xml.matches(&needle).count();
             }
+            ops_unsupported_count += xml.matches("<IsAutomatable>0</IsAutomatable>").count();
+            ops_unsupported_count += xml
+                .matches("<DLSS_Override_No_OPS>0</DLSS_Override_No_OPS>")
+                .count();
         }
     }
 
@@ -333,6 +338,25 @@ pub fn apply_nvidia_app_whitelist(unlock_ops_supported: bool) -> Result<(usize, 
                     xml = xml.replace(&needle, &replacement);
                     flags_cleared += count;
                     changed = true;
+                }
+            }
+            if unlock_ops_supported {
+                for (needle, replacement) in [
+                    (
+                        "<IsAutomatable>0</IsAutomatable>",
+                        "<IsAutomatable>1</IsAutomatable>",
+                    ),
+                    (
+                        "<DLSS_Override_No_OPS>0</DLSS_Override_No_OPS>",
+                        "<DLSS_Override_No_OPS>1</DLSS_Override_No_OPS>",
+                    ),
+                ] {
+                    let count = xml.matches(needle).count();
+                    if count > 0 {
+                        xml = xml.replace(needle, replacement);
+                        flags_cleared += count;
+                        changed = true;
+                    }
                 }
             }
             if changed {
@@ -404,5 +428,52 @@ pub fn restart_nvidia_services() -> Result<String, String> {
     #[cfg(not(windows))]
     {
         Err("Only supported on Windows".to_string())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn counts_and_unlocks_ops_locks_even_when_override_flags_are_zero() {
+        let mut doc = json!({
+            "Applications": [
+                {
+                    "Application": {
+                        "DisplayName": "Star Citizen",
+                        "Disable_FG_Override": false,
+                        "Disable_RR_Override": false,
+                        "Disable_SR_Override": false,
+                        "Disable_RR_Model_Override": false,
+                        "Disable_SR_Model_Override": false,
+                        "IsOpsSupported": false
+                    }
+                }
+            ]
+        });
+
+        let mut blocked = 0;
+        let mut ops = 0;
+        let mut apps = BTreeSet::new();
+        count_blocked_in_json(&doc, &mut blocked, &mut ops, &mut apps);
+        assert_eq!(blocked, 0);
+        assert_eq!(ops, 1);
+        assert!(apps.contains("Star Citizen"));
+
+        let mut modified = 0;
+        let mut modified_apps = BTreeSet::new();
+        unlock_json_recursive(&mut doc, true, &mut modified, &mut modified_apps);
+        assert_eq!(modified, 1);
+        assert!(modified_apps.contains("Star Citizen"));
+
+        let mut blocked_after = 0;
+        let mut ops_after = 0;
+        let mut apps_after = BTreeSet::new();
+        count_blocked_in_json(&doc, &mut blocked_after, &mut ops_after, &mut apps_after);
+        assert_eq!(blocked_after, 0);
+        assert_eq!(ops_after, 0);
+        assert!(apps_after.is_empty());
     }
 }

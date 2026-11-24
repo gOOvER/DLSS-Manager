@@ -11,6 +11,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-11-24
+
+### Fixed
+- **NVIDIA App Ops-Lock Persistence After Reboot (`src-tauri/src/nvapp_whitelist.rs`, `src-tauri/src/lib.rs`, `ui/app.js`):**
+  - Also patch `<IsAutomatable>0</IsAutomatable>` → `<IsAutomatable>1</IsAutomatable>` and `<DLSS_Override_No_OPS>0</DLSS_Override_No_OPS>` → `<DLSS_Override_No_OPS>1</DLSS_Override_No_OPS>` inside NVIDIA App's `fingerprint.db` (and include them in `ops_unsupported_count`) so `NvContainerLocalSystem` no longer resets `IsOpsSupported` back to `false` in `ApplicationStorage.json` after a Windows reboot for non-OPS games such as **Star Citizen**.
+  - Fixed a startup UI race condition where `refreshNvidiaAppWhitelistStatus()` ran before `get_initial_state` completed its automatic whitelist restore, leaving stale warning banners visible until a manual click; status now refreshes after `get_initial_state` and after `restart_nvidia_services_cmd`.
+  - Include apps with `IsOpsSupported: false` in `blocked_apps` even when `blocked_flags == 0`.
+
 ## [1.0.0] - 2026-11-22
 
 ### Added

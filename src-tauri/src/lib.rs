@@ -1673,7 +1673,7 @@ async fn apply_nvidia_app_whitelist(
     state: State<'_, AppState>,
 ) -> Result<nvapp_whitelist::NvAppWhitelistStatus, String> {
     let (flags_cleared, apps_unlocked) =
-        nvapp_whitelist::apply_nvidia_app_whitelist(unlock_ops.unwrap_or(false))?;
+        nvapp_whitelist::apply_nvidia_app_whitelist(unlock_ops.unwrap_or(true))?;
 
     let (games, config, gpu) = {
         let db = state.db.lock().map_err(|e| e.to_string())?;

@@ -39,7 +39,7 @@ const ALL_TECH_GROUPS = [
 ];
 
 let appState = {
-  version: "1.0.0",
+  version: "1.0.1",
   games: [],
   backups: [],
   catalog: [],
@@ -4026,6 +4026,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     try {
       if (triggerBtn) triggerBtn.disabled = true;
       const msg = await invoke("restart_nvidia_services_cmd");
+      await refreshNvidiaAppWhitelistStatus();
       showToast(msg);
     } catch (err) {
       showToast(String(err), true);
@@ -4052,8 +4053,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     btnHubRestartNv.addEventListener("click", () => runRestartNvidiaServices(btnHubRestartNv));
   }
 
-  refreshNvidiaAppWhitelistStatus();
-
   document.querySelectorAll("[data-url]").forEach((btn) => {
     btn.addEventListener("click", () => {
       openExternalUrl(btn.dataset.url);
@@ -4079,6 +4078,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     );
     const initial = await invoke("get_initial_state");
     applyPayload(initial);
+    refreshNvidiaAppWhitelistStatus();
     if (!initial.games || initial.games.length === 0) {
       setStartupStatus(
         "🔍 Scanne Launcher & Spieleordner nach Upscaler-DLLs…",

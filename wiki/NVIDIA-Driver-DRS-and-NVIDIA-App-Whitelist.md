@@ -58,7 +58,7 @@ DLSS Manager solves this on three levels:
 ### Level 1: 1-Click Whitelist Unlocker (`🔓 Unlock All Games`)
 On the **Hub** (and under **⚙️ Settings → Global NVIDIA DLSS Presets**), DLSS Manager automatically checks your NVIDIA App whitelist status on startup:
 - Clicking **🔓 Unlock All Games** creates automatic backups (`ApplicationStorage.json.dlss_manager.bak` & `fingerprint.db.dlss_manager.bak`).
-- It flips all `Disable_FG_Override`, `Disable_RR_Override`, `Disable_SR_Override`, `Disable_RR_Model_Override`, and `Disable_SR_Model_Override` flags in `ApplicationStorage.json` and `fingerprint.db` to `false` (`0`) and enables `IsOpsSupported`.
+- It flips all `Disable_FG_Override`, `Disable_RR_Override`, `Disable_SR_Override`, `Disable_RR_Model_Override`, and `Disable_SR_Model_Override` flags in `ApplicationStorage.json` and `fingerprint.db` to `false` (`0`), enables `IsOpsSupported` in `ApplicationStorage.json`, and flips `<IsAutomatable>0</IsAutomatable>` and `<DLSS_Override_No_OPS>0</DLSS_Override_No_OPS>` to `1` in `fingerprint.db` so `IsOpsSupported` persists across Windows reboots.
 - Clicking **🔄 Restart NVIDIA Service** reloads `NVDisplay.ContainerLocalSystem` so NVIDIA App stops reverting your overrides.
 
 ### Level 2: Automatic Cleanup of `0`-Blocks in Driver Profiles
