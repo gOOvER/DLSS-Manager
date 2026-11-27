@@ -1442,31 +1442,54 @@ pub fn apply_nvapi_dlssg_mfg(
 
             if !h_profile.is_null() {
                 let frame_count = multiplier.clamp(2, 6) - 1;
+                let del_fn_opt: Option<DrsDeleteProfileSettingFn> = if !del_setting_ptr.is_null() {
+                    Some(std::mem::transmute(del_setting_ptr))
+                } else {
+                    None
+                };
                 match mode.trim().to_ascii_lowercase().as_str() {
                     "fixed" | "on" => {
                         let mut m = make_dword(NGX_DLSSG_MODE_ID, 1);
                         let mut c = make_dword(NGX_DLSSG_MULTI_FRAME_COUNT_ID, frame_count);
                         let _ = set_setting(h_session, h_profile, &mut m);
                         let _ = set_setting(h_session, h_profile, &mut c);
+                        if let Some(del_fn) = del_fn_opt {
+                            let _ = del_fn(h_session, h_profile, NGX_DLSSG_DYNAMIC_MULTI_FRAME_COUNT_MAX_ID);
+                            let _ = del_fn(h_session, h_profile, NGX_DLSSG_DYNAMIC_TARGET_FRAME_RATE_ID);
+                        }
                     }
                     "dynamic" => {
+                        const NGX_DLSSG_TARGET_FPS_AUTO: u32 = 0x0100_0000; // NVIDIA DRS Auto (Display Refresh Rate)
                         let mut m = make_dword(NGX_DLSSG_MODE_ID, 2);
                         let mut c =
                             make_dword(NGX_DLSSG_DYNAMIC_MULTI_FRAME_COUNT_MAX_ID, frame_count);
-                        let fps_val = target_fps.filter(|&v| v > 0).unwrap_or(0);
+                        let fps_val = target_fps
+                            .filter(|&v| v > 0)
+                            .map(|v| v.clamp(30, 1000))
+                            .unwrap_or(NGX_DLSSG_TARGET_FPS_AUTO);
                         let mut f = make_dword(NGX_DLSSG_DYNAMIC_TARGET_FRAME_RATE_ID, fps_val);
                         let _ = set_setting(h_session, h_profile, &mut m);
                         let _ = set_setting(h_session, h_profile, &mut c);
                         let _ = set_setting(h_session, h_profile, &mut f);
+                        if let Some(del_fn) = del_fn_opt {
+                            let _ = del_fn(h_session, h_profile, NGX_DLSSG_MULTI_FRAME_COUNT_ID);
+                        }
                     }
                     "off" => {
                         let mut m = make_dword(NGX_DLSSG_MODE_ID, 0);
                         let _ = set_setting(h_session, h_profile, &mut m);
+                        if let Some(del_fn) = del_fn_opt {
+                            for id in [
+                                NGX_DLSSG_MULTI_FRAME_COUNT_ID,
+                                NGX_DLSSG_DYNAMIC_MULTI_FRAME_COUNT_MAX_ID,
+                                NGX_DLSSG_DYNAMIC_TARGET_FRAME_RATE_ID,
+                            ] {
+                                let _ = del_fn(h_session, h_profile, id);
+                            }
+                        }
                     }
                     _ => {
-                        if !del_setting_ptr.is_null() {
-                            let del_fn: DrsDeleteProfileSettingFn =
-                                std::mem::transmute(del_setting_ptr);
+                        if let Some(del_fn) = del_fn_opt {
                             for id in [
                                 NGX_DLSSG_MODE_ID,
                                 NGX_DLSSG_MULTI_FRAME_COUNT_ID,

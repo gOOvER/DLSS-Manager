@@ -39,7 +39,7 @@ const ALL_TECH_GROUPS = [
 ];
 
 let appState = {
-  version: "1.0.3",
+  version: "1.0.4",
   games: [],
   backups: [],
   catalog: [],
@@ -2424,11 +2424,9 @@ function gameHasRrTech(game) {
 }
 
 function gameHasFgTech(game) {
-  const hasFgDll = (game.dlls || []).some(
+  return (game.dlls || []).some(
     (d) => d.type_label === "DLSS-G" || (d.filename || "").toLowerCase() === "sl.dlss_g.dll"
   );
-  const hasSrDll = (game.dlls || []).some((d) => d.type_label === "DLSS");
-  return hasFgDll || (hasSrDll && Boolean(appState.gpu?.supports_dlss_fg));
 }
 
 window.quickSaveInlineGamePresets = async function (gameId, reset = false) {

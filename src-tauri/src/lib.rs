@@ -235,7 +235,7 @@ async fn get_initial_state(state: State<'_, AppState>) -> Result<InitialPayload,
                 });
                 let has_fg = g.dlls.iter().any(|d| {
                     d.dll_type == DllType::DlssG || d.filename.eq_ignore_ascii_case("sl.dlss_g.dll")
-                }) || (has_sr && gpu.supports_dlss_fg);
+                });
 
                 let sr = if has_sr {
                     g.dlss_sr_preset
@@ -276,13 +276,21 @@ async fn get_initial_state(state: State<'_, AppState>) -> Result<InitialPayload,
                     fg,
                 );
                 if let Some(ref mode_val) = g.dlss_fg_mode {
-                    if !fg.eq_ignore_ascii_case("off") || mode_val.eq_ignore_ascii_case("off") {
+                    if has_fg && (!fg.eq_ignore_ascii_case("off") || mode_val.eq_ignore_ascii_case("off")) {
                         let _ = gpu_nvapi::apply_nvapi_dlssg_mfg(
                             Some(&g.name),
                             resolved_exe.as_deref(),
                             mode_val,
                             g.dlss_fg_multiplier.unwrap_or(2),
                             g.dlss_fg_target_fps,
+                        );
+                    } else if !has_fg {
+                        let _ = gpu_nvapi::apply_nvapi_dlssg_mfg(
+                            Some(&g.name),
+                            resolved_exe.as_deref(),
+                            "Default",
+                            2,
+                            None,
                         );
                     }
                 }
@@ -1622,8 +1630,7 @@ async fn save_game_dlss_presets(
                     d.dll_type == DllType::DlssG || d.filename.eq_ignore_ascii_case("sl.dlss_g.dll")
                 })
             })
-            .unwrap_or(false)
-            || (has_sr && gpu.supports_dlss_fg);
+            .unwrap_or(false);
 
         let clean_sr = if has_sr || sr_preset.trim().eq_ignore_ascii_case("off") {
             sr_preset.clone()
@@ -1823,6 +1830,9 @@ async fn apply_nvidia_app_whitelist(
                     .dlss_rr_preset
                     .as_deref()
                     .unwrap_or(&config.global_dlss_rr_preset);
+                let has_fg = g.dlls.iter().any(|d| {
+                    d.dll_type == DllType::DlssG || d.filename.eq_ignore_ascii_case("sl.dlss_g.dll")
+                });
                 let fg = g
                     .dlss_fg_preset
                     .as_deref()
@@ -1835,13 +1845,21 @@ async fn apply_nvidia_app_whitelist(
                     fg,
                 );
                 if let Some(ref mode_val) = g.dlss_fg_mode {
-                    if !fg.eq_ignore_ascii_case("off") || mode_val.eq_ignore_ascii_case("off") {
+                    if has_fg && (!fg.eq_ignore_ascii_case("off") || mode_val.eq_ignore_ascii_case("off")) {
                         let _ = gpu_nvapi::apply_nvapi_dlssg_mfg(
                             Some(&g.name),
                             resolved_exe.as_deref(),
                             mode_val,
                             g.dlss_fg_multiplier.unwrap_or(2),
                             g.dlss_fg_target_fps,
+                        );
+                    } else if !has_fg {
+                        let _ = gpu_nvapi::apply_nvapi_dlssg_mfg(
+                            Some(&g.name),
+                            resolved_exe.as_deref(),
+                            "Default",
+                            2,
+                            None,
                         );
                     }
                 }

@@ -11,6 +11,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.4] - 2026-11-27
+
+### Fixed
+- **Critical Fix: Dynamic MFG Auto Target FPS (`0x01000000` instead of `0`) (`src-tauri/src/gpu_nvapi.rs`, `src-tauri/src/lib.rs`):**
+  - Fixed a severe stuttering/lag bug when **DLSS-G MFG Mode: Dynamic** was selected with Auto/empty Target FPS: `apply_nvapi_dlssg_mfg` previously wrote `0` to `0x10CF4125` (`NGX_DLSSG_DYNAMIC_TARGET_FRAME_RATE_ID`) instead of NVIDIA's Auto/Display-Refresh-Rate sentinel `0x01000000`, causing extreme frame pacing lags in games such as **No Man's Sky**.
+  - Cleanly delete conflicting Fixed/Dynamic DRS keys when switching MFG modes (`Fixed`, `Dynamic`, `Off`, `Default`) and automatically clear stale `dlss_fg_mode` DRS entries on games without `nvngx_dlssg.dll` / `sl.dlss_g.dll`.
+- **Hide DLSS Frame Generation Controls on Games Without DLSS-G (`ui/app.js`, `src-tauri/src/lib.rs`, `src-tauri/src/game_db.rs`):**
+  - Only show per-game DLSS Frame Generation (FG) & Multi-Frame Generation (MFG) controls for games that actually ship `nvngx_dlssg.dll` or `sl.dlss_g.dll`, eliminating the UI contradiction on games such as **Overwatch 2** and **Star Citizen** whose compatibility profiles mark `DLSS-G (Frame Gen)` as unsupported (while Global BaseProfile MFG cleanup continues to protect all games automatically).
+
 ## [1.0.3] - 2026-11-27
 
 ### Fixed
