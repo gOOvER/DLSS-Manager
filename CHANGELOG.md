@@ -11,6 +11,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.3] - 2026-11-27
+
+### Fixed
+- **Live DRS Readback & FG/MFG Modal Polish (`src-tauri/src/lib.rs`, `src-tauri/src/game_db.rs`, `ui/app.js`):**
+  - Resolved game executables properly in `read_live_drs_status_cmd` when a DLL path or folder is passed, so live per-game DRS overrides (including `SR Off`, `FG Preset`, `FG Off`, and `MFG Mode`) are read from the actual game profile instead of falling back to BaseProfile.
+  - Display `Treiber / NVIDIA App` instead of a placeholder `v310.9.16.0` on the FG card (both Game Details and Secondary Preset modals) when no local `nvngx_dlssg.dll` is present, disable multiplier/target-FPS inputs when MFG is `Default`/`Off`, include active `MFG` modes in game card badges and `Reset to Default` visibility, add DE/EN i18n for Global MFG settings, and updated the built-in `overwatch-2` compatibility profile to reflect driver/NVIDIA App FG support without contradicting the UI.
+  - Prevented `apply_nvidia_app_whitelist` (**Unlock All Games**) from clearing explicit per-game DRS overrides (including `Off` and custom `MFG` modes) by only clearing NVIDIA App blocks on inheriting profiles and re-enforcing explicit per-game settings afterward.
+
 ## [1.0.2] - 2026-11-24
 
 ### Added

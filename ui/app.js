@@ -39,7 +39,7 @@ const ALL_TECH_GROUPS = [
 ];
 
 let appState = {
-  version: "1.0.2",
+  version: "1.0.3",
   games: [],
   backups: [],
   catalog: [],
@@ -134,6 +134,9 @@ const I18N = {
     hub_nvapp_whitelist_title: "🛡️ NVIDIA App Override-Status (Treiber-DRS & Whitelist)",
     settings_nvapp_whitelist_title: "NVIDIA App Override-Whitelist (für nicht unterstützte Spiele)",
     btn_nvapp_whitelist: "🔓 Alle Spiele freischalten",
+    settings_global_mfg_label: "DLSS-G MFG Modus (Global)",
+    settings_global_mfg_default: "Default (Kein globales MFG · Empfohlen)",
+    settings_global_mfg_off: "Off (Global deaktivieren)",
     btn_restart_nv_services: "🔄 NVIDIA Dienst neu starten",
     settings_tech_scope_title: "Aktivierte Upscaler-Technologien",
     settings_tech_scope_sub: "Wähle aus, welche Technologiegruppen auf Updates geprüft und bei Massen-Updates berücksichtigt werden sollen.",
@@ -239,6 +242,9 @@ const I18N = {
     hub_nvapp_whitelist_title: "🛡️ NVIDIA App Override Status (Driver DRS & Whitelist)",
     settings_nvapp_whitelist_title: "NVIDIA App Override Whitelist (Unlock Unsupported Games)",
     btn_nvapp_whitelist: "🔓 Unlock All Games",
+    settings_global_mfg_label: "DLSS-G MFG Mode (Global)",
+    settings_global_mfg_default: "Default (No Global MFG · Recommended)",
+    settings_global_mfg_off: "Off (Disable Globally)",
     btn_restart_nv_services: "🔄 Restart NVIDIA Service",
     settings_tech_scope_title: "Enabled Upscaler Technologies",
     settings_tech_scope_sub: "Choose which technology groups should be checked for updates and included in batch updates.",
@@ -1440,8 +1446,8 @@ function renderGamesGrid() {
           : "badge-current";
 
       const hasSrTech = (g.dlls || []).some((d) => d.type_label === "DLSS");
-      const hasRrTech = (g.dlls || []).some((d) => d.type_label === "DLSS-RR");
-      const hasFgTech = (g.dlls || []).some((d) => d.type_label === "DLSS-G");
+      const hasRrTech = gameHasRrTech(g);
+      const hasFgTech = gameHasFgTech(g);
 
       const activePresetParts = [];
       if (hasSrTech && g.dlss_sr_preset && g.dlss_sr_preset !== "Default") {
@@ -1452,6 +1458,13 @@ function renderGamesGrid() {
       }
       if (hasFgTech && g.dlss_fg_preset && g.dlss_fg_preset !== "Default") {
         activePresetParts.push(`FG: ${g.dlss_fg_preset}`);
+      }
+      if (hasFgTech && g.dlss_fg_mode && g.dlss_fg_mode !== "Default") {
+        const mfgLabel =
+          g.dlss_fg_mode === "Off"
+            ? "MFG: Off"
+            : `MFG: ${g.dlss_fg_mode}${g.dlss_fg_multiplier ? ` ${g.dlss_fg_multiplier}x` : ""}`;
+        activePresetParts.push(mfgLabel);
       }
       const hasCustomPreset = activePresetParts.length > 0;
       const presetBadgeLabel =
@@ -2638,7 +2651,11 @@ window.openGameDllModal = function (gameId) {
   if (isNvidia && (hasDlssTech || dbProf?.recommended_sr_preset)) {
     const srDllVer = counts.groups.find((g) => g.typeLabel === "DLSS")?.version || "310.9.16.0";
     const rrDllVer = counts.groups.find((g) => g.typeLabel === "DLSS-RR")?.version || "310.9.16.0";
-    const fgDllVer = counts.groups.find((g) => g.typeLabel === "DLSS-G")?.version || "310.9.16.0";
+    const fgLocalVer = counts.groups.find((g) => g.typeLabel === "DLSS-G")?.version || null;
+    const fgDllVer = fgLocalVer || "310.9.16.0";
+    const fgVersionBadge = fgLocalVer
+      ? `v${escapeHtml(fgLocalVer)}`
+      : (de ? "Treiber / NVIDIA App" : "Driver / NVIDIA App");
 
     const srOptions = getSupportedPresetsForDllVersion("sr", srDllVer);
     const rrOptions = getSupportedPresetsForDllVersion("rr", rrDllVer);
@@ -2657,7 +2674,11 @@ window.openGameDllModal = function (gameId) {
       (!recSr || gameSr === recSr) &&
       (!recRr || gameRr === recRr) &&
       (!recFg || gameFg === recFg);
-    const hasAnyCustom = gameSr !== "Default" || gameRr !== "Default" || gameFg !== "Default";
+    const hasAnyCustom =
+      gameSr !== "Default" ||
+      gameRr !== "Default" ||
+      gameFg !== "Default" ||
+      Boolean(game.dlss_fg_mode && game.dlss_fg_mode !== "Default");
 
     const statusBadge = isOptimalApplied
       ? `<span class="compat-status-pill compat-safe">✓ ${de ? "Optimales Preset aktiv" : "Optimal Preset Active"} (${escapeHtml(recSr || gameSr)})</span>`
@@ -2703,10 +2724,12 @@ window.openGameDllModal = function (gameId) {
       `);
     }
     if (hasFgTech) {
+      const fgModeVal = game.dlss_fg_mode || "Default";
+      const fgModeNeedsParams = fgModeVal === "Fixed" || fgModeVal === "Dynamic";
       slotCardsHtml.push(`
-        <div class="preset-slot-card ${gameFg !== "Default" ? "is-active" : ""}">
+        <div class="preset-slot-card ${gameFg !== "Default" || fgModeVal !== "Default" ? "is-active" : ""}">
           <div class="preset-slot-top">
-            <span class="preset-slot-title">DLSS Frame Generation (FG) · <code style="font-size:0.72rem;opacity:0.85">v${escapeHtml(fgDllVer)}</code></span>
+            <span class="preset-slot-title">DLSS Frame Generation (FG) · <code style="font-size:0.72rem;opacity:0.85">${fgVersionBadge}</code></span>
             ${recFg
           ? `<span class="preset-slot-rec" title="${de ? "Empfohlenes Preset" : "Recommended Preset"}">★ ${de ? "Empfohlen:" : "Recommended:"} ${escapeHtml(recFg)}</span>`
           : ""
@@ -2715,17 +2738,17 @@ window.openGameDllModal = function (gameId) {
           <select id="inline-fg-preset" class="preset-slot-select" onchange="quickSaveInlineGamePresets('${game.id}', false)">
             ${buildPresetOptionsHtml("fg", gameFg, recFg, fgDllVer)}
           </select>
-          <div style="display:grid;grid-template-columns:1fr 90px 100px;gap:8px;margin-top:8px">
+          <div style="display:grid;grid-template-columns:1fr 84px 104px;gap:8px;margin-top:8px">
             <select id="inline-fg-mode" class="preset-slot-select" title="${de ? "DLSS-G MFG Modus (RTX 50)" : "DLSS-G MFG Mode (RTX 50)"}" onchange="quickSaveInlineGamePresets('${game.id}', false)">
-              <option value="Default" ${!game.dlss_fg_mode || game.dlss_fg_mode === "Default" ? "selected" : ""}>MFG: Default</option>
-              <option value="Fixed" ${game.dlss_fg_mode === "Fixed" ? "selected" : ""}>MFG: Fixed</option>
-              <option value="Dynamic" ${game.dlss_fg_mode === "Dynamic" ? "selected" : ""}>MFG: Dynamic</option>
-              <option value="Off" ${game.dlss_fg_mode === "Off" ? "selected" : ""}>MFG: Off</option>
+              <option value="Default" ${fgModeVal === "Default" ? "selected" : ""}>MFG: Default</option>
+              <option value="Fixed" ${fgModeVal === "Fixed" ? "selected" : ""}>MFG: Fixed</option>
+              <option value="Dynamic" ${fgModeVal === "Dynamic" ? "selected" : ""}>MFG: Dynamic</option>
+              <option value="Off" ${fgModeVal === "Off" ? "selected" : ""}>MFG: Off</option>
             </select>
-            <select id="inline-fg-mult" class="preset-slot-select" title="${de ? "Multiplikator" : "Multiplier"}" onchange="quickSaveInlineGamePresets('${game.id}', false)">
+            <select id="inline-fg-mult" class="preset-slot-select" ${fgModeNeedsParams ? "" : "disabled style='opacity:0.45'"} title="${de ? "MFG Multiplikator (nur bei Fixed/Dynamic)" : "MFG Multiplier (Fixed/Dynamic only)"}" onchange="quickSaveInlineGamePresets('${game.id}', false)">
               ${[2, 3, 4, 5, 6].map((m) => `<option value="${m}" ${(game.dlss_fg_multiplier || 2) === m ? "selected" : ""}>${m}x</option>`).join("")}
             </select>
-            <input type="number" id="inline-fg-target-fps" class="preset-slot-select" min="0" max="1000" value="${game.dlss_fg_target_fps || 0}" title="${de ? "Ziel-FPS (0 = Auto)" : "Target FPS (0 = Auto)"}" onchange="quickSaveInlineGamePresets('${game.id}', false)" />
+            <input type="number" id="inline-fg-target-fps" class="preset-slot-select" ${fgModeVal === "Dynamic" ? "" : "disabled style='opacity:0.45'"} min="0" max="1000" value="${game.dlss_fg_target_fps || ""}" placeholder="${de ? "Ziel-FPS" : "Target FPS"}" title="${de ? "Ziel-FPS für Dynamic MFG (leer = Auto)" : "Target FPS for Dynamic MFG (empty = Auto)"}" onchange="quickSaveInlineGamePresets('${game.id}', false)" />
           </div>
           <div class="preset-slot-desc">💡 ${escapeHtml(getPresetDescription("fg", gameFg, fgDllVer))}</div>
         </div>
@@ -2944,21 +2967,35 @@ window.openGameDllModal = function (gameId) {
           drsBadgeEl.style.display = "none";
           return;
         }
-        if (drs.is_blocked_by_zero) {
+        const fgParts = [];
+        if (hasFgTech) {
+          if (drs.fg_override === 0) {
+            fgParts.push(de ? "FG: Aus" : "FG: Off");
+          } else if (drs.fg_override === 1 && drs.fg_preset) {
+            fgParts.push(`FG: ${drs.fg_preset}`);
+          }
+          if (drs.fg_mode && drs.fg_mode !== "Default") {
+            fgParts.push(
+              `MFG: ${drs.fg_mode}${drs.fg_mode !== "Off" && drs.fg_multiplier && drs.fg_multiplier > 1 ? ` ${drs.fg_multiplier}x` : ""}`
+            );
+          }
+        }
+        const fgSuffix = fgParts.length ? ` · ${fgParts.join(" · ")}` : "";
+
+        if (gameSr === "Off" && drs.sr_override === 0) {
+          drsBadgeEl.className = "default-preset-chip";
+          drsBadgeEl.textContent = `${de ? "Treiber-Live" : "Driver Live"}: ${de ? "SR Aus" : "SR Off"}${fgSuffix}`;
+        } else if (drs.is_blocked_by_zero) {
           drsBadgeEl.className = "compat-status-pill compat-warn";
           drsBadgeEl.textContent = de
             ? "⚠️ Treiber-DRS: Durch NVIDIA App blockiert (0)"
             : "⚠️ Driver DRS: Blocked by NVIDIA App (0)";
         } else if (drs.sr_override === 1 && drs.sr_preset) {
           drsBadgeEl.className = "compat-status-pill compat-safe";
-          const fgPart =
-            hasFgTech && drs.fg_mode && drs.fg_mode !== "Default"
-              ? ` · FG ${drs.fg_mode}${drs.fg_multiplier && drs.fg_multiplier > 1 ? ` ${drs.fg_multiplier}x` : ""}`
-              : "";
-          drsBadgeEl.textContent = `${de ? "Treiber-Live" : "Driver Live"}: ${drs.sr_preset}${fgPart}`;
+          drsBadgeEl.textContent = `${de ? "Treiber-Live" : "Driver Live"}: ${drs.sr_preset}${fgSuffix}`;
         } else {
           drsBadgeEl.className = "default-preset-chip";
-          drsBadgeEl.textContent = `${de ? "Treiber-Live" : "Driver Live"}: Default`;
+          drsBadgeEl.textContent = `${de ? "Treiber-Live" : "Driver Live"}: Default${fgSuffix}`;
         }
       })
       .catch(() => {
@@ -3198,7 +3235,13 @@ window.openGameDlssPresetsModal = function (gameId) {
 
   const srDllVer = (game.dlls || []).find((d) => d.type_label === "DLSS")?.version || "310.9.16.0";
   const rrDllVer = (game.dlls || []).find((d) => d.type_label === "DLSS-RR")?.version || "310.9.16.0";
-  const fgDllVer = (game.dlls || []).find((d) => d.type_label === "DLSS-G")?.version || "310.9.16.0";
+  const fgLocalVer = (game.dlls || []).find((d) => d.type_label === "DLSS-G")?.version || null;
+  const fgDllVer = fgLocalVer || "310.9.16.0";
+  const fgVersionBadge = fgLocalVer
+    ? `v${escapeHtml(fgLocalVer)}`
+    : (de ? "Treiber / NVIDIA App" : "Driver / NVIDIA App");
+  const fgModeVal = game.dlss_fg_mode || "Default";
+  const fgModeNeedsParams = fgModeVal === "Fixed" || fgModeVal === "Dynamic";
 
   const srOptions = getSupportedPresetsForDllVersion("sr", srDllVer);
   const rrOptions = getSupportedPresetsForDllVersion("rr", rrDllVer);
@@ -3243,7 +3286,7 @@ window.openGameDlssPresetsModal = function (gameId) {
     }
         ${hasFgTech
       ? `<div class="preset-field">
-                 <label>DLSS Frame Generation (FG) Preset · <code>v${escapeHtml(fgDllVer)}</code></label>
+                 <label>DLSS Frame Generation (FG) Preset · <code>${fgVersionBadge}</code></label>
                  <select id="game-fg-preset" class="toolbar-select" onchange="document.getElementById('game-fg-desc').textContent = '💡 ' + getPresetDescription('fg', this.value, '${escapeJsStr(fgDllVer)}')">
                    ${buildPresetOptionsHtml("fg", fg, "Latest", fgDllVer)}
                  </select>
@@ -3252,22 +3295,22 @@ window.openGameDlssPresetsModal = function (gameId) {
                <div class="preset-select-grid" style="grid-template-columns:repeat(3,1fr);gap:10px">
                  <div class="preset-field">
                    <label>${de ? "DLSS-G MFG Modus (RTX 50)" : "DLSS-G MFG Mode (RTX 50)"}</label>
-                   <select id="game-fg-mode" class="toolbar-select">
-                     <option value="Default" ${!game.dlss_fg_mode || game.dlss_fg_mode === "Default" ? "selected" : ""}>Default</option>
-                     <option value="Fixed" ${game.dlss_fg_mode === "Fixed" ? "selected" : ""}>Fixed (2x–6x)</option>
-                     <option value="Dynamic" ${game.dlss_fg_mode === "Dynamic" ? "selected" : ""}>Dynamic (Auto-FPS)</option>
-                     <option value="Off" ${game.dlss_fg_mode === "Off" ? "selected" : ""}>Off</option>
+                   <select id="game-fg-mode" class="toolbar-select" onchange="const m=this.value;const mu=document.getElementById('game-fg-mult');const tf=document.getElementById('game-fg-target-fps');if(mu){mu.disabled=(m!=='Fixed'&&m!=='Dynamic');mu.style.opacity=mu.disabled?'0.45':'1';}if(tf){tf.disabled=(m!=='Dynamic');tf.style.opacity=tf.disabled?'0.45':'1';}">
+                     <option value="Default" ${fgModeVal === "Default" ? "selected" : ""}>Default</option>
+                     <option value="Fixed" ${fgModeVal === "Fixed" ? "selected" : ""}>Fixed (2x–6x)</option>
+                     <option value="Dynamic" ${fgModeVal === "Dynamic" ? "selected" : ""}>Dynamic (Auto-FPS)</option>
+                     <option value="Off" ${fgModeVal === "Off" ? "selected" : ""}>Off</option>
                    </select>
                  </div>
                  <div class="preset-field">
                    <label>${de ? "MFG Multiplikator" : "MFG Multiplier"}</label>
-                   <select id="game-fg-mult" class="toolbar-select">
+                   <select id="game-fg-mult" class="toolbar-select" ${fgModeNeedsParams ? "" : "disabled style='opacity:0.45'"}>
                      ${[2, 3, 4, 5, 6].map((m) => `<option value="${m}" ${(game.dlss_fg_multiplier || 2) === m ? "selected" : ""}>${m}x</option>`).join("")}
                    </select>
                  </div>
                  <div class="preset-field">
-                   <label>${de ? "Dynamic Ziel-FPS (0 = Auto)" : "Dynamic Target FPS (0 = Auto)"}</label>
-                   <input type="number" id="game-fg-target-fps" class="toolbar-select" min="0" max="1000" value="${game.dlss_fg_target_fps || 0}" />
+                   <label>${de ? "Dynamic Ziel-FPS (leer = Auto)" : "Dynamic Target FPS (empty = Auto)"}</label>
+                   <input type="number" id="game-fg-target-fps" class="toolbar-select" ${fgModeVal === "Dynamic" ? "" : "disabled style='opacity:0.45'"} min="0" max="1000" value="${game.dlss_fg_target_fps || ""}" placeholder="Auto" />
                  </div>
                </div>`
       : `<input type="hidden" id="game-fg-preset" value="Default" />`

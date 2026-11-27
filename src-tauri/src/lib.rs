@@ -1721,7 +1721,26 @@ async fn relaunch_as_admin_cmd() -> Result<(), String> {
 async fn read_live_drs_status_cmd(
     exe_name: Option<String>,
 ) -> Result<gpu_nvapi::LiveDrsStatus, String> {
-    Ok(gpu_nvapi::read_live_drs_status(exe_name.as_deref()))
+    let resolved = exe_name.and_then(|raw| {
+        let trimmed = raw.trim();
+        if trimmed.is_empty() {
+            return None;
+        }
+        let lower = trimmed.to_ascii_lowercase();
+        if lower.ends_with(".exe") {
+            return Some(trimmed.to_string());
+        }
+        let p = Path::new(trimmed);
+        let dir = if p.is_file() {
+            p.parent().unwrap_or(p)
+        } else {
+            p
+        };
+        find_primary_game_executable(dir)
+            .map(|e| e.to_string_lossy().to_string())
+            .or_else(|| Some(trimmed.to_string()))
+    });
+    Ok(gpu_nvapi::read_live_drs_status(resolved.as_deref()))
 }
 
 #[tauri::command]
@@ -1746,8 +1765,14 @@ async fn apply_nvidia_app_whitelist(
     };
 
     if gpu.vendor.eq_ignore_ascii_case("NVIDIA") {
-        let exes: Vec<String> = games
+        let inherit_exes: Vec<String> = games
             .iter()
+            .filter(|g| {
+                g.dlss_sr_preset.is_none()
+                    && g.dlss_rr_preset.is_none()
+                    && g.dlss_fg_preset.is_none()
+                    && g.dlss_fg_mode.is_none()
+            })
             .filter_map(|g| {
                 g.custom_exe_path
                     .clone()
@@ -1758,7 +1783,7 @@ async fn apply_nvidia_app_whitelist(
                     })
             })
             .collect();
-        let cleared_profiles = gpu_nvapi::clear_game_dlss_profile_blocks(&exes);
+        let cleared_profiles = gpu_nvapi::clear_game_dlss_profile_blocks(&inherit_exes);
         let _ = apply_nvapi_dlss_presets(
             None,
             None,
@@ -1775,6 +1800,53 @@ async fn apply_nvidia_app_whitelist(
             2,
             None,
         );
+        // Re-enforce explicit per-game overrides (including explicit "Off" and MFG modes)
+        for g in &games {
+            if g.dlss_sr_preset.is_some()
+                || g.dlss_rr_preset.is_some()
+                || g.dlss_fg_preset.is_some()
+                || g.dlss_fg_mode.is_some()
+            {
+                let resolved_exe = g
+                    .custom_exe_path
+                    .clone()
+                    .filter(|s| !s.trim().is_empty())
+                    .or_else(|| {
+                        find_primary_game_executable(Path::new(&g.path))
+                            .map(|p| p.to_string_lossy().to_string())
+                    });
+                let sr = g
+                    .dlss_sr_preset
+                    .as_deref()
+                    .unwrap_or(&config.global_dlss_preset);
+                let rr = g
+                    .dlss_rr_preset
+                    .as_deref()
+                    .unwrap_or(&config.global_dlss_rr_preset);
+                let fg = g
+                    .dlss_fg_preset
+                    .as_deref()
+                    .unwrap_or(&config.global_dlss_fg_preset);
+                let _ = apply_nvapi_dlss_presets(
+                    Some(&g.name),
+                    resolved_exe.as_deref(),
+                    sr,
+                    rr,
+                    fg,
+                );
+                if let Some(ref mode_val) = g.dlss_fg_mode {
+                    if !fg.eq_ignore_ascii_case("off") || mode_val.eq_ignore_ascii_case("off") {
+                        let _ = gpu_nvapi::apply_nvapi_dlssg_mfg(
+                            Some(&g.name),
+                            resolved_exe.as_deref(),
+                            mode_val,
+                            g.dlss_fg_multiplier.unwrap_or(2),
+                            g.dlss_fg_target_fps,
+                        );
+                    }
+                }
+            }
+        }
         push_log(
             &state,
             "INFO",
