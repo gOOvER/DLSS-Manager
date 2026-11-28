@@ -1,4 +1,4 @@
-![Downloads](https://img.shields.io/badge/Downloads-7-blue)
+![Downloads](https://img.shields.io/badge/Downloads-11-blue)
 <div align="center">
   <img src=".github/assets/social-banner.png" alt="DLSS Manager Banner" width="100%" />
 
